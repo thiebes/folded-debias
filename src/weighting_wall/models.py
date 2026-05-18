@@ -200,9 +200,61 @@ class GeneralizedGaussianModel:
                         at_wall=bool(at_wall), ok=ok)
 
 
+# --------------------------------------------------------------------------
+# Moment estimator -- the non-truncated alternative ("remove the wall")
+# --------------------------------------------------------------------------
+@dataclass
+class MomentModel:
+    """Non-truncated, moment-based width estimator.
+
+    Instead of a bounded curve fit, the variance is the discrete second
+    central moment of the (background-subtracted) profile. That estimator is
+    linear in the data: it can return a *negative* variance and does not fold
+    at zero. Its sampling distribution is therefore approximately symmetric
+    and, to leading order, unbiased -- so no bias correction is needed (cf.
+    Vestergaard's covariance-based estimator: unbiased *because* it admits
+    negative values). The cost is higher variance, since the x^2 weighting
+    amplifies tail noise.
+
+    The estimator assumes the profile is centred near x = 0, which the
+    simulation guarantees; a production implementation would track the
+    centroid. ``noise_free_series`` reuses the Gaussian profile -- the moment
+    estimator is the *estimator* under test, applied to ordinary Gaussian
+    data.
+    """
+
+    name: str = "moment"
+    edge_frac: float = 0.1       # fraction of pixels each side used for baseline
+
+    def noise_free_series(self, exp: Experiment) -> np.ndarray:
+        return _gaussian_series(exp)
+
+    def fit_variance(self, x: np.ndarray, y: np.ndarray) -> FrameFit:
+        x = np.asarray(x, float)
+        y = np.asarray(y, float)
+        n = x.size
+        edge = max(1, int(self.edge_frac * n))
+        baseline = 0.5 * (y[:edge].mean() + y[-edge:].mean())
+        ys = y - baseline                       # may be negative (noise)
+
+        total = float(ys.sum())
+        amp = float(np.nanmax(y))
+        if not np.isfinite(total) or total <= 0.0:
+            # Negative/zero total signal: a noise-dominated frame, unusable.
+            return FrameFit(variance=np.nan, amplitude=amp,
+                            at_wall=False, ok=False)
+
+        mean = float(np.sum(ys * x) / total)
+        variance = float(np.sum(ys * (x - mean) ** 2) / total)
+        # No wall: the moment estimator is not bounded below.
+        return FrameFit(variance=variance, amplitude=amp,
+                        at_wall=False, ok=True)
+
+
 # Convenience registry for scripts that select a model by name.
 MODELS = {
     "gaussian": GaussianModel,
     "voigt": VoigtModel,
     "generalized_gaussian": GeneralizedGaussianModel,
+    "moment": MomentModel,
 }

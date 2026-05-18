@@ -100,10 +100,47 @@ build. Calibration and evaluation use independent random seeds. On real data
 the same calibration is done against simulations matched to the measurement
 (Koay-style simulation-based debiasing).
 
-## 7. Open points
+## 7. Two alternatives, tested
+
+`folded_normal` subtracts the *calibrated* `var_bias(CNR)`. When that
+calibration is imperfect — it conflates frames of equal CNR but different true
+width, and the low-CNR mean is heavy-tailed — the hard subtraction can
+overshoot and push `D` below the truth in the deepest noise. Two routes were
+tested against this.
+
+**MAS-gated subtraction (`mas` scheme).** Following Plaszczynski's Modified
+Asymptotic estimator, the subtraction is passed through a smooth gate:
+
+    ṽ²_i = σ̂²_i − s_i² · (1 − exp(−σ̂²_i / s_i²)).
+
+Writing `u = σ̂²/s²`, the corrected value is `s²·(u − 1 + e^−u)`, which is ≥ 0
+for all `u ≥ 0` and increasing — the correction **cannot drive the variance
+negative**. The gate is ≈ 1 when the frame is well above the noise (full `s²`
+subtraction, matching `folded_normal`) and → 0 when it is noise dominated (the
+frame is left uncorrected rather than overshot). In the comparison
+(`scripts/compare_methods.py`) `mas` gives the lowest bias of any scheme — mean
+|⟨D⟩/D_true − 1| = **0.089** vs `folded_normal` 0.116, inverse-variance 0.31,
+OLS 10.3 — and removes the deep-regime overshoot (CNR₀ = 5: 0.76 → 1.00) at no
+cost in precision. **`mas` is the recommended scheme.**
+
+**Non-truncated moment estimator (`MomentModel`).** The alternative is to
+remove the wall entirely: estimate the variance from the discrete second
+moment of the profile, which is linear in the data, admits negative values,
+and so needs no correction (cf. Vestergaard's covariance-based estimator,
+unbiased *because* it allows negative values). It **fails here**: the moment
+is a ratio, second moment over total intensity, and the denominator passes
+through zero at low CNR, producing wild, often negative `D` (mean bias ~10³,
+enormous spread). Removing the wall is sound in principle, but it needs a
+*stable* non-truncated estimator — the covariance-based estimator achieves
+this on raw displacement increments, which an intensity-profile MSD pipeline
+does not have. An intensity-profile moment is not a viable substitute.
+
+## 8. Open points
 
 - The POC calibrates `s²(CNR)`; the analytic `s² ∝ σ²/CNR²` (localization CRLB)
   should be checked against the calibration as a model test.
+- A 2-D `var_bias(CNR, σ)` calibration should further reduce the residual
+  overcorrection (`mas` already removes most of it).
 - Subdiffusive transport (`MSD ∝ t^α`, α < 1) — confirm the correction
   de-biases α as well as D.
 - Voigt and generalized-Gaussian models showed a minor (~5%) clipping pile-up

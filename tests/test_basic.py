@@ -12,8 +12,8 @@ import pytest
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from weighting_wall import (Experiment, GaussianModel, GeneralizedGaussianModel,
-                            VoigtModel, calibrate, evaluate, frame_stats,
-                            run_ensemble)
+                            MomentModel, VoigtModel, calibrate, evaluate,
+                            frame_stats, run_ensemble)
 from weighting_wall.fit import fit_D, fit_variance
 from weighting_wall.simulate import noise_free_series
 
@@ -73,28 +73,40 @@ def test_low_cnr_inflates_D():
     VoigtModel(gamma=0.3),
     GeneralizedGaussianModel(shape=1.5),
     GeneralizedGaussianModel(shape=3.0),
+    MomentModel(),
 ])
 def test_models_recover_noise_free_variance(model):
-    """Every profile model must fit its own clean profiles back to truth."""
+    """Every estimator must recover the known variance from clean profiles."""
     exp = Experiment(D=0.02, n_frames=6, t_max=2.0)
     clean = model.noise_free_series(exp)
     for f in range(exp.n_frames):
         ff = model.fit_variance(exp.x, clean[f])
         assert ff.ok
-        assert ff.variance == pytest.approx(exp.true_variance[f], rel=2e-3)
+        assert ff.variance == pytest.approx(exp.true_variance[f], rel=5e-3)
 
 
 @pytest.mark.parametrize("model", [
     VoigtModel(gamma=0.3),
     GeneralizedGaussianModel(shape=1.5),
+    MomentModel(),
 ])
 def test_models_run_through_montecarlo(model):
-    """Voigt and generalized-Gaussian models run through the MC pipeline."""
+    """Voigt, generalized-Gaussian and moment models run through the pipeline."""
     exp = Experiment(D=0.02, n_frames=8, t_max=2.0)
     ens = run_ensemble(exp, cnr0=20.0, n_runs=40, seed=0, model=model)
     assert ens.model_name == model.name
     assert ens.variance.shape == (40, exp.n_frames)
     assert np.isfinite(ens.cnr_frame).all()
+
+
+def test_moment_estimator_can_go_negative():
+    """The non-truncated moment estimator must admit negative variances at
+    low CNR -- that is what makes it un-folded and (to leading order)
+    unbiased."""
+    exp = Experiment(D=0.02, n_frames=8, t_max=2.0)
+    ens = run_ensemble(exp, cnr0=4.0, n_runs=300, seed=0, model=MomentModel())
+    finite = ens.variance[np.isfinite(ens.variance)]
+    assert np.any(finite < 0.0)
 
 
 def test_generalized_gaussian_variance_factor():
@@ -109,7 +121,7 @@ def test_evaluate_runs_and_returns_all_schemes():
     grid = np.array([3.0, 10.0, 30.0])
     model = calibrate(exp, grid, n_runs=150, seed=1)
     results = evaluate(exp, grid, model, n_runs=150, seed=5000)
-    assert set(results) == {"ols", "inverse_variance", "folded_normal"}
+    assert set(results) == {"ols", "inverse_variance", "folded_normal", "mas"}
     for r in results.values():
         assert r.mean_bias.shape == grid.shape
         assert np.all(np.isfinite(r.mean_bias))

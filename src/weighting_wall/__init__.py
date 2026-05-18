@@ -24,7 +24,7 @@ Typical use::
 """
 from .simulate import Experiment, cnr_per_frame, noisy_series
 from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
-                     VoigtModel)
+                     MomentModel, VoigtModel)
 from .montecarlo import Ensemble, run_ensemble
 from .truncation import FrameStats, TruncationModel, frame_stats
 from .weights import SCHEMES, msd_and_weights
@@ -34,7 +34,8 @@ __version__ = "0.2.0"
 
 __all__ = [
     "Experiment", "cnr_per_frame", "noisy_series",
-    "GaussianModel", "VoigtModel", "GeneralizedGaussianModel", "MODELS",
+    "GaussianModel", "VoigtModel", "GeneralizedGaussianModel", "MomentModel",
+    "MODELS",
     "Ensemble", "run_ensemble",
     "FrameStats", "TruncationModel", "frame_stats",
     "SCHEMES", "msd_and_weights",
