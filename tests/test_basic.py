@@ -1,7 +1,7 @@
 """Sanity tests for the weighting-wall POC.
 
 These are smoke tests, not a validation suite -- they keep the moving parts
-wired together while the analytical weight form is still being derived.
+wired together.
 """
 import os
 import sys
@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from weighting_wall import (Experiment, GaussianModel, GeneralizedGaussianModel,
                             VoigtModel, calibrate, evaluate, frame_stats,
-                            run_ensemble, truncation_factor)
+                            run_ensemble)
 from weighting_wall.fit import fit_D, fit_variance
 from weighting_wall.simulate import noise_free_series
 
@@ -38,11 +38,14 @@ def test_noise_free_fit_D_is_exact():
     assert d.D == pytest.approx(exp.D, rel=1e-3)
 
 
-def test_truncation_factor_limits():
-    """p=0 -> factor 1 (clean); p=0.5 -> factor 0 (pure noise)."""
-    assert truncation_factor(0.0) == pytest.approx(1.0)
-    assert truncation_factor(0.5) == pytest.approx(0.0)
-    assert 0.0 < truncation_factor(0.25) < 1.0
+def test_var_bias_is_positive_and_grows_at_low_cnr():
+    """The folded-normal prediction: sigma_hat^2 is biased high, more so at
+    low CNR (DERIVATION.md s.2)."""
+    exp = Experiment(D=0.02)
+    lo = frame_stats(run_ensemble(exp, cnr0=4.0, n_runs=300, seed=0))
+    hi = frame_stats(run_ensemble(exp, cnr0=60.0, n_runs=300, seed=0))
+    assert np.nanmean(lo.var_bias) > 0.0
+    assert np.nanmean(lo.var_bias) > np.nanmean(hi.var_bias)
 
 
 def test_truncation_fraction_grows_at_low_cnr():
@@ -106,7 +109,19 @@ def test_evaluate_runs_and_returns_all_schemes():
     grid = np.array([3.0, 10.0, 30.0])
     model = calibrate(exp, grid, n_runs=150, seed=1)
     results = evaluate(exp, grid, model, n_runs=150, seed=5000)
-    assert set(results) == {"ols", "inverse_variance", "cnr_aware"}
+    assert set(results) == {"ols", "inverse_variance", "folded_normal"}
     for r in results.values():
         assert r.mean_bias.shape == grid.shape
         assert np.all(np.isfinite(r.mean_bias))
+
+
+def test_folded_normal_beats_inverse_variance_at_low_cnr():
+    """The derived scheme should leave less D-bias than inverse-variance in
+    the low-CNR regime where the truncation bias is large."""
+    exp = Experiment(D=0.02)
+    grid = np.array([6.0, 10.0, 18.0, 32.0])
+    model = calibrate(exp, grid, n_runs=300, seed=1)
+    results = evaluate(exp, grid, model, n_runs=300, seed=5000)
+    iv = np.nanmean(np.abs(results["inverse_variance"].mean_bias - 1.0))
+    fn = np.nanmean(np.abs(results["folded_normal"].mean_bias - 1.0))
+    assert fn < iv

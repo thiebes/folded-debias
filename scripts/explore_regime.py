@@ -1,17 +1,17 @@
 """Parameter-space exploration: where is the weighting improvement clearest?
 
 Sweeps the diffusion coefficient D and the initial CNR_0 and tabulates the
-bias <D_est>/D_true for OLS, inverse-variance, and CNR-aware weighting. The
-goal is to locate the regime -- the project hypothesis is small D and small
-CNR -- where inverse-variance weighting is *itself* most biased, so that the
-improvement offered by a truncation-aware weight is most clearly resolved.
+bias <D_est>/D_true for OLS, inverse-variance, and the folded-normal scheme.
+The goal is to locate the regime -- the project hypothesis is small D and
+small CNR -- where inverse-variance weighting is *itself* most biased, so that
+the improvement offered by the folded-normal correction is clearly resolved.
 
 Run from the repository root::
 
     python scripts/explore_regime.py
 
-Prints, per D, a CNR_0 table and the (inverse-variance - cnr-aware) gap, then
-reports the cell with the largest inverse-variance bias and the cell with the
+Prints, per D, a CNR_0 table and the (inverse-variance - folded-normal) gap,
+then reports the cell with the largest inverse-variance bias and the cell with
 largest weighting improvement.
 """
 from __future__ import annotations
@@ -40,7 +40,7 @@ def main() -> None:
     print(f"  {N_RUNS} Monte Carlo runs per cell\n")
 
     iv_grid = np.full((D_GRID.size, CNR0_GRID.size), np.nan)
-    ca_grid = np.full((D_GRID.size, CNR0_GRID.size), np.nan)
+    fn_grid = np.full((D_GRID.size, CNR0_GRID.size), np.nan)
 
     for di, D in enumerate(D_GRID):
         exp = Experiment(sigma0=1.0, D=float(D), tau=TAU, n_frames=12, t_max=3.0)
@@ -49,13 +49,13 @@ def main() -> None:
         model = TruncationModel.from_stats(stats)
         res = evaluate(exp, CNR0_GRID, model, n_runs=N_RUNS, seed=20000 + di)
         iv_grid[di] = res["inverse_variance"].mean_bias
-        ca_grid[di] = res["cnr_aware"].mean_bias
+        fn_grid[di] = res["folded_normal"].mean_bias
 
         print(f"--- D={D:.3f}  (L_D/FWHM_0={ld_fwhm:.3f}) ---")
-        print("  CNR0   inv-var  cnr-aware   gap(iv-ca)")
+        print("  CNR0   inv-var  folded-normal   gap(iv-fn)")
         for ci, c0 in enumerate(CNR0_GRID):
-            iv, ca = iv_grid[di, ci], ca_grid[di, ci]
-            print(f"  {c0:5.0f}  {iv:7.3f}  {ca:9.3f}   {iv - ca:+8.3f}")
+            iv, fn = iv_grid[di, ci], fn_grid[di, ci]
+            print(f"  {c0:5.0f}  {iv:7.3f}  {fn:11.3f}   {iv - fn:+8.3f}")
         print()
 
     # Where is inverse-variance weighting itself most biased?
@@ -64,12 +64,12 @@ def main() -> None:
     print(f"Largest inverse-variance bias: D={D_GRID[di]:.3f}, "
           f"CNR0={CNR0_GRID[ci]:.0f}  ->  <D>/D_true = {iv_grid[di, ci]:.3f}")
 
-    # Where does the truncation-aware weight help most?
-    gain = np.abs(iv_grid - 1.0) - np.abs(ca_grid - 1.0)
+    # Where does the folded-normal correction help most?
+    gain = np.abs(iv_grid - 1.0) - np.abs(fn_grid - 1.0)
     di, ci = np.unravel_index(np.nanargmax(gain), gain.shape)
-    print(f"Largest weighting improvement: D={D_GRID[di]:.3f}, "
+    print(f"Largest correction improvement: D={D_GRID[di]:.3f}, "
           f"CNR0={CNR0_GRID[ci]:.0f}  ->  inv-var {iv_grid[di, ci]:.3f} "
-          f"vs cnr-aware {ca_grid[di, ci]:.3f}")
+          f"vs folded-normal {fn_grid[di, ci]:.3f}")
     print("\nUse this cell's (D, CNR0) to set the demo so the improvement is "
           "clearly resolved.")
 

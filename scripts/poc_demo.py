@@ -1,15 +1,15 @@
-"""Proof-of-concept demo: the truncation bias and a CNR-aware correction.
+"""Proof-of-concept demo: the truncation bias and the folded-normal correction.
 
 Run from the repository root::
 
-    python scripts/poc_demo.py
+    python scripts/poc_demo.py [gaussian|voigt|generalized_gaussian]
 
 Produces ``output/poc_demo.png`` (if matplotlib is installed) with two panels:
 
 * (a) the truncation fraction p and MSD skewness vs per-frame CNR -- evidence
       that the wall at zero distorts the width estimator, worst at low CNR;
 * (b) the bias <D_est>/D_true vs CNR_0 for OLS, standard inverse-variance, and
-      the proposed CNR-aware weighting.
+      the derived folded-normal scheme (see docs/DERIVATION.md).
 
 It also prints a summary table to stdout, so it is useful with or without a
 plotting backend.
@@ -34,7 +34,6 @@ from weighting_wall.truncation import TruncationModel  # noqa: E402
 EXP = Experiment(sigma0=1.0, D=0.02, tau=1.0, n_frames=12, t_max=3.0)
 CNR0_GRID = np.array([5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 90.0])
 N_RUNS = 400
-GAMMA = 2.0
 
 
 def _profile_model_from_argv():
@@ -62,29 +61,30 @@ def main() -> None:
     model: TruncationModel = TruncationModel.from_stats(stats)
 
     # Independent evaluation sweep (different seed).
-    print("Evaluating weighting schemes ...")
-    results = evaluate(EXP, CNR0_GRID, model, n_runs=N_RUNS, gamma=GAMMA,
+    print("Evaluating schemes ...")
+    results = evaluate(EXP, CNR0_GRID, model, n_runs=N_RUNS,
                        seed=20000, profile_model=pmodel)
 
     # --- summary table ---------------------------------------------------
     print("\n  <D_est> / D_true   (1.000 = unbiased)")
-    print("  CNR_0     OLS     inv-var   cnr-aware")
+    print("  CNR_0     OLS     inv-var   folded-normal")
     for i, c0 in enumerate(CNR0_GRID):
         print(f"  {c0:6.0f}  {results['ols'].mean_bias[i]:7.3f}  "
               f"{results['inverse_variance'].mean_bias[i]:7.3f}  "
-              f"{results['cnr_aware'].mean_bias[i]:9.3f}")
+              f"{results['folded_normal'].mean_bias[i]:11.3f}")
 
     ols = results["ols"].mean_bias
     iv = results["inverse_variance"].mean_bias
-    ca = results["cnr_aware"].mean_bias
-    f = np.isfinite(ols) & np.isfinite(iv) & np.isfinite(ca)
+    fn = results["folded_normal"].mean_bias
+    f = np.isfinite(ols) & np.isfinite(iv) & np.isfinite(fn)
     print(f"\n  mean |bias-1|  ols={np.nanmean(np.abs(ols[f] - 1)):.2f}  "
           f"inv-var={np.nanmean(np.abs(iv[f] - 1)):.3f}  "
-          f"cnr-aware={np.nanmean(np.abs(ca[f] - 1)):.3f}")
-    print("  Reading: OLS is catastrophically biased at low CNR; weighting is")
-    print("  mandatory. The candidate (1-2p)^2 weight already reduces residual")
-    print("  bias modestly below inverse-variance; the principled folded-normal")
-    print("  weight form (open derivation, see PLAN.md) is expected to do more.")
+          f"folded-normal={np.nanmean(np.abs(fn[f] - 1)):.3f}")
+    print("  Reading: OLS is catastrophically biased at low CNR, and")
+    print("  inverse-variance weighting leaves a residual it cannot remove.")
+    print("  The folded-normal scheme subtracts the additive variance bias")
+    print("  (see docs/DERIVATION.md) and cuts the mean residual bias well")
+    print("  below inverse-variance; it can overcorrect in the deepest noise.")
 
     _plot(stats, results, model_name)
 
@@ -121,7 +121,7 @@ def _plot(stats, results, model_name) -> None:
     for scheme, color, label in [
         ("ols", "tab:gray", "OLS (unweighted)"),
         ("inverse_variance", "tab:orange", "inverse-variance (standard)"),
-        ("cnr_aware", "tab:green", "CNR-aware (proposed)"),
+        ("folded_normal", "tab:green", "folded-normal (derived)"),
     ]:
         r = results[scheme]
         ax1.plot(r.cnr0, r.mean_bias, "o-", color=color, label=label)
@@ -129,8 +129,8 @@ def _plot(stats, results, model_name) -> None:
     ax1.set_xlabel("initial CNR$_0$")
     ax1.set_ylabel("$\\langle D_{est}\\rangle\\, /\\, D_{true}$")
     ax1.set_xscale("log")
-    ax1.set_yscale("log")   # OLS spans ~40x; log keeps the weighted schemes legible
-    ax1.set_title("(b)  Bias in $D$: OLS fails, weighting is required")
+    ax1.set_yscale("log")   # OLS spans ~40x; log keeps the corrected schemes legible
+    ax1.set_title("(b)  Bias in $D$: only the folded-normal correction removes it")
     ax1.legend(fontsize=8)
 
     fig.tight_layout()

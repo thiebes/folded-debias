@@ -1,15 +1,16 @@
-"""End-to-end validation: does CNR-aware weighting reduce the bias in D?
+"""End-to-end validation: does the folded-normal correction reduce D bias?
 
 The validation has two stages, deliberately on independent random seeds:
 
 1. **Calibrate** -- run Monte Carlo ensembles across a CNR sweep and build a
-   :class:`~weighting_wall.truncation.TruncationModel`, p(CNR) and v(CNR).
-2. **Evaluate** -- run fresh ensembles, fit D under each weighting scheme using
-   only the per-frame CNR plus the calibrated model, and report the bias
-   ``<D_est> / D_true`` as a function of CNR_0.
+   :class:`~weighting_wall.truncation.TruncationModel` mapping CNR to the
+   truncation fraction, the MSD-point variance, and the additive variance bias.
+2. **Evaluate** -- run fresh ensembles, fit D under each scheme using only the
+   per-frame CNR plus the calibrated model, and report ``<D_est> / D_true`` as
+   a function of CNR_0.
 
-A scheme that works drives the bias curve toward 1 at low CNR, where the
-standard inverse-variance scheme still leaves D inflated.
+A scheme that works drives the bias curve toward 1 at low CNR, where OLS and
+the standard inverse-variance scheme leave D inflated.
 """
 from __future__ import annotations
 
@@ -21,7 +22,7 @@ from .fit import fit_D
 from .montecarlo import run_ensemble
 from .simulate import Experiment
 from .truncation import TruncationModel, frame_stats
-from .weights import SCHEMES, make_weights
+from .weights import SCHEMES, msd_and_weights
 
 
 def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
@@ -60,8 +61,8 @@ class SchemeResult:
 
 
 def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
-             n_runs: int = 400, gamma: float = 2.0,
-             seed: int = 20000, profile_model=None) -> dict[str, SchemeResult]:
+             n_runs: int = 400, seed: int = 20000,
+             profile_model=None) -> dict[str, SchemeResult]:
     """Fit D under every scheme and return the bias curves.
 
     ``model`` is the calibrated :class:`TruncationModel`; ``profile_model`` is
@@ -79,10 +80,11 @@ def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
         ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i,
                            model=profile_model)
         for scheme in SCHEMES:
-            w = make_weights(scheme, ens.cnr_frame, model, gamma=gamma)
             ratios = []
             for r in range(ens.n_runs):
-                d = fit_D(times, ens.msd[r], w)
+                msd, w = msd_and_weights(scheme, ens.variance[r],
+                                         ens.cnr_frame, model)
+                d = fit_D(times, msd, w)
                 if d.ok and np.isfinite(d.D):
                     ratios.append(d.D / exp.D)
             ratios = np.asarray(ratios, float)

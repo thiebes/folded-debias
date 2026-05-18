@@ -1,14 +1,16 @@
-"""weighting-wall: CNR-aware weighting for MSD diffusion fits.
+"""weighting-wall: correcting the truncation-at-zero bias in MSD diffusion fits.
 
-Fitted Gaussian widths cannot be negative, so the sampling distribution of a
-fitted width is left-truncated at zero and right-skewed -- worst at low CNR.
-That asymmetry leaks through the MSD fit and inflates the extracted diffusion
-coefficient D.  Standard inverse-variance weighting assumes a symmetric error
-distribution and so cannot remove the bias.
+A fitted width cannot be negative, so at low CNR the sampling distribution of
+the fitted variance is right-skewed and biased high. That bias leaks through
+the MSD fit and inflates the extracted diffusion coefficient D. Standard
+inverse-variance weighting corrects the unequal noise across frames but cannot
+remove a mean bias from a slope fit.
 
-This package derives and validates a weighting scheme that takes the per-frame
-contrast-to-noise ratio (from the ``fft-cnr`` package) as input and corrects
-for the truncation as well as the heteroscedasticity.
+This package derives the correction from a folded-normal model of the fitted
+width (see ``docs/DERIVATION.md``): the fitted variance carries an additive
+bias equal to the estimation-noise variance, so the fix is to subtract that
+bias per frame, then weight by inverse variance. The per-frame CNR (from the
+``fft-cnr`` package) is the input.
 
 Typical use::
 
@@ -16,25 +18,25 @@ Typical use::
     import numpy as np
 
     exp = Experiment(D=0.02)                 # short-L_D nanocrystal-solid regime
-    cnr0 = np.array([2, 3, 5, 8, 12, 20, 40])
+    cnr0 = np.array([5, 8, 13, 21, 34, 55, 90])
     model = calibrate(exp, cnr0)
-    results = evaluate(exp, cnr0, model)     # bias curves per weighting scheme
+    results = evaluate(exp, cnr0, model)     # bias curves: ols / inverse_variance / folded_normal
 """
 from .simulate import Experiment, cnr_per_frame, noisy_series
 from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
                      VoigtModel)
 from .montecarlo import Ensemble, run_ensemble
 from .truncation import FrameStats, TruncationModel, frame_stats
-from .weights import SCHEMES, make_weights, truncation_factor
+from .weights import SCHEMES, msd_and_weights
 from .validate import SchemeResult, calibrate, evaluate, sweep_stats
 
-__version__ = "0.1.0"
+__version__ = "0.2.0"
 
 __all__ = [
     "Experiment", "cnr_per_frame", "noisy_series",
     "GaussianModel", "VoigtModel", "GeneralizedGaussianModel", "MODELS",
     "Ensemble", "run_ensemble",
     "FrameStats", "TruncationModel", "frame_stats",
-    "SCHEMES", "make_weights", "truncation_factor",
+    "SCHEMES", "msd_and_weights",
     "SchemeResult", "calibrate", "evaluate", "sweep_stats",
 ]
