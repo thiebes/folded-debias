@@ -21,6 +21,8 @@ Typical use::
     results = evaluate(exp, cnr0, model)     # bias curves per weighting scheme
 """
 from .simulate import Experiment, cnr_per_frame, noisy_series
+from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
+                     VoigtModel)
 from .montecarlo import Ensemble, run_ensemble
 from .truncation import FrameStats, TruncationModel, frame_stats
 from .weights import SCHEMES, make_weights, truncation_factor
@@ -30,6 +32,7 @@ __version__ = "0.1.0"
 
 __all__ = [
     "Experiment", "cnr_per_frame", "noisy_series",
+    "GaussianModel", "VoigtModel", "GeneralizedGaussianModel", "MODELS",
     "Ensemble", "run_ensemble",
     "FrameStats", "TruncationModel", "frame_stats",
     "SCHEMES", "make_weights", "truncation_factor",

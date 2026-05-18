@@ -24,7 +24,7 @@ import numpy as np
 # Allow running from a source checkout without installing the package.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from weighting_wall import Experiment, evaluate, sweep_stats  # noqa: E402
+from weighting_wall import MODELS, Experiment, evaluate, sweep_stats  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 
 # Nanocrystal-solid regime: short diffusion length against the spot size.
@@ -37,10 +37,20 @@ N_RUNS = 400
 GAMMA = 2.0
 
 
+def _profile_model_from_argv():
+    """Profile model selected by an optional command-line argument."""
+    name = sys.argv[1] if len(sys.argv) > 1 else "gaussian"
+    if name not in MODELS:
+        sys.exit(f"unknown model {name!r}; choose from {sorted(MODELS)}")
+    return name, MODELS[name]()
+
+
 def main() -> None:
+    model_name, pmodel = _profile_model_from_argv()
     fwhm = 2.3548 * EXP.sigma0
     ld = np.sqrt(2.0 * EXP.D * EXP.tau)
     print("weighting-wall POC demo")
+    print(f"  profile model: {model_name}")
     print(f"  experiment: D={EXP.D}, tau={EXP.tau}, n_frames={EXP.n_frames}, "
           f"L_D/FWHM_0={ld / fwhm:.3f}")
     print(f"  CNR_0 sweep: {CNR0_GRID}")
@@ -48,13 +58,13 @@ def main() -> None:
 
     # One calibration sweep, reused for the truncation model and panel (a).
     print("Calibrating truncation model ...")
-    stats = sweep_stats(EXP, CNR0_GRID, n_runs=N_RUNS, seed=1)
+    stats = sweep_stats(EXP, CNR0_GRID, n_runs=N_RUNS, seed=1, model=pmodel)
     model: TruncationModel = TruncationModel.from_stats(stats)
 
     # Independent evaluation sweep (different seed).
     print("Evaluating weighting schemes ...")
     results = evaluate(EXP, CNR0_GRID, model, n_runs=N_RUNS, gamma=GAMMA,
-                       seed=20000)
+                       seed=20000, profile_model=pmodel)
 
     # --- summary table ---------------------------------------------------
     print("\n  <D_est> / D_true   (1.000 = unbiased)")
@@ -76,10 +86,10 @@ def main() -> None:
     print("  bias modestly below inverse-variance; the principled folded-normal")
     print("  weight form (open derivation, see PLAN.md) is expected to do more.")
 
-    _plot(stats, results)
+    _plot(stats, results, model_name)
 
 
-def _plot(stats, results) -> None:
+def _plot(stats, results, model_name) -> None:
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -106,7 +116,7 @@ def _plot(stats, results) -> None:
     ax0b.scatter(cnr, skew, s=16, c="tab:blue", alpha=0.5, marker="^")
     ax0b.set_ylabel("MSD sample skewness", color="tab:blue")
     ax0b.tick_params(axis="y", labelcolor="tab:blue")
-    ax0.set_title("(a)  The wall distorts the width estimator")
+    ax0.set_title(f"(a)  The wall distorts the width estimator ({model_name})")
 
     for scheme, color, label in [
         ("ols", "tab:gray", "OLS (unweighted)"),
@@ -125,7 +135,8 @@ def _plot(stats, results) -> None:
 
     fig.tight_layout()
     os.makedirs("output", exist_ok=True)
-    out = os.path.join("output", "poc_demo.png")
+    suffix = "" if model_name == "gaussian" else f"_{model_name}"
+    out = os.path.join("output", f"poc_demo{suffix}.png")
     fig.savefig(out, dpi=150)
     print(f"\nFigure written to {out}")
 

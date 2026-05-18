@@ -25,25 +25,27 @@ from .weights import SCHEMES, make_weights
 
 
 def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
-                seed: int = 1) -> list:
+                seed: int = 1, model=None) -> list:
     """Per-frame statistics from a Monte Carlo CNR sweep.
 
     Returns one :class:`~weighting_wall.truncation.FrameStats` per CNR_0.  This
     is the raw material both for the truncation model and for the diagnostic
     panel of the POC figure, so callers can reuse it instead of resampling.
+    ``model`` selects the profile model (see :mod:`weighting_wall.models`).
     """
     stats = []
     for i, cnr0 in enumerate(cnr0_grid):
-        ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i)
+        ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i,
+                           model=model)
         stats.append(frame_stats(ens))
     return stats
 
 
 def calibrate(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
-              seed: int = 1) -> TruncationModel:
+              seed: int = 1, model=None) -> TruncationModel:
     """Build a truncation model from a Monte Carlo CNR sweep."""
     return TruncationModel.from_stats(
-        sweep_stats(exp, cnr0_grid, n_runs=n_runs, seed=seed))
+        sweep_stats(exp, cnr0_grid, n_runs=n_runs, seed=seed, model=model))
 
 
 @dataclass
@@ -59,8 +61,13 @@ class SchemeResult:
 
 def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
              n_runs: int = 400, gamma: float = 2.0,
-             seed: int = 20000) -> dict[str, SchemeResult]:
-    """Fit D under every scheme and return the bias curves."""
+             seed: int = 20000, profile_model=None) -> dict[str, SchemeResult]:
+    """Fit D under every scheme and return the bias curves.
+
+    ``model`` is the calibrated :class:`TruncationModel`; ``profile_model`` is
+    the profile model (Gaussian / Voigt / generalized-Gaussian) and must match
+    the one used for calibration.
+    """
     times = exp.times
     cnr0_grid = np.asarray(cnr0_grid, float)
     n = cnr0_grid.size
@@ -69,7 +76,8 @@ def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
                "spread": np.full(n, np.nan)} for s in SCHEMES}
 
     for i, cnr0 in enumerate(cnr0_grid):
-        ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i)
+        ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i,
+                           model=profile_model)
         for scheme in SCHEMES:
             w = make_weights(scheme, ens.cnr_frame, model, gamma=gamma)
             ratios = []

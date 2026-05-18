@@ -54,10 +54,23 @@ for s, r in results.items():
     print(s, r.mean_bias)                     # <D_est>/D_true vs CNR_0
 ```
 
+## Profile models
+
+The truncation bias afflicts any non-negative width estimator, so the profile
+model is pluggable (`weighting_wall.models`): `GaussianModel`, `VoigtModel`
+(diffusing Gaussian + fixed Lorentzian PSF — the form Prins' group fits), and
+`GeneralizedGaussianModel` (tunable shape exponent — the `fft-cnr` family, the
+handle for non-Gaussian transport). Scripts take a model name argument:
+
+```bash
+python scripts/poc_demo.py voigt
+python scripts/diagnose_boundary.py generalized_gaussian
+```
+
 ## Proof-of-concept demo
 
 ```bash
-python scripts/poc_demo.py
+python scripts/poc_demo.py            # gaussian (default)
 ```
 
 Prints a bias table and writes `output/poc_demo.png` with two panels:
@@ -77,14 +90,17 @@ pytest
 
 | Path | Role |
 |------|------|
-| `src/weighting_wall/simulate.py`  | Gaussian profiles: diffusion, decay, noise |
-| `src/weighting_wall/fit.py`       | per-frame width fit; MSD→D linear fit |
-| `src/weighting_wall/montecarlo.py`| Monte Carlo ensembles |
+| `src/weighting_wall/simulate.py`  | profile geometry: diffusion, decay, noise |
+| `src/weighting_wall/models.py`    | profile models: Gaussian, Voigt, generalized-Gaussian |
+| `src/weighting_wall/fit.py`       | per-frame Gaussian width fit; MSD→D linear fit |
+| `src/weighting_wall/montecarlo.py`| Monte Carlo ensembles (model-pluggable) |
 | `src/weighting_wall/truncation.py`| truncation fraction p(CNR); `TruncationModel` |
 | `src/weighting_wall/weights.py`   | OLS / inverse-variance / CNR-aware schemes |
 | `src/weighting_wall/cnr.py`       | per-frame CNR from real data via `fft-cnr` |
 | `src/weighting_wall/validate.py`  | calibrate + evaluate → bias curves |
-| `scripts/poc_demo.py`             | proof-of-concept figure |
+| `scripts/poc_demo.py`             | proof-of-concept figure (`[model]` arg) |
+| `scripts/diagnose_boundary.py`    | clipping-vs-reflection diagnostic (`[model]` arg) |
+| `scripts/explore_regime.py`       | (D, CNR₀) parameter-space sweep |
 
 ## Related work
 

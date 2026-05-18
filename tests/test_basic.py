@@ -11,7 +11,8 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from weighting_wall import (Experiment, calibrate, evaluate, frame_stats,
+from weighting_wall import (Experiment, GaussianModel, GeneralizedGaussianModel,
+                            VoigtModel, calibrate, evaluate, frame_stats,
                             run_ensemble, truncation_factor)
 from weighting_wall.fit import fit_D, fit_variance
 from weighting_wall.simulate import noise_free_series
@@ -62,6 +63,41 @@ def test_low_cnr_inflates_D():
         if d.ok:
             slopes.append(d.D)
     assert np.mean(slopes) > exp.D  # positive (high) bias
+
+
+@pytest.mark.parametrize("model", [
+    GaussianModel(),
+    VoigtModel(gamma=0.3),
+    GeneralizedGaussianModel(shape=1.5),
+    GeneralizedGaussianModel(shape=3.0),
+])
+def test_models_recover_noise_free_variance(model):
+    """Every profile model must fit its own clean profiles back to truth."""
+    exp = Experiment(D=0.02, n_frames=6, t_max=2.0)
+    clean = model.noise_free_series(exp)
+    for f in range(exp.n_frames):
+        ff = model.fit_variance(exp.x, clean[f])
+        assert ff.ok
+        assert ff.variance == pytest.approx(exp.true_variance[f], rel=2e-3)
+
+
+@pytest.mark.parametrize("model", [
+    VoigtModel(gamma=0.3),
+    GeneralizedGaussianModel(shape=1.5),
+])
+def test_models_run_through_montecarlo(model):
+    """Voigt and generalized-Gaussian models run through the MC pipeline."""
+    exp = Experiment(D=0.02, n_frames=8, t_max=2.0)
+    ens = run_ensemble(exp, cnr0=20.0, n_runs=40, seed=0, model=model)
+    assert ens.model_name == model.name
+    assert ens.variance.shape == (40, exp.n_frames)
+    assert np.isfinite(ens.cnr_frame).all()
+
+
+def test_generalized_gaussian_variance_factor():
+    """The p=2 generalized Gaussian must reduce to the plain Gaussian."""
+    g2 = GeneralizedGaussianModel(shape=2.0)
+    assert g2.var_factor == pytest.approx(1.0, rel=1e-6)
 
 
 def test_evaluate_runs_and_returns_all_schemes():
