@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Outputs
+output/
+*.png
+*.svg
+*.pdf
+!docs/**/*.png
+!docs/**/*.svg
+
+# Source PDFs / extracted text (local reference only)
+sources/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

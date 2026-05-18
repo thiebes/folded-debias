@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "weighting-wall"
+version = "0.1.0"
+description = "CNR-aware weighting for MSD diffusion fits: correcting the truncation-at-zero bias in fitted Gaussian widths."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [
+    { name = "Joseph J. Thiebes", email = "joseph@thiebes.org" },
+]
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.10",
+]
+
+[project.optional-dependencies]
+# fft-cnr supplies per-frame CNR estimates from single 1-D profiles.
+# Used for real experimental data; the Monte Carlo validation knows true CNR.
+cnr = ["fft-cnr>=0.1"]
+plot = ["matplotlib>=3.7"]
+dev = ["pytest>=7.4", "matplotlib>=3.7", "fft-cnr>=0.1"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
