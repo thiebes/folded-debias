@@ -27,10 +27,13 @@ from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
                      MomentModel, VoigtModel)
 from .montecarlo import Ensemble, run_ensemble
 from .truncation import FrameStats, TruncationModel, frame_stats
-from .weights import SCHEMES, msd_and_weights
-from .validate import SchemeResult, calibrate, evaluate, sweep_stats
+from .weights import SCHEMES, corrected_variance, msd_and_weights
+from .validate import (FrameDiagnostic, SchemeResult, calibrate,
+                       calibrate_d_free, evaluate, per_frame_diagnostic,
+                       sweep_stats)
+from .calibration import CalibrationGrid, calibrate_2d
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 
 __all__ = [
     "Experiment", "cnr_per_frame", "noisy_series",
@@ -38,6 +41,8 @@ __all__ = [
     "MODELS",
     "Ensemble", "run_ensemble",
     "FrameStats", "TruncationModel", "frame_stats",
-    "SCHEMES", "msd_and_weights",
-    "SchemeResult", "calibrate", "evaluate", "sweep_stats",
+    "SCHEMES", "msd_and_weights", "corrected_variance",
+    "SchemeResult", "calibrate", "calibrate_d_free", "evaluate", "sweep_stats",
+    "FrameDiagnostic", "per_frame_diagnostic",
+    "CalibrationGrid", "calibrate_2d",
 ]
