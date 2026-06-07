@@ -96,11 +96,11 @@ working; re-run when calibration or validation logic changes.
 explored avenues that did not pan out. They run, but are not part of
 the current canonical pipeline:
 
-- **`legacy/validate_d_free.py`** — Validation of the *experimental 2-D*
-  `var_bias(CNR, σ²)` calibration (`weighting_wall.calibration.calibrate_2d`).
-  The 2-D calibration was not competitive at deep CNR; we use the 1-D
-  `D=0` calibration (`calibrate_d_free`) instead. Kept as documentation
-  of the failure.
+- **`legacy/validate_d_free.py`** — Validation of the *experimental joint*
+  `var_bias(CNR, σ²)` calibration
+  (`weighting_wall.calibration.calibrate_cnr_sigma2`). The joint calibration
+  was not competitive at deep CNR; we use the single-σ_0 `D=0` calibration
+  (`calibrate_d_free`) instead. Kept as documentation of the failure.
 - **`legacy/diagnose_calibration.py`** — One-off comparison of 1-D
   D-aware vs 2-D D-free calibration values at matched (CNR, σ²) points.
   Output of the same investigation.

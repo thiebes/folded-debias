@@ -25,11 +25,15 @@ calibration see ``scripts/validate_d_zero.py``.
 """
 from __future__ import annotations
 
+import os
+import time
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 
-from .models import GaussianModel
+from .models import MODELS, GaussianModel
 from .simulate import Experiment
 
 
@@ -37,13 +41,18 @@ from .simulate import Experiment
 class CalibrationGrid:
     """A 2-D lookup of ``var_bias`` and ``rel_variance`` over (CNR, variance).
 
-    Built by :func:`calibrate_2d`. ``var_bias[i, j]`` is the empirical
+    Built by :func:`calibrate_cnr_sigma2`. ``var_bias[i, j]`` is the empirical
     ``E[sigma_hat^2] - sigma^2_true`` from ``n_runs`` fits at
     ``cnr_grid[i]`` and ``variance_grid[j]``. ``rel_variance[i, j]`` is the
     sample variance of those fits -- the per-frame ``Var(sigma_hat^2)``.
 
     The grids are 1-D and ascending; bilinear interpolation between cells is
     handled by :class:`~weighting_wall.truncation.TruncationModel`.
+
+    Also carries the calibration's pixel grid (``pixel_x``) so saved
+    calibrations can be reloaded without re-deriving the geometry the lookup
+    is conditional on. Applications must match this pixel grid (in absolute
+    units) for the lookup to apply.
     """
 
     cnr_grid: np.ndarray         # (n_cnr,), ascending
@@ -52,6 +61,39 @@ class CalibrationGrid:
     rel_variance: np.ndarray     # (n_cnr, n_var)
     n_runs: int
     model_name: str
+    pixel_x: np.ndarray | None = None    # the calibration's spatial axis
+    amplitude: float = 1.0
+
+    def save(self, path: str | os.PathLike) -> None:
+        """Save the calibration to a single ``.npz`` archive."""
+        np.savez_compressed(
+            str(path),
+            cnr_grid=self.cnr_grid,
+            variance_grid=self.variance_grid,
+            var_bias=self.var_bias,
+            rel_variance=self.rel_variance,
+            pixel_x=(np.asarray(self.pixel_x, float)
+                     if self.pixel_x is not None else np.array([])),
+            n_runs=np.array([self.n_runs]),
+            model_name=np.array([self.model_name]),
+            amplitude=np.array([self.amplitude]),
+        )
+
+    @classmethod
+    def load(cls, path: str | os.PathLike) -> "CalibrationGrid":
+        """Load a calibration previously saved with :meth:`save`."""
+        z = np.load(str(path))
+        px = z["pixel_x"]
+        return cls(
+            cnr_grid=z["cnr_grid"],
+            variance_grid=z["variance_grid"],
+            var_bias=z["var_bias"],
+            rel_variance=z["rel_variance"],
+            n_runs=int(z["n_runs"][0]),
+            model_name=str(z["model_name"][0]),
+            pixel_x=px if px.size > 0 else None,
+            amplitude=float(z["amplitude"][0]),
+        )
 
 
 def _single_frame_profile(model, pixel_x: np.ndarray, variance: float,
@@ -75,80 +117,187 @@ def _single_frame_profile(model, pixel_x: np.ndarray, variance: float,
     return model.noise_free_series(exp)[0]
 
 
-def calibrate_2d(model=None, *, pixel_x: np.ndarray | None = None,
-                 variance_grid: np.ndarray | None = None,
-                 cnr_grid: np.ndarray | None = None,
-                 amplitude: float = 1.0, n_runs: int = 300,
-                 seed: int = 0,
-                 verbose: bool = False) -> CalibrationGrid:
-    """Build the 2-D (CNR, variance) calibration of the fit bias.
+def _cell_worker(args):
+    """Top-level worker (picklable) for a single (CNR, variance) cell.
+
+    The bias estimate filters out broken-fit outliers (sigma_hat^2 above
+    ``filter_threshold``) before computing the mean. The rel_variance
+    estimate is computed over ALL finite fits -- broken cells should report
+    high rel_variance so the downstream slope fit can downweight frames
+    that land there.
+    """
+    (i, j, cnr, variance, pixel_x, amplitude, n_runs, seed,
+     model_name, model_kwargs, filter_threshold) = args
+    model = MODELS[model_name](**(model_kwargs or {}))
+    clean = _single_frame_profile(model, pixel_x, variance, amplitude)
+    rng = np.random.default_rng(seed)
+    noise_sigma = float(amplitude) / float(cnr)
+    fits = np.empty(n_runs)
+    for r in range(n_runs):
+        noise = rng.normal(0.0, noise_sigma, size=clean.shape)
+        ff = model.fit_variance(pixel_x, clean + noise)
+        fits[r] = ff.variance
+    good = np.isfinite(fits)
+    if good.sum() > 1:
+        # rel_variance uses ALL finite fits (broken fits should drive this up).
+        rv = float(np.var(fits[good], ddof=1))
+        # var_bias filters out broken fits (sigma_hat^2 above threshold).
+        keep = good & (fits < filter_threshold)
+        if keep.sum() > 1:
+            vb = float(fits[keep].mean() - variance)
+        else:
+            vb = float("nan")
+    else:
+        vb = float("nan")
+        rv = float("nan")
+    return i, j, vb, rv
+
+
+def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
+                         variance_grid: np.ndarray | None = None,
+                         sigma_grid: np.ndarray | None = None,
+                         cnr_grid: np.ndarray | None = None,
+                         amplitude: float = 1.0, n_runs: int = 300,
+                         seed: int = 0,
+                         n_workers: int | None = None,
+                         model_kwargs: dict | None = None,
+                         filter_threshold: float | None = None,
+                         verbose: bool = False) -> CalibrationGrid:
+    """Build the joint (CNR, sigma^2) calibration of the fit bias.
+
+    The lookup has two scalar parameter axes -- per-frame CNR and the true
+    fitted variance sigma^2 -- producing a surface ``bias(CNR, sigma^2)``.
+    The "2D" refers to those two parameter axes (not anything spatial or
+    temporal); the calibration's Monte Carlo is static, with the data the
+    lookup will be applied to remaining 1-D spatial profiles measured over
+    time.
+
+    Cells are evaluated in parallel via :class:`ProcessPoolExecutor`. Each
+    cell's RNG is seeded from a :class:`numpy.random.SeedSequence` spawn so
+    the calibration is reproducible irrespective of completion order.
 
     Parameters
     ----------
-    model : profile model (see :mod:`weighting_wall.models`). Defaults to
-        :class:`~weighting_wall.models.GaussianModel`.
+    model : profile model instance (see :mod:`weighting_wall.models`).
+        Defaults to :class:`~weighting_wall.models.GaussianModel`. The
+        model's name is recorded; its class and ``model_kwargs`` are used to
+        reconstruct the model inside worker processes.
     pixel_x : the spatial axis on which the fit will run. Must match the
-        experimental grid for the calibration to apply. Defaults to the
-        :class:`Experiment` standard grid.
-    variance_grid : the true-variance values to span. Defaults to a generous
-        range from ``0.6`` to ``3.5`` in units of ``sigma_0^2``.
-    cnr_grid : the per-frame CNR values to span. Defaults to a log-spaced grid
-        from ``0.5`` to ``120``.
-    amplitude : the noise-free peak amplitude used in the calibration. Only its
-        ratio to ``noise_sigma`` (= ``CNR``) affects the fit bias, so the choice
-        is conventional; left at ``1.0`` to match the standard experiment.
+        application's pixel grid for the calibration to apply. Defaults to
+        the standard :class:`Experiment` grid.
+    variance_grid : the true sigma^2 values to span. Mutually exclusive with
+        ``sigma_grid``. Defaults to ``np.linspace(0.6, 3.5, 12)`` (in units
+        consistent with ``pixel_x``).
+    sigma_grid : alternative way to specify the variance axis -- linear-in-
+        sigma spacing, which gives denser sampling at small sigma^2 (where
+        the bias gradient is largest near the wall at zero). Internally
+        converted to ``variance_grid = sigma_grid ** 2``. Pass either this
+        or ``variance_grid``, not both.
+    cnr_grid : the per-frame CNR values to span. Defaults to log-spaced
+        ``np.logspace(np.log10(0.15), np.log10(120), 22)``.
+    amplitude : the noise-free peak amplitude. Only its ratio to noise (=
+        CNR) affects the bias, so the value is conventional; left at 1.0.
     n_runs : Monte-Carlo runs per grid cell.
     seed : root random seed; each cell gets an independent stream.
-    verbose : print per-cell progress.
+    n_workers : number of worker processes. Defaults to ``os.cpu_count() - 1``.
+        Set to 1 to run serially.
+    model_kwargs : kwargs to reconstruct the model in worker processes (e.g.
+        ``{"gamma": 0.01}`` for :class:`VoigtModel`). The model instance's
+        own attributes are not pickled across processes; we re-instantiate
+        from the name + these kwargs.
+    filter_threshold : per-cell, when computing the mean bias, discard any
+        individual fit whose sigma_hat^2 exceeds this threshold. These are
+        broken fits pegged at the fit's upper bound; their contribution to
+        the mean pollutes the bias estimate at low-CNR cells. Defaults to
+        ``5 * variance_grid.max()``, which catches anything near var_max
+        without touching legitimate fits inside the calibration's grid.
+        rel_variance is computed without the filter so broken cells
+        correctly report high spread (downstream slope fit then
+        downweights frames at those cells).
+    verbose : print per-completion progress every ~10% of cells.
 
     Returns
     -------
     :class:`CalibrationGrid`
-        The 2-D ``var_bias`` and ``rel_variance`` lookups.
+        The 2-D ``var_bias`` and ``rel_variance`` lookups plus the
+        calibration's geometry (``pixel_x``, ``amplitude``) and metadata.
     """
     if model is None:
         model = GaussianModel()
     if pixel_x is None:
         pixel_x = Experiment().x
-    if variance_grid is None:
+    if variance_grid is not None and sigma_grid is not None:
+        raise ValueError("pass either variance_grid or sigma_grid, not both")
+    if sigma_grid is not None:
+        variance_grid = np.asarray(sigma_grid, float) ** 2
+    elif variance_grid is None:
         variance_grid = np.linspace(0.6, 3.5, 12)
     if cnr_grid is None:
-        # Span deep noise: per-frame CNR drops below 1 in the low-CNR_0 regime
-        # (CNR_0 = 5, t_max = 3*tau -> per-frame CNR -> ~0.25 by the last frame).
-        # The grid extends down to 0.15 so those frames are not clipped.
         cnr_grid = np.logspace(np.log10(0.15), np.log10(120.0), 22)
+    if n_workers is None:
+        n_workers = max(1, (os.cpu_count() or 4) - 1)
 
     pixel_x = np.asarray(pixel_x, float)
     cnr_grid = np.asarray(cnr_grid, float)
     variance_grid = np.asarray(variance_grid, float)
+
+    if filter_threshold is None:
+        filter_threshold = 5.0 * float(variance_grid.max())
 
     n_cnr = cnr_grid.size
     n_var = variance_grid.size
     var_bias = np.full((n_cnr, n_var), np.nan)
     rel_var = np.full((n_cnr, n_var), np.nan)
 
-    # Independent RNG stream per cell, so the calibration is reproducible
-    # whatever order the loops run in (or if they're later parallelised).
     seed_seq = np.random.SeedSequence(seed)
     child_seeds = seed_seq.spawn(n_cnr * n_var)
 
+    args_list = []
     for i, cnr in enumerate(cnr_grid):
-        if verbose:
-            print(f"  CNR {cnr:7.3f} ({i + 1}/{n_cnr})")
-        noise_sigma = float(amplitude) / float(cnr)
         for j, variance in enumerate(variance_grid):
-            clean = _single_frame_profile(model, pixel_x, variance, amplitude)
-            rng = np.random.default_rng(child_seeds[i * n_var + j])
-            fits = np.empty(n_runs)
-            for r in range(n_runs):
-                noise = rng.normal(0.0, noise_sigma, size=clean.shape)
-                ff = model.fit_variance(pixel_x, clean + noise)
-                fits[r] = ff.variance
-            good = np.isfinite(fits)
-            if good.sum() > 1:
-                var_bias[i, j] = float(fits[good].mean() - variance)
-                rel_var[i, j] = float(np.var(fits[good], ddof=1))
+            args_list.append((
+                i, j, float(cnr), float(variance), pixel_x,
+                float(amplitude), int(n_runs), child_seeds[i * n_var + j],
+                model.name, model_kwargs or {},
+                float(filter_threshold),
+            ))
 
-    return CalibrationGrid(cnr_grid=cnr_grid, variance_grid=variance_grid,
-                           var_bias=var_bias, rel_variance=rel_var,
-                           n_runs=int(n_runs), model_name=model.name)
+    total = len(args_list)
+    milestones = max(1, total // 10)
+    done = 0
+    t0 = time.time()
+
+    if n_workers == 1:
+        for args in args_list:
+            i, j, vb, rv = _cell_worker(args)
+            var_bias[i, j] = vb
+            rel_var[i, j] = rv
+            done += 1
+            if verbose and (done % milestones == 0 or done == total):
+                _progress(done, total, t0)
+    else:
+        with ProcessPoolExecutor(max_workers=n_workers) as ex:
+            futures = [ex.submit(_cell_worker, args) for args in args_list]
+            for fut in as_completed(futures):
+                i, j, vb, rv = fut.result()
+                var_bias[i, j] = vb
+                rel_var[i, j] = rv
+                done += 1
+                if verbose and (done % milestones == 0 or done == total):
+                    _progress(done, total, t0)
+
+    return CalibrationGrid(
+        cnr_grid=cnr_grid, variance_grid=variance_grid,
+        var_bias=var_bias, rel_variance=rel_var,
+        n_runs=int(n_runs), model_name=model.name,
+        pixel_x=pixel_x, amplitude=float(amplitude),
+    )
+
+
+def _progress(done: int, total: int, t0: float) -> None:
+    """Print one progress line: pct, elapsed, ETA."""
+    pct = 100.0 * done / total
+    dt = time.time() - t0
+    eta = dt * (total - done) / max(done, 1)
+    print(f"    [calibrate_cnr_sigma2] {done}/{total} ({pct:3.0f}%)  "
+          f"elapsed {dt:6.0f}s  ETA {eta:6.0f}s", flush=True)

@@ -30,7 +30,8 @@ the ``fft-cnr`` package (see :mod:`weighting_wall.cnr`).
 
 The ``model`` (a :class:`~weighting_wall.truncation.TruncationModel`) can be
 either a legacy 1-D, D-aware calibration or the 2-D, D-free one from
-:func:`~weighting_wall.calibration.calibrate_2d`. With the 2-D calibration the
+:func:`~weighting_wall.calibration.calibrate_cnr_sigma2`. With the joint
+(CNR, sigma^2) calibration the
 per-frame raw fitted variance is also passed into the lookup, so the
 correction is width-aware and carries no reference to D.
 """

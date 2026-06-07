@@ -177,9 +177,9 @@ the residual bias grows (`D ≈ 0.005` has `L_D ≈ 1.5% FWHM`, near the
 information-theoretic floor for *any* unbiased estimator at these CNRs); the
 calibration is not at fault.
 
-An experimental 2-D `var_bias(CNR, σ²)` calibration
-(`weighting_wall.calibration.calibrate_2d`) was prototyped for cases of
-large `σ²` spread (high-`D`, heterogeneous transport). It is not currently
+An experimental joint `var_bias(CNR, σ²)` calibration
+(`weighting_wall.calibration.calibrate_cnr_sigma2`) was prototyped for
+cases of large `σ²` spread (high-`D`, heterogeneous transport). It is not currently
 competitive: the per-cell Monte-Carlo noise at low CNR dominates the lookup,
 and the additional sample budget needed to fix that (≳ 5000 runs/cell plus
 post-hoc smoothing) is not yet justified. See the module docstring for
@@ -248,7 +248,140 @@ experimental constraints prevent that, the late frames must be discarded
 or replaced with denser early-time sampling so the slope fit is
 dominated by frames inside the working regime.
 
-## 10. Open points
+## 10. Robust calibration and multiplicative correction
+
+(In development.) Two failure modes of the basic Section-8 calibration and
+Section-5 subtractive scheme, surfaced once the method was applied beyond
+the headline `L_D / FWHM ≤ 0.20` regime:
+
+1. **Calibration-vs-application width mismatch.** The 1-D D-free
+   calibration measures `s²(CNR)` at `σ²_true = σ_0²` (the calibration
+   condition at `D = 0`). When the application's `σ²(t)` varies
+   substantially across the measurement (e.g., reaction-diffusion data
+   with large variance growth, or any moderate-to-high `D`), the
+   subtracted bias is the wrong absolute value for the data's actual
+   width.
+2. **Heavy-tail contamination of the calibrated mean.** At low CNR, a
+   fraction of fits peg at the fitter's upper bound `var_max ≈ window²`
+   (Section 9's saturation regime). The sample mean of `σ̂²` is dragged
+   upward by this tail; the contribution scales with `var_max`, not with
+   `σ_0²`, and so breaks any clean functional form of the bias.
+
+The two together produce over-correction at moderate-to-low CNR when the
+calibration's `σ_0` does not match the data's `σ²(t)`. Both are addressed
+by replacing the calibration summary statistic with a robust one, and
+applying the correction multiplicatively rather than additively.
+
+### 10.1 Multiplicative form
+
+A CRLB-based scaling argument gives, to leading order at fixed pixel-grid
+geometry,
+
+    bias(CNR, σ²_true) = σ²_true × g(CNR),
+
+with `g` dimensionless. Linearity in `σ²_true` means
+`E[σ̂²] = σ²_true × (1 + g(CNR))`, which inverts in closed form:
+
+    σ²_true ≈ σ̂² / (1 + g(CNR)),     g(CNR) = bias_cal(CNR) / σ_0².
+
+This is the **multiplicative correction**. It collapses to the
+subtractive form `σ̂² − σ_0² × g(CNR)` when `σ²_true ≈ σ_0²` (the
+calibration's working condition), so headline-regime results carry over
+unchanged. It scales correctly when `σ²_true ≠ σ_0²`, and it stays
+positive — `σ̂² / (1 + g) > 0` for any `g ≥ 0` — which removes the
+subtractive form's negative-variance pathology below the per-profile
+floor.
+
+The linearity assumption is exact in the asymptotic CRLB regime; it
+weakens once a non-negligible fraction of fits enters the broken-fit
+saturation regime (Section 9's analytical-floor discussion), and there is
+a residual `σ/dx` dependence at finer pixel resolutions that we do not
+yet capture in the 1-D lookup. Both effects are second-order in the
+headline regime.
+
+### 10.2 Robust calibration statistics
+
+For each (per-frame CNR) calibration cell with `N` independent noisy
+realizations producing fitted variances `σ̂²_1, …, σ̂²_N`, replace
+sample mean and sample std with:
+
+    m   = median(σ̂²_1, …, σ̂²_N),                       (location)
+    MAD = median(|σ̂²_1 − m|, …, |σ̂²_N − m|).            (scale)
+
+The MAD is the median absolute deviation from the median — a single
+median operation, no centring around the mean. It ignores the upper tail
+that the broken-fit pile-up contributes.
+
+Under the assumption that the **bulk** of the σ̂² distribution
+(excluding the broken-fit tail) is approximately Normal — which holds in
+the analytical CRLB regime that the actual bias inhabits — two standard
+statistical conversions apply:
+
+    σ_bulk ≈ MAD / Φ⁻¹(0.75) ≈ MAD × 1.4826,             (1)
+
+    SE_median ≈ √(π / 2) × σ_bulk / √N ≈ 1.253 × σ_bulk / √N.   (2)
+
+The factor `Φ⁻¹(0.75) ≈ 0.6745` in (1) is the 75th-percentile point of
+the standard Normal: for `X ~ N(0, σ²)`, `P(|X| ≤ 0.6745 σ) = 0.5`, so
+the median of `|X|` is `0.6745 σ`, giving the inversion above. The
+factor `√(π/2) ≈ 1.2533` in (2) is the asymptotic ratio of the
+sample-median standard error to the sample-mean standard error for a
+Normal sample (sample mean has variance `σ²/N`; sample median has
+asymptotic variance `π σ² / (2N)`).
+
+Combining,
+
+    SE_median ≈ 1.4826 × 1.253 × MAD / √N ≈ 1.858 × MAD / √N.   (3)
+
+(3) gives the standard error of the calibrated median bias from each
+cell's MAD and its sample count. Unlike the sample-std-based SE, it is
+not inflated by the broken-fit tail — `var_max`-pegged outliers do not
+move the MAD because they are far from the median; the median itself
+sits in the bulk.
+
+### 10.3 Significance gate
+
+A calibrated `median_bias(CNR)` is meaningful only where it stands above
+its own MC noise. Define a two-sigma gate:
+
+    apply correction iff   |median_bias(CNR)| > 2 × SE_median(CNR).
+
+Cells that fail the gate contribute `g(CNR) = 0` to the lookup. The
+correction at any per-frame CNR interpolating into a failed cell passes
+the data through unchanged. This prevents the multiplicative correction
+from amplifying calibration noise at moderate-to-high CNR where the true
+bias is essentially zero but our finite-`N` median bias estimate
+fluctuates around it.
+
+### 10.4 Algorithm summary
+
+Calibration, once per profile model and geometry:
+
+1. Run a `D = 0` MC sweep across a CNR_0 grid with `N` realizations per
+   cell. Each cell yields `N` independent samples of σ̂² at a per-frame
+   CNR.
+2. For each cell, compute `m`, `MAD`, and `SE_median` from (3); record
+   `(CNR, median_bias = m − σ_0², SE_median, rel_variance)` where
+   `rel_variance = Var(MSD)` is the empirical variance of the per-frame
+   MSD used for inverse-variance weighting.
+3. Concatenate all cells into a 1-D lookup sorted by per-frame CNR.
+
+Application, per noisy realization:
+
+1. For each frame, interpolate `(median_bias, SE_median)` at the frame's
+   CNR.
+2. Apply the gate (Section 10.3). Set `g = median_bias / σ_0²` where the
+   gate passes, otherwise `g = 0`.
+3. Replace each σ̂² with σ̂² / (1 + g) (Section 10.1).
+4. Form MSD = corrected σ̂²(t) − corrected σ̂²(0) and fit with
+   inverse-variance weighting from the calibration's `rel_variance`.
+
+Implemented in `scripts/dense_calibration_and_test_robust.py` (headline-
+regime validation, three profile shapes) and
+`scripts/marc_mn_trapping_plan_a.py` (Marc reaction-diffusion
+application).
+
+## 11. Open points
 
 - Subdiffusive transport (`MSD ∝ t^α`, α < 1) — confirm the correction
   de-biases α as well as D.

@@ -31,7 +31,7 @@ from .weights import SCHEMES, corrected_variance, msd_and_weights
 from .validate import (FrameDiagnostic, SchemeResult, calibrate,
                        calibrate_d_free, evaluate, per_frame_diagnostic,
                        sweep_stats)
-from .calibration import CalibrationGrid, calibrate_2d
+from .calibration import CalibrationGrid, calibrate_cnr_sigma2
 
 __version__ = "0.3.0"
 
@@ -44,5 +44,5 @@ __all__ = [
     "SCHEMES", "msd_and_weights", "corrected_variance",
     "SchemeResult", "calibrate", "calibrate_d_free", "evaluate", "sweep_stats",
     "FrameDiagnostic", "per_frame_diagnostic",
-    "CalibrationGrid", "calibrate_2d",
+    "CalibrationGrid", "calibrate_cnr_sigma2",
 ]
