@@ -27,3 +27,6 @@ Thumbs.db
 .vscode/
 .idea/
 
+# Collaborator data (Marc's pshare datasets) -- never committed; read locally
+# or from the P: pshare.
+mc_experiments/**/data/
