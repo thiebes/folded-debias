@@ -2,19 +2,25 @@
 
 Marc supplied noiseless diffusion maps and ground-truth variance curves for four
 Mn-doping cases (undoped, 0.51%, 0.81%, 4.04% Mn) from the Magdaleno et al. 2025
-reaction-diffusion model. This script runs the per-frame correction directly on
-his published maps -- no regeneration through our port -- which is the strongest
+reaction-diffusion model. This runs the per-frame correction directly on his
+published maps -- no regeneration through our port -- the strongest
 realistic-transport test of the method: the transport is genuinely non-Fickian
-(two trapping channels), and the ground truth is the model author's own
+(two trapping channels) and the ground truth is the model author's own
 sigma^2(t).
 
-For each case and each CNR_0 we add white noise to the noiseless map, fit each
-frame's Gaussian variance, apply the subtractive folded-normal correction through
-the joint (CNR, sigma^2) calibration (``calibration_marc_gaussian_filtered.npz``,
-which carries the fixed-point inversion needed for the large variance spread of
-the undoped case), and average over seeds. We then compare the recovered variance
-to the ground truth, both over all frames and over the working regime
-(per-frame CNR >= 1, where the per-profile floor places the correction).
+Three fit models are compared, each with its own joint (CNR, sigma^2)
+calibration on Marc's geometry: Gaussian, Voigt (fixed Lorentzian gamma), and
+generalized-Gaussian. For each, two quantities are separated:
+
+  * **Correction residual** -- |corrected fit - NOISELESS fit| in the working
+    regime (per-frame CNR >= 1). The noiseless fit is the bias-free target for
+    *that estimator* (no noise, no fold), so this isolates the truncation
+    correction from everything else.
+  * **Shape gap** -- |noiseless fit - true 2nd moment|. A single peaked fit of a
+    multi-population (free + trapped) profile does not equal its second moment;
+    this gap is the estimator's shape mismatch, which the truncation correction
+    neither causes nor removes. Comparing the gap across estimators shows which
+    one best captures the true transport width.
 
 Run from the repository root::
 
@@ -40,6 +46,8 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from weighting_wall import CalibrationGrid  # noqa: E402
 from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
+from weighting_wall.models import (GeneralizedGaussianModel,  # noqa: E402
+                                   VoigtModel)
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
@@ -47,28 +55,41 @@ from mc_experiments.marc_mn_trapping.marc_data import load_all  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
-CAL_PATH = OUTPUT / "calibration_marc_gaussian_filtered.npz"
 
 DICE_BLUE = "#003f7f"
 DICE_GOLD = "#f7941e"
+DICE_GREEN = "#0cce6b"
 
+VOIGT_GAMMA = 0.01        # must match the Voigt calibration build
 CNR_GRID = (10.0, 20.0, 50.0, 100.0, 200.0)
-FIG_CNR0 = 100.0          # CNR_0 shown in the per-case trajectory figure
 N_SEEDS = 15
 FLOOR_CNR = 1.0           # per-frame CNR above which the correction is reliable
 
+# (key, label, colour, calibration file, fit function) -- one per estimator.
+ESTIMATORS = [
+    ("gaussian", "Gaussian", DICE_BLUE,
+     "calibration_marc_gaussian_filtered.npz", fit_gaussian),
+    ("voigt", "Voigt", DICE_GOLD,
+     "calibration_marc_voigt_filtered.npz",
+     VoigtModel(gamma=VOIGT_GAMMA).fit_variance),
+    ("gengauss", "generalized-Gaussian", DICE_GREEN,
+     "calibration_marc_gengauss_filtered.npz",
+     GeneralizedGaussianModel().fit_variance),
+]
 
-def fit_each_row(x: np.ndarray, profiles: np.ndarray) -> np.ndarray:
-    """Gaussian variance fit of every row; NaN where the fit fails."""
+
+def fit_each_row(x: np.ndarray, profiles: np.ndarray, fit_fn) -> np.ndarray:
+    """Variance fit of every row with ``fit_fn``; NaN where the fit fails."""
     out = np.full(profiles.shape[0], np.nan)
     for i in range(profiles.shape[0]):
-        r = fit_gaussian(x, profiles[i])
+        r = fit_fn(x, profiles[i])
         if getattr(r, "ok", True) and np.isfinite(r.variance):
             out[i] = r.variance
     return out
 
 
-def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
+def validation_pass(case, trunc: TruncationModel, fit_fn, cnr0: float,
+                    n_seeds: int):
     """Per-frame raw and folded-normal-corrected variance, averaged over seeds."""
     peak0 = float(case.diffmap[0].max())
     noise_sigma = peak0 / cnr0
@@ -80,14 +101,13 @@ def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
     for s in range(n_seeds):
         rng = np.random.default_rng(int(cnr0) * 1000 + s)
         noisy = case.diffmap + rng.normal(0.0, noise_sigma, case.diffmap.shape)
-        var_hat = fit_each_row(case.x, noisy)
+        var_hat = fit_each_row(case.x, noisy, fit_fn)
         raw[s] = var_hat
         cor[s] = corrected_variance("folded_normal", var_hat, cnr_frame, trunc)
     return (np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnr_frame)
 
 
-def _residual(recovered: np.ndarray, truth: np.ndarray,
-              mask: np.ndarray | None = None) -> float:
+def _residual(recovered, truth, mask=None) -> float:
     d = np.abs(recovered - truth)
     if mask is not None:
         d = d[mask]
@@ -95,96 +115,101 @@ def _residual(recovered: np.ndarray, truth: np.ndarray,
 
 
 def main() -> None:
-    if not CAL_PATH.exists():
-        print(f"Calibration not found: {CAL_PATH}")
-        print("Build it with scripts/build_calibration.py (tag "
-              "marc_gaussian_filtered) first.")
-        return
-
-    cal = CalibrationGrid.load(CAL_PATH)
-    trunc = TruncationModel.from_calibration(cal)
     cases = load_all()
+    lines = [
+        "=" * 72,
+        "Marc diffusion-map validation -- folded-normal across three estimators",
+        "(joint 2-D calibration; subtractive folded_normal + fixed-point)",
+        "=" * 72,
+        f"n_seeds per CNR_0: {N_SEEDS};  reliable regime: per-frame "
+        f"CNR >= {FLOOR_CNR}",
+        "Correction residual = |corrected - noiseless fit| (working regime).",
+        "Shape gap = mean|noiseless fit - true 2nd moment| over all frames.",
+        "",
+    ]
 
-    lines = []
-    lines.append("=" * 70)
-    lines.append("Marc diffusion-map validation -- folded-normal correction")
-    lines.append("(joint 2-D calibration; subtractive folded_normal + "
-                 "fixed-point)")
-    lines.append("=" * 70)
-    lines.append(f"calibration: {CAL_PATH.name}")
-    lines.append(f"n_seeds per CNR_0: {N_SEEDS};  reliable regime: "
-                 f"per-frame CNR >= {FLOOR_CNR}")
-    lines.append("")
+    # noiseless_fits[est_key][case.name] = noiseless-fit trajectory
+    noiseless_fits: dict = {}
+    shape_gaps: dict = {}          # (est_key, case.name) -> scalar gap
 
-    lines.append("Reference = the NOISELESS Gaussian fit (isolates the "
-                 "truncation correction).")
-    lines.append("Shape gap = |noiseless fit - true 2nd moment|: the "
-                 "Gaussian-fit-vs-moment mismatch the correction cannot touch.")
-    lines.append("")
+    for key, label, _color, cal_file, fit_fn in ESTIMATORS:
+        cal_path = OUTPUT / cal_file
+        if not cal_path.exists():
+            lines.append(f"### {label}: calibration {cal_file} not found "
+                         f"-- skipped\n")
+            continue
+        trunc = TruncationModel.from_calibration(CalibrationGrid.load(cal_path))
+        noiseless_fits[key] = {}
+        lines.append("#" * 72)
+        lines.append(f"### Estimator: {label}   (calibration: {cal_file})")
+        lines.append("#" * 72)
+        for case in cases:
+            nf = fit_each_row(case.x, case.diffmap, fit_fn)   # noiseless fit
+            noiseless_fits[key][case.name] = nf
+            gap = _residual(nf, case.var_true)
+            shape_gaps[(key, case.name)] = gap
+            lines.append(f"-- {case.name}: noiseless fit "
+                         f"[{np.nanmin(nf):.4g}, {np.nanmax(nf):.4g}] um^2, "
+                         f"shape gap {gap:.4g} um^2 "
+                         f"(true 2nd-moment max {case.var_true.max():.4g})")
+            lines.append("   CNR_0 | min CNR | frames>=1 | "
+                         "|resid vs noiseless fit| (raw / corrected)")
+            for cnr0 in CNR_GRID:
+                raw, cor, cnr_frame = validation_pass(
+                    case, trunc, fit_fn, cnr0, N_SEEDS)
+                work = cnr_frame >= FLOOR_CNR
+                n_work = int(work.sum())
+                r_raw = _residual(raw, nf, work)
+                r_cor = _residual(cor, nf, work)
+                lines.append(f"   {cnr0:5.0f} | {cnr_frame.min():7.2f} | "
+                             f"{n_work:4d}/{cnr_frame.size} | "
+                             f"{r_raw:8.4g}  /  {r_cor:8.4g}")
+            lines.append("")
 
-    fig_rows = {}     # case.name -> (cnr_frame, raw, cor, nf) at FIG_CNR0
-    for case in cases:
-        # Noise-free Gaussian fit per frame: the reference the truncation
-        # correction must recover. With no noise there is no fold, so this is
-        # the bias-free target for the *estimator we actually use* -- distinct
-        # from the true second moment, which a Gaussian fit of a non-Gaussian
-        # profile does not equal (the "shape gap" below).
-        nf = fit_each_row(case.x, case.diffmap)
-        lines.append("-" * 70)
-        lines.append(f"=== {case.name} ===   noiseless fit: "
-                     f"[{np.nanmin(nf):.4g}, {np.nanmax(nf):.4g}] um^2   "
-                     f"(true 2nd-moment max {case.var_true.max():.4g})")
-        lines.append("  CNR_0 | min CNR | frames CNR>=1 | mean|resid vs "
-                     "noiseless fit| (raw / corrected) | shape gap")
-        for cnr0 in CNR_GRID:
-            raw, cor, cnr_frame = validation_pass(case, trunc, cnr0, N_SEEDS)
-            work = cnr_frame >= FLOOR_CNR
-            n_work = int(work.sum())
-            r_raw = _residual(raw, nf, work)
-            r_cor = _residual(cor, nf, work)
-            shape_gap = _residual(nf, case.var_true, work)
-            lines.append(f"  {cnr0:5.0f} | {cnr_frame.min():7.2f} | "
-                         f"{n_work:4d}/{cnr_frame.size} | "
-                         f"{r_raw:8.4g}  /  {r_cor:8.4g} | {shape_gap:8.4g}")
-            if cnr0 == FIG_CNR0:
-                fig_rows[case.name] = (cnr_frame, raw, cor, nf)
+    # --- Shape-gap comparison table (the headline) ------------------------
+    present = [e for e in ESTIMATORS if e[0] in noiseless_fits]
+    if present:
+        lines.append("=" * 72)
+        lines.append("SHAPE GAP (um^2) -- mean|noiseless fit - true 2nd moment|,"
+                     " per estimator")
+        lines.append("=" * 72)
+        header = "  case            " + "".join(f"{e[1][:12]:>14}" for e in present)
+        lines.append(header)
+        for case in cases:
+            row = f"  {case.name:14s}" + "".join(
+                f"{shape_gaps[(e[0], case.name)]:14.4g}" for e in present)
+            lines.append(row)
         lines.append("")
 
     report = "\n".join(lines)
     print(report)
     (OUTPUT / "marc_diffmap_validation.txt").write_text(report)
 
-    # --- Figure: recovered vs true variance per case at FIG_CNR0 ----------
-    fig, axes = plt.subplots(2, 2, figsize=(8.2, 6.0), sharex=True)
-    for ax, case in zip(axes.ravel(), cases):
-        cnr_frame, raw, cor, nf = fig_rows[case.name]
-        work = cnr_frame >= FLOOR_CNR
-        ax.plot(case.t, nf, color="k", lw=1.8, label="noiseless fit (ref)")
-        ax.plot(case.t, case.var_true, color="#888888", lw=1.0, ls=":",
-                label="true 2nd moment")
-        ax.plot(case.t, raw, ".", color=DICE_GOLD, ms=3, alpha=0.7,
-                label="raw fit")
-        ax.plot(case.t, cor, ".", color=DICE_BLUE, ms=3, label="corrected")
-        # Mark where per-frame CNR drops below the working floor.
-        if work.any() and not work.all():
-            t_floor = case.t[work][-1]
-            ax.axvline(t_floor, color="#bbbbbb", ls="--", lw=1.0)
-        ax.set_title(f"{case.name}", fontsize=10)
-        ax.tick_params(direction="in", which="both", top=True, right=True)
-        ax.set_ylim(0, max(case.var_true.max() * 1.5, 0.05))
-        ax.grid(True, alpha=0.2)
-    axes[0, 0].legend(fontsize=8, loc="upper left")
-    for ax in axes[1, :]:
-        ax.set_xlabel("time  (ns)")
-    for ax in axes[:, 0]:
-        ax.set_ylabel(r"variance  $\sigma^2(t)$  (um$^2$)")
-    fig.suptitle(f"Correction on Marc's diffusion maps  (CNR$_0$ = "
-                 f"{FIG_CNR0:.0f})", fontsize=12)
-    fig.tight_layout()
-    path = OUTPUT / "marc_diffmap_validation.png"
-    fig.savefig(path, dpi=300)
-    plt.close(fig)
-    print(f"\nSaved figure: {path.name}")
+    # --- Figure: shape gap per estimator across the doping series ---------
+    if present:
+        fig, axes = plt.subplots(2, 2, figsize=(8.4, 6.2), sharex=True)
+        for ax, case in zip(axes.ravel(), cases):
+            ax.plot(case.t, case.var_true, color="k", lw=1.6, ls=":",
+                    label="true 2nd moment")
+            for key, label, color, _f, _fn in present:
+                ax.plot(case.t, noiseless_fits[key][case.name], color=color,
+                        lw=1.7, label=f"{label} fit")
+            ax.set_title(case.name, fontsize=10)
+            ax.tick_params(direction="in", which="both", top=True, right=True)
+            ax.set_ylim(0, max(case.var_true.max() * 1.2, 0.03))
+            ax.grid(True, alpha=0.2)
+        axes[0, 0].legend(fontsize=7, loc="upper left")
+        for ax in axes[1, :]:
+            ax.set_xlabel("time  (ns)")
+        for ax in axes[:, 0]:
+            ax.set_ylabel(r"variance  $\sigma^2(t)$  (um$^2$)")
+        fig.suptitle("Estimator shape gap on Marc's diffusion maps "
+                     "(noiseless fits vs true 2nd moment)", fontsize=12)
+        fig.tight_layout()
+        path = OUTPUT / "marc_diffmap_validation.png"
+        fig.savefig(path, dpi=300)
+        plt.close(fig)
+        print(f"\nSaved figure: {path.name}")
 
 
 if __name__ == "__main__":
