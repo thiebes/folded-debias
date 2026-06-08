@@ -252,69 +252,81 @@ def correction_residual(cnr: float, sigma: float = 1.0, half_window: float = 6.0
         b = b_gaussian_closed(x, sigma, 1.0, ns, cnr)
     g = b / sigma ** 2
     v_corr = v / (1.0 + g)
-    w_corr = np.sqrt(np.clip(v_corr, 0.0, None))
-    mean_w = float(w_corr.mean())
     mean_v = float(v_corr.mean())
+    # Derived width = width of the corrected MEAN variance (the D-relevant
+    # quantity); the variance form is the binding criterion (operator decision).
+    derived_w = float(np.sqrt(max(mean_v, 0.0)))
     return {
         "cnr": float(ens.cnr_frame[0]), "b": b,
-        "mean_w": mean_w, "w_resid": mean_w - sigma,
         "mean_v": mean_v, "v_resid": mean_v - sigma ** 2,
-        "raw_w": float(np.sqrt(np.clip(v, 0, None)).mean()) - sigma,
-        "raw_v": float(v.mean()) - sigma ** 2,
+        "v_resid_pct": 100.0 * (mean_v - sigma ** 2) / sigma ** 2,
+        "derived_w": derived_w, "dw_resid_pct": 100.0 * (derived_w - sigma) / sigma,
+        "raw_v_pct": 100.0 * (float(v.mean()) - sigma ** 2) / sigma ** 2,
     }
 
 
 def stop_condition_section(n_runs: int = 40000) -> None:
     print("=" * 78)
-    print("Stop-condition test: corrected WIDTH within 1% at CNR = 1.3")
-    print("Multiplicative correction; width residual is the criterion")
+    print("Stop-condition test: |mean(var_corr) - var_true| <= 2% (variance form)")
+    print("derived width = sqrt(mean v_corr); reported as a diagnostic")
     print("=" * 78)
-    print(f"\n{'CNR':>6} {'corr':>8} {'raw_w_res':>10} {'w_resid':>10} "
-          f"{'w_res/sig%':>10} {'v_resid':>10} {'v_res%':>8}")
+    print(f"\n{'CNR':>6} {'corr':>8} {'raw_v%':>8} {'v_resid%':>9} "
+          f"{'dwidth%':>8} {'PASS(2%)':>9}")
     for cnr in (8.0, 3.0, 2.0, 1.3):
         for which in ("box", "twoterm"):
             r = correction_residual(cnr, which=which, n_runs=n_runs)
-            print(f"{r['cnr']:>6.2f} {which:>8} {r['raw_w']:>10.4f} "
-                  f"{r['w_resid']:>10.4f} {100*r['w_resid']:>10.3f} "
-                  f"{r['v_resid']:>10.4f} {100*r['v_resid']:>8.2f}")
+            ok = "yes" if abs(r["v_resid_pct"]) <= 2.0 else "NO"
+            print(f"{r['cnr']:>6.2f} {which:>8} {r['raw_v_pct']:>8.2f} "
+                  f"{r['v_resid_pct']:>9.2f} {r['dw_resid_pct']:>8.3f} {ok:>9}")
 
 
-def gaussian_geometry_sweep(n_runs: int = 20000) -> None:
-    """Check the dx, W, sigma scaling of the Box coefficient at CNR = 8."""
+def _geom_cell(sigma, W, N, n_runs):
+    """Per geometry cell: Box-scaling check at CNR 8 and C4 extraction at 1.3.
+
+    Returns (dx, dx*sigma, MC/Box at CNR 8, C4 = (b_MC - b_Box)*CNR^4 at 1.3).
+    C4 is the empirical coefficient of the next-order 1/CNR^4 term; its scaling
+    against dx*sigma and W is what we want to read off.
+    """
+    x = np.linspace(-W, W, N)
+    dx = float(x[1] - x[0])
+    exp = Experiment(sigma0=sigma, D=0.0, half_window=W, n_pixels=N)
+    # high-CNR: Box scaling
+    _, bm8, _, _ = mc_bias("gaussian", 8.0, sigma, W, N, n_runs=n_runs)
+    box8 = box_bias_gaussian(x, sigma, 1.0, noise_sigma_for_cnr0(exp, 8.0))
+    # low-CNR: C4
+    _, bm13, _, _ = mc_bias("gaussian", 1.3, sigma, W, N, n_runs=n_runs)
+    box13 = box_bias_gaussian(x, sigma, 1.0, noise_sigma_for_cnr0(exp, 1.3))
+    c4 = (bm13 - box13) * 1.3 ** 4
+    return dx, dx * sigma, bm8 / box8, c4
+
+
+def gaussian_geometry_sweep(n_runs: int = 15000) -> None:
+    """Pin the Box scaling (CNR 8) and the C4 coefficient (CNR 1.3) vs geometry."""
     print("\n" + "=" * 78)
-    print("Gaussian Box bias: geometry scaling at CNR = 8 (b vs b_Box)")
+    print("Gaussian geometry sweep: Box scaling (CNR8) + C4 = excess*CNR^4 (CNR1.3)")
+    print("C4 in sigma0^2 units; watch whether C4 tracks dx*sigma, (dx*sigma)^2, or W")
     print("=" * 78)
-    cnr = 8.0
     print("\n-- pixel size dx (vary N at W = 6, sigma = 1) --")
-    print(f"{'N':>6} {'dx':>8} {'b_MC':>11} {'se':>9} {'b_Box':>11} {'MC/Box':>8}")
+    print(f"{'N':>6} {'dx':>8} {'dx*sig':>8} {'MC/Box@8':>9} {'C4@1.3':>9} "
+          f"{'C4/(dxsig)':>10}")
     for N in (121, 161, 241, 321, 481):
-        x = np.linspace(-6.0, 6.0, N)
-        _, bm, _, se = mc_bias("gaussian", cnr, 1.0, 6.0, N, n_runs=n_runs)
-        ns = noise_sigma_for_cnr0(
-            Experiment(sigma0=1.0, D=0.0, half_window=6.0, n_pixels=N), cnr)
-        bbox = box_bias_gaussian(x, 1.0, 1.0, ns)
-        print(f"{N:>6} {x[1]-x[0]:>8.4f} {bm:>11.3e} {se:>9.2e} {bbox:>11.3e} "
-              f"{bm/bbox:>8.2f}")
+        dx, dxs, ratio, c4 = _geom_cell(1.0, 6.0, N, n_runs)
+        print(f"{N:>6} {dx:>8.4f} {dxs:>8.4f} {ratio:>9.2f} {c4:>9.4f} "
+              f"{c4/dxs:>10.3f}")
     print("\n-- window W (vary half_window at dx ~ 0.05, sigma = 1) --")
-    print(f"{'W':>6} {'N':>6} {'b_MC':>11} {'se':>9} {'b_Box':>11} {'MC/Box':>8}")
+    print(f"{'W':>6} {'N':>6} {'dx':>8} {'MC/Box@8':>9} {'C4@1.3':>9}")
     for W in (3.0, 4.0, 6.0, 8.0, 10.0):
         N = int(round(2 * W / 0.05)) + 1
-        x = np.linspace(-W, W, N)
-        _, bm, _, se = mc_bias("gaussian", cnr, 1.0, W, N, n_runs=n_runs)
-        ns = noise_sigma_for_cnr0(
-            Experiment(sigma0=1.0, D=0.0, half_window=W, n_pixels=N), cnr)
-        bbox = box_bias_gaussian(x, 1.0, 1.0, ns)
-        print(f"{W:>6.0f} {N:>6} {bm:>11.3e} {se:>9.2e} {bbox:>11.3e} "
-              f"{bm/bbox:>8.2f}")
-    print("\n-- width sigma (W = 6, N = 241, dx = 0.05) --")
-    print(f"{'sigma':>6} {'b_MC':>11} {'se':>9} {'b_Box':>11} {'MC/Box':>8}")
+        dx, dxs, ratio, c4 = _geom_cell(1.0, W, N, n_runs)
+        print(f"{W:>6.0f} {N:>6} {dx:>8.4f} {ratio:>9.2f} {c4:>9.4f}")
+    print("\n-- width sigma (fixed absolute grid dx = 0.05, window = +/-6) --")
+    print(f"{'sigma':>6} {'W/sig':>6} {'dx*sig':>8} {'MC/Box@8':>9} {'C4@1.3':>9} "
+          f"{'C4/(dxsig)':>10}")
     for sg in (0.5, 0.7, 1.0, 1.4, 2.0):
-        x = np.linspace(-6.0, 6.0, 241)
-        _, bm, _, se = mc_bias("gaussian", cnr, sg, 6.0, 241, n_runs=n_runs)
-        ns = noise_sigma_for_cnr0(
-            Experiment(sigma0=sg, D=0.0, half_window=6.0, n_pixels=241), cnr)
-        bbox = box_bias_gaussian(x, sg, 1.0, ns)
-        print(f"{sg:>6.2f} {bm:>11.3e} {se:>9.2e} {bbox:>11.3e} {bm/bbox:>8.2f}")
+        half_window = 6.0 / sg          # absolute window = +/-6, dx = 0.05
+        dx, dxs, ratio, c4 = _geom_cell(sg, half_window, 241, n_runs)
+        print(f"{sg:>6.2f} {6.0/sg:>6.1f} {dxs:>8.4f} {ratio:>9.2f} {c4:>9.4f} "
+              f"{c4/dxs:>10.3f}")
 
 
 def moment_section(n_runs: int = 60000) -> None:

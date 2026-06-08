@@ -7,12 +7,40 @@ fit, generalized-Gaussian fit, and the second-moment estimator -- validated
 against the repository Monte Carlo. This replaces the project's numerical
 `var_bias(CNR)` calibration with an analytic expression.
 
-Stop criterion: at per-frame CNR = 1.3, across the covered parameter ranges,
-the closed-form correction leaves the corrected mean width within 1% of true
-(`|mean(sigma_corrected) - sigma_true| <= 0.01 sigma_true`, ~2% in variance).
+Stop criterion (settled with the operator, iter 3): the **variance form** is
+the binding test -- `|mean(var_corrected) - var_true| <= 0.02 var_true` at
+per-frame CNR = 1.3, across the covered parameter ranges, for every estimator.
+The variance is the quantity that de-biases D (the MSD slope), so it is the
+physically meaningful target. The width is reported as a derived diagnostic,
+quoted as `sqrt(mean(var_corrected))` (the width of the corrected mean
+variance, which is what sets the reported diffusion length).
+
+**Why the per-frame width form was dropped.** At CNR = 1.3 the estimator spread
+is large, so `mean(sqrt(v_hat)) != sqrt(mean(v_hat))` (Jensen). The raw
+per-frame mean width is only +0.18% biased while the raw variance is +5.24%
+biased -- a 29x ratio, not the 2x that linearisation assumes. A correction that
+makes the variance unbiased necessarily makes the *per-frame-averaged* width
+biased low (-2.36% at CNR 1.3), because `sqrt` of an unbiased variance
+estimator is a downward-biased width estimator. The two per-frame forms are
+mutually unsatisfiable at CNR 1.3; the variance form is the one that matters for
+D, and `sqrt(mean(v_corrected))` recovers the width to -0.19% there.
 
 ## Progress log (newest first)
 
+- **Iter 3 (2026-06-08).** Ran the stop-condition test (multiplicative
+  correction on isolated-frame MC). Surfaced and resolved the width-vs-variance
+  ambiguity: at CNR 1.3, Jensen makes the per-frame width and variance criteria
+  mutually unsatisfiable. Operator chose the **variance form** as binding
+  (width is a derived diagnostic, quoted as `sqrt(mean v_corr)`). Under it the
+  Gaussian **two-term form passes at base geometry**: variance residual -0.38%
+  (criterion 2%), derived-width residual -0.19% (Box-only is +1.47%, inside 2%
+  but near the edge). Built the unified numeric Box predictor
+  (`box_bias_numeric`), validated to reproduce the analytic Gaussian to 4
+  places, and computed Voigt / GenGauss coefficients (Voigt grows with gamma;
+  GenGauss p=1.5 flips sign). Next: pin `C4` geometry scaling via the geometry
+  sweep so the two-term form holds across the grid (not just base geometry),
+  validate the variance criterion across dx/W/sigma at CNR 1.3, then MC-validate
+  Voigt/GenGauss and the moment estimator.
 - **Iter 2 (2026-06-08).** MC-validated the Gaussian Box coefficient. At CNR
   8..12 the clean isolated-frame mean bias matches `b_Box` to within MC error
   (`mean/Box = 0.98-1.02`), confirming the `2/sqrt(pi)` coefficient and
