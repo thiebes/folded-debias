@@ -34,6 +34,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+from scipy.optimize import curve_fit  # noqa: E402
 
 from weighting_wall import CalibrationGrid  # noqa: E402
 from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
@@ -49,10 +50,35 @@ CAL_PATH = OUTPUT / "calibration_nc_solid_gaussian.npz"
 DICE_BLUE = "#003f7f"
 DICE_GOLD = "#f7941e"
 
-CNR_GRID = (5.0, 10.0, 20.0, 50.0, 100.0)
+CNR_GRID = (3.0, 5.0, 10.0, 20.0, 50.0, 100.0)
 FIG_CNR0 = 20.0
 N_SEEDS = 15
 FLOOR_CNR = 1.0
+
+
+def fit_msd_powerlaw(t: np.ndarray, var: np.ndarray,
+                     mask: np.ndarray | None = None) -> tuple[float, float]:
+    """Field-standard MSD = 2 D t^alpha fit; returns (D, alpha).
+
+    MSD uses the fitted t=0 width: ``msd = var - var[0]`` (per the project
+    invariant). Fit over t > 0; NaN frames are dropped. If ``mask`` is given
+    (e.g. frames above the per-profile CNR floor), only those frames are fit --
+    this is the "discard sub-floor frames" design rule.
+    """
+    msd = var - var[0]
+    m = (t > 0) & np.isfinite(msd)
+    if mask is not None:
+        m = m & mask
+    if m.sum() < 3:
+        return np.nan, np.nan
+    try:
+        popt, _ = curve_fit(
+            lambda tt, d, a: 2.0 * d * tt ** a, t[m], msd[m],
+            p0=[max(msd[m][-1] / (2.0 * t[m][-1]), 1e-6), 1.0],
+            bounds=([0.0, 0.2], [np.inf, 2.0]), maxfev=20000)
+        return float(popt[0]), float(popt[1])
+    except (RuntimeError, ValueError):
+        return np.nan, np.nan
 
 
 def fit_each_row(x: np.ndarray, profiles: np.ndarray) -> np.ndarray:
@@ -112,22 +138,27 @@ def main() -> None:
     for case in cases:
         nf = fit_each_row(case.x, case.profiles)              # noiseless fit
         gap = _residual(nf, case.var_true)
+        D_nf, a_nf = fit_msd_powerlaw(case.t, nf)             # noiseless truth
         lines.append("-" * 70)
         lines.append(f"=== {case.name} ===   noiseless fit "
                      f"[{np.nanmin(nf):.4g}, {np.nanmax(nf):.4g}] um^2, "
-                     f"shape gap {gap:.4g} um^2 "
-                     f"(true 2nd-moment [{case.var_true.min():.4g}, "
-                     f"{case.var_true.max():.4g}])")
-        lines.append("  CNR_0 | min CNR | frames>=1 | mean|resid vs "
-                     "noiseless fit| (raw / corrected)")
+                     f"shape gap {gap:.4g} um^2")
+        lines.append(f"  noiseless-truth MSD fit:  D = {D_nf:.4g} um^2/ns, "
+                     f"alpha = {a_nf:.3f}")
+        lines.append("  naive = all-frames raw fit;  method = corrected + "
+                     "sub-floor frames dropped (CNR >= 1)")
+        lines.append("  CNR_0 | min CNR | n>=1 | D naive/method | "
+                     "alpha naive/method  (truth D={:.3g}, alpha={:.2f})"
+                     .format(D_nf, a_nf))
         for cnr0 in CNR_GRID:
             raw, cor, cnr_frame = validation_pass(case, trunc, cnr0, N_SEEDS)
             work = cnr_frame >= FLOOR_CNR
-            r_raw = _residual(raw, nf, work)
-            r_cor = _residual(cor, nf, work)
+            D_naive, a_naive = fit_msd_powerlaw(case.t, raw)          # all, raw
+            D_meth, a_meth = fit_msd_powerlaw(case.t, cor, mask=work)  # cut+cor
             lines.append(f"  {cnr0:5.0f} | {cnr_frame.min():7.2f} | "
-                         f"{int(work.sum()):3d}/{cnr_frame.size} | "
-                         f"{r_raw:9.4g}  /  {r_cor:9.4g}")
+                         f"{int(work.sum()):2d}/{cnr_frame.size} | "
+                         f"{D_naive:.3g}/{D_meth:.3g} | "
+                         f"{a_naive:.3f}/{a_meth:.3f}")
             if cnr0 == FIG_CNR0:
                 fig_rows[case.name] = (cnr_frame, raw, cor, nf)
         lines.append("")
