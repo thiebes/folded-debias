@@ -47,7 +47,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from weighting_wall import CalibrationGrid  # noqa: E402
 from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
 from weighting_wall.models import (GeneralizedGaussianModel,  # noqa: E402
-                                   VoigtModel)
+                                   MomentModel, VoigtModel)
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
@@ -166,18 +166,67 @@ def main() -> None:
                              f"{r_raw:8.4g}  /  {r_cor:8.4g}")
             lines.append("")
 
+    # --- MomentModel: the non-truncated estimator -------------------------
+    # The second central moment IS the true-transport width by construction, so
+    # it closes the shape gap -- but it takes NO folded-normal correction (it has
+    # no wall) and pays in noise variance, which the x^2 weighting amplifies in
+    # the tails. We report the cross-seed SD (instability) and the NaN fraction
+    # (frames where the baseline-subtracted total goes <= 0, i.e. unusable) as
+    # the cost of that gap-closing.
+    MOMENT_KEY, MOMENT_LABEL, MOMENT_COLOR = "moment", "second moment", "#9467bd"
+    moment = MomentModel()
+    noiseless_fits[MOMENT_KEY] = {}
+    lines.append("#" * 72)
+    lines.append(f"### Estimator: {MOMENT_LABEL}  (no calibration; NON-truncated,"
+                 " no folded correction)")
+    lines.append("#" * 72)
+    for case in cases:
+        nm = fit_each_row(case.x, case.diffmap, moment.fit_variance)
+        noiseless_fits[MOMENT_KEY][case.name] = nm
+        shape_gaps[(MOMENT_KEY, case.name)] = _residual(nm, case.var_true)
+        lines.append(f"-- {case.name}: noiseless moment "
+                     f"[{np.nanmin(nm):.4g}, {np.nanmax(nm):.4g}] um^2, "
+                     f"shape gap {shape_gaps[(MOMENT_KEY, case.name)]:.4g} um^2")
+        lines.append("   CNR_0 | min CNR | frames>=1 | mean|noisy-noiseless| | "
+                     "cross-seed SD | NaN frac")
+        n_frames = case.diffmap.shape[0]
+        peak0 = float(case.diffmap[0].max())
+        for cnr0 in CNR_GRID:
+            noise_sigma = peak0 / cnr0
+            cnr_frame = case.diffmap.max(axis=1) / noise_sigma
+            work = cnr_frame >= FLOOR_CNR
+            noisy = np.full((N_SEEDS, n_frames), np.nan)
+            for s in range(N_SEEDS):
+                rng = np.random.default_rng(int(cnr0) * 1000 + s)
+                prof = case.diffmap + rng.normal(0.0, noise_sigma,
+                                                 case.diffmap.shape)
+                noisy[s] = fit_each_row(case.x, prof, moment.fit_variance)
+            resid = _residual(np.nanmean(noisy, axis=0), nm, work)
+            sd = (float(np.nanmean(np.nanstd(noisy, axis=0)[work]))
+                  if work.any() else float("nan"))
+            nan_frac = (float(np.mean(np.isnan(noisy[:, work])))
+                        if work.any() else float("nan"))
+            lines.append(f"   {cnr0:5.0f} | {cnr_frame.min():7.2f} | "
+                         f"{int(work.sum()):4d}/{cnr_frame.size} | "
+                         f"{resid:8.4g} | {sd:8.4g} | {nan_frac:6.3f}")
+        lines.append("")
+
     # --- Shape-gap comparison table (the headline) ------------------------
     present = [e for e in ESTIMATORS if e[0] in noiseless_fits]
-    if present:
+    table_cols = [(e[0], e[1]) for e in present]
+    if MOMENT_KEY in noiseless_fits:
+        table_cols.append((MOMENT_KEY, MOMENT_LABEL))
+    if table_cols:
         lines.append("=" * 72)
         lines.append("SHAPE GAP (um^2) -- mean|noiseless fit - true 2nd moment|,"
                      " per estimator")
         lines.append("=" * 72)
-        header = "  case            " + "".join(f"{e[1][:12]:>14}" for e in present)
+        header = "  case            " + "".join(f"{lbl[:12]:>14}"
+                                                for _k, lbl in table_cols)
         lines.append(header)
         for case in cases:
             row = f"  {case.name:14s}" + "".join(
-                f"{shape_gaps[(e[0], case.name)]:14.4g}" for e in present)
+                f"{shape_gaps[(k, case.name)]:14.4g}" for k, _lbl in table_cols)
             lines.append(row)
         lines.append("")
 
@@ -194,6 +243,10 @@ def main() -> None:
             for key, label, color, _f, _fn in present:
                 ax.plot(case.t, noiseless_fits[key][case.name], color=color,
                         lw=1.7, label=f"{label} fit")
+            if MOMENT_KEY in noiseless_fits:
+                ax.plot(case.t, noiseless_fits[MOMENT_KEY][case.name],
+                        color=MOMENT_COLOR, lw=1.5, ls="--",
+                        label="second moment")
             ax.set_title(case.name, fontsize=10)
             ax.tick_params(direction="in", which="both", top=True, right=True)
             ax.set_ylim(0, max(case.var_true.max() * 1.2, 0.03))
