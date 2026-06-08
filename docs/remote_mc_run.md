@@ -9,34 +9,41 @@ worker count. The point of the second machine is simply more cores.
 
 ## One-time setup: a shared bare repo on the LAN
 
-Both machines coordinate through a bare repository named `origin`, hosted on the
-local network (not on P:, which holds only share-ready material). Do this once,
-then skip to step 1 on later runs.
+The two machines coordinate through a bare repository on the primary machine
+(`SURFACEPRESSURE`), shared over the local network. It is not on P:, which holds
+only share-ready material. Do this once.
 
-Pick a host on the LAN (for example the compute machine) and create the bare
-repo in a folder you will share:
+### On the primary machine (SURFACEPRESSURE)
 
-```powershell
-git init --bare D:\git-remotes\weighting-wall.git
-```
-
-Share that folder so the other machine can reach it as a UNC path, then add it
-as `origin` on both machines and seed it from the machine that has the work:
+Create the bare repo and seed it from the working copy:
 
 ```powershell
-# On each machine (use the host's real name and share path):
-git remote add origin \\HOST\git-remotes\weighting-wall.git
-
-# From the machine that currently has the commits:
+git init --bare C:\Users\josep\git-remotes\weighting-wall.git
+git remote add origin C:\Users\josep\git-remotes\weighting-wall.git
 git push -u origin master
 ```
 
-If the other machine has no working copy yet, clone instead of adding a remote:
-`git clone \\HOST\git-remotes\weighting-wall.git`.
+Then share the folder `C:\Users\josep\git-remotes` on the network: in File
+Explorer, right-click it, Properties, Sharing, Share, and keep the share name
+`git-remotes`. This makes the repo reachable from the other room at
+`\\SURFACEPRESSURE\git-remotes\weighting-wall.git`.
 
-SSH is an alternative to the file share if a host runs an OpenSSH server: create
-the bare repo the same way and use `ssh://user@HOST/C:/git-remotes/weighting-wall.git`
-as the remote URL.
+### On the compute machine (the other room)
+
+Clone once from the primary machine; the only thing you need to carry over is
+this one line:
+
+```powershell
+git clone \\SURFACEPRESSURE\git-remotes\weighting-wall.git
+cd weighting-wall
+```
+
+After that the repo is here, this runbook is in `docs\`, and the steps below
+work. On later visits, `git pull` picks up the latest; the results you push back
+in step 6 reach the primary machine when it runs `git fetch` or `git pull`.
+
+If `SURFACEPRESSURE` is asleep or the share is unreachable, wake it and confirm
+`\\SURFACEPRESSURE\git-remotes` opens in File Explorer before retrying.
 
 ## Conventions
 
