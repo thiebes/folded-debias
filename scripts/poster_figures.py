@@ -48,6 +48,11 @@ from precision_limit.crlb import crlb_D  # noqa: E402
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
 
+# The fft-cnr validation lives in the sibling repo (see POSTER_PLAN); the Panel 4
+# CNR-recovery figure is restyled from its case-11 sweep results.
+FFTCNR_NPZ = (Path(__file__).resolve().parents[2] / "fft-cnr-paper"
+              / "validation" / "results" / "case11_gengauss_cnr_sweep.npz")
+
 # --- DICE palette (Montana State; from the sibling DICE repo) ----------------
 DICE_BLUE = "#003f7f"
 DICE_GOLD = "#f7941e"
@@ -351,11 +356,64 @@ def figure_floor() -> Path | None:
     return path
 
 
+def figure_fftcnr(npz_path: Path) -> Path | None:
+    """Panel 4 (CNR-centric spine): fft-cnr recovers CNR across profile shapes.
+
+    Restyles the sibling fft-cnr-paper case-11 sweep (generalized-Gaussian fit
+    path -- the one weighting-wall uses) into the DICE palette: estimated CNR vs
+    true CNR hugging the 1:1 line, median + interquartile band, one line per
+    shape. The three poster-primary shapes carry the DICE colours; the flat-top
+    is a neutral secondary reference.
+    """
+    if not npz_path.exists():
+        print(f"  (fft-cnr case-11 data not found at {npz_path} -- skipping "
+              "Panel 4 fft-cnr)")
+        return None
+    d = np.load(npz_path, allow_pickle=True)
+    true_cnr = d["true_cnr"]
+    shapes = list(d["shapes"])
+    # Map the case-11 shapes to poster labels/colours.
+    style = {
+        "Gaussian (p=2)": ("Gaussian", DICE_BLUE),
+        "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", DICE_GREEN),
+        "Voigt": ("Voigt", DICE_GOLD),
+        "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
+    }
+
+    fig, ax = plt.subplots(figsize=(4.4, 3.6))
+    lo, hi = true_cnr.min() * 0.8, true_cnr.max() * 1.2
+    ax.plot([lo, hi], [lo, hi], color="#666666", ls="--", lw=1.0, label="1 : 1")
+    for i, shape in enumerate(shapes):
+        gg = d[f"gg_{i}"]                       # (n_cnr, n_trials)
+        med = np.nanmedian(gg, axis=1)
+        q1 = np.nanpercentile(gg, 25, axis=1)
+        q3 = np.nanpercentile(gg, 75, axis=1)
+        label, color = style.get(shape, (shape, "#333333"))
+        ax.fill_between(true_cnr, q1, q3, color=color, alpha=0.15)
+        ax.loglog(true_cnr, med, "o-", ms=4, lw=1.7, color=color, label=label)
+    ax.set_xlim(lo, hi)
+    ax.set_ylim(lo, hi)
+    ax.set_xlabel(r"true contrast-to-noise  CNR")
+    ax.set_ylabel(r"estimated CNR  (fft-cnr)")
+    ax.set_title("fft-cnr recovers the per-frame CNR across shapes", fontsize=10)
+    ax.grid(True, which="both", alpha=0.20)
+    ax.legend(fontsize=7, loc="upper left")
+    _style(ax)
+    fig.tight_layout()
+    path = OUTPUT / "poster_panel4_fftcnr.png"
+    fig.savefig(path, dpi=300)
+    plt.close(fig)
+    return path
+
+
 def main() -> None:
     print("Producing poster figures...")
     print(f"  Panel 1 schematic (measurement):   {figure_schematic_measurement().name}")
     print(f"  Panel 2A schematic (wall + fold):  {figure_schematic_wall_fold().name}")
     print(f"  Panel 4 (precision floor):         {figure_crlb().name}")
+    p4c = figure_fftcnr(FFTCNR_NPZ)
+    if p4c:
+        print(f"  Panel 4 (fft-cnr CNR recovery):    {p4c.name}")
     p5 = figure_corrected_bias(OUTPUT / "dense_calibration_and_test.txt")
     if p5:
         print(f"  Panel 5 (corrected bias):          {p5.name}")
