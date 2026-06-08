@@ -228,6 +228,68 @@ def gaussian_section(n_runs: int = 20000) -> None:
               f"{bm/bbox:>9.2f} {bd/bbox:>9.2f}")
 
 
+def _fit_variance_varmax(x, y, var_max_mult):
+    """Gaussian variance fit with the upper bound set to var_max_mult * span^2.
+
+    A local copy of fit.fit_variance with an adjustable var_max ceiling, to
+    separate var_max-saturation from genuine higher-order NLS bias: if the
+    low-CNR excess shrinks as the ceiling rises, the excess is the saturation
+    tail; if it persists, it is the asymptotic series.
+    """
+    from scipy.optimize import curve_fit
+    x = np.asarray(x, float); y = np.asarray(y, float)
+    n = x.size
+    span = float(x[-1] - x[0])
+    var_min = (span / n) ** 2
+    var_max = var_max_mult * span ** 2
+    var0 = (span / 4.0) ** 2
+    margin = 0.3 * span
+    central = (x >= x[0] + margin) & (x <= x[-1] - margin)
+    idx = np.where(central)[0]
+    mu0 = float(x[idx][int(np.argmax(np.abs(y[idx])))]) if idx.size \
+        else float(x[int(np.argmax(np.abs(y)))])
+    amp_max = float(np.max(np.abs(y))) or 1.0
+
+    def model(xx, mu, var, amp):
+        return amp * np.exp(-0.5 * (xx - mu) ** 2 / var)
+    try:
+        popt, _ = curve_fit(model, x, y, p0=[mu0, var0, amp_max],
+                            bounds=([x[0] + margin, var_min, 0.0],
+                                    [x[-1] - margin, var_max, 2.0 * amp_max]),
+                            maxfev=5000)
+        return float(popt[1])
+    except (RuntimeError, ValueError):
+        return var0
+
+
+def varmax_diagnostic_section(n_runs: int = 30000) -> None:
+    """At CNR = 1.3, base geometry: low-CNR excess vs the var_max ceiling."""
+    print("=" * 78)
+    print("var_max saturation diagnostic at CNR = 1.3 (base geometry)")
+    print("If excess (b_MC - b_Box) falls as var_max grows -> saturation tail")
+    print("=" * 78)
+    sigma, W, N, cnr = 1.0, 6.0, 241, 1.3
+    x = np.linspace(-W, W, N)
+    span = x[-1] - x[0]
+    clean = np.exp(-0.5 * x ** 2 / sigma ** 2)
+    ns = 1.0 / cnr
+    b_box = box_bias_gaussian(x, sigma, 1.0, ns)
+    seeds = np.random.SeedSequence(3).spawn(n_runs)
+    print(f"\nb_Box = {b_box:.4e};  default var_max = span^2 = {span**2:.1f}")
+    print(f"{'varmax_mult':>12} {'var_max':>10} {'b_MC':>11} {'excess':>11} "
+          f"{'peg_frac':>9}")
+    for mult in (1.0, 4.0, 16.0, 64.0):
+        vh = np.empty(n_runs)
+        for i in range(n_runs):
+            rng = np.random.default_rng(seeds[i])
+            y = clean + rng.normal(0.0, ns, size=N)
+            vh[i] = _fit_variance_varmax(x, y, mult)
+        b_mc = float(np.mean(vh)) - sigma ** 2
+        peg = float(np.mean(vh > 0.9 * mult * span ** 2))
+        print(f"{mult:>12.0f} {mult*span**2:>10.1f} {b_mc:>11.4e} "
+              f"{b_mc-b_box:>11.4e} {peg:>9.2e}")
+
+
 def correction_residual(cnr: float, sigma: float = 1.0, half_window: float = 6.0,
                         n_pixels: int = 241, n_runs: int = 40000, seed: int = 7,
                         which: str = "twoterm"):
@@ -329,6 +391,60 @@ def gaussian_geometry_sweep(n_runs: int = 15000) -> None:
               f"{c4/dxs:>10.3f}")
 
 
+def _profile_v_builder(model_name: str, x: np.ndarray, **kw):
+    """Return profile_v(v, amp, mean) for the numeric Box predictor."""
+    from weighting_wall.models import (_voigt_peaknorm, _gen_gaussian,
+                                       _genstd_var_factor)
+    if model_name == "voigt":
+        gamma = kw.get("gamma", 0.3)
+        return lambda v, a, m: _voigt_peaknorm(x, a, m, np.sqrt(v), gamma)
+    if model_name == "generalized_gaussian":
+        p = kw.get("shape", 2.0)
+        fac = _genstd_var_factor(p)
+        return lambda v, a, m: _gen_gaussian(x, a, m, np.sqrt(v / fac), p)
+    return lambda v, a, m: a * np.exp(-0.5 * (x - m) ** 2 / v)
+
+
+def shapes_section(n_runs: int = 25000, c4: float = 0.055) -> None:
+    """MC-validate the numeric Box prediction and the CNR=1.3 variance criterion
+    for Voigt (gamma) and generalized-Gaussian (p)."""
+    print("=" * 78)
+    print("Voigt / GenGauss: numeric Box vs MC, and CNR=1.3 variance criterion")
+    print(f"Two-term b = box_numeric + {c4}/CNR^4; criterion |v_resid| <= 2%")
+    print("=" * 78)
+    sigma, W, N = 1.0, 6.0, 241
+    x = np.linspace(-W, W, N)
+    cases = [("voigt", {"gamma": 0.1}), ("voigt", {"gamma": 0.3}),
+             ("voigt", {"gamma": 0.5}),
+             ("generalized_gaussian", {"shape": 1.5}),
+             ("generalized_gaussian", {"shape": 2.0}),
+             ("generalized_gaussian", {"shape": 3.0})]
+    print(f"\n{'model':>22} {'CNR':>5} {'b_MC':>11} {'b_Box':>11} {'MC/Box':>7} "
+          f"{'raw_v%':>7} {'box_v%':>7} {'2term_v%':>8}")
+    for name, kw in cases:
+        profile_v = _profile_v_builder(name, x, **kw)
+        exp = Experiment(sigma0=sigma, D=0.0, half_window=W, n_pixels=N,
+                         n_frames=1)
+        label = f"{name}{list(kw.values())[0]}"
+        for cnr in (8.0, 1.3):
+            ens = run_ensemble(exp, float(cnr), n_runs=n_runs, seed=11,
+                               model=MODELS[name](**kw))
+            col = ens.variance[:, 0]
+            col = col[np.isfinite(col)]
+            b_mc = float(col.mean()) - sigma ** 2
+            ns = noise_sigma_for_cnr0(exp, cnr)
+            b_box = box_bias_numeric(profile_v, sigma ** 2, 1.0, 0.0, ns,
+                                     x_scale=sigma)
+            b_2t = b_box + c4 * sigma ** 2 / cnr ** 4
+            raw_v = 100.0 * b_mc / sigma ** 2
+            box_v = 100.0 * (col / (1 + b_box / sigma ** 2)).mean() \
+                - 100.0   # mean corrected variance residual %
+            tt_v = 100.0 * (col / (1 + b_2t / sigma ** 2)).mean() - 100.0
+            print(f"{label:>22} {cnr:>5.1f} {b_mc:>11.3e} {b_box:>11.3e} "
+                  f"{b_mc/b_box if b_box else float('nan'):>7.2f} "
+                  f"{raw_v:>7.2f} {box_v:>7.2f} {tt_v:>8.2f}")
+
+
 def moment_section(n_runs: int = 60000) -> None:
     print("=" * 78)
     print("Moment estimator: bulk delta-method bias vs MC, and T<0 boundary")
@@ -402,8 +518,12 @@ def main() -> None:
         gaussian_section()
     if section in ("gaussian_geom", "all"):
         gaussian_geometry_sweep()
+    if section in ("varmax", "all"):
+        varmax_diagnostic_section()
     if section in ("stop", "all"):
         stop_condition_section()
+    if section in ("shapes", "all"):
+        shapes_section()
     if section in ("moment", "all"):
         moment_section()
 
