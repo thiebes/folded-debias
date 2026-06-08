@@ -23,13 +23,29 @@ except ImportError:  # pragma: no cover - exercised only without the package
     HAVE_FFT_CNR = False
 
 
-def per_frame_cnr(profiles: np.ndarray) -> np.ndarray:
+def per_frame_cnr(profiles: np.ndarray,
+                  fit_model: str = "generalized_gaussian") -> np.ndarray:
     """Estimate the CNR of every row of ``profiles`` with ``fft-cnr``.
 
     Parameters
     ----------
     profiles : array, shape (n_frames, n_pixels)
         Stack of 1-D spatial profiles, one per time point.
+    fit_model : str
+        The ``fft-cnr`` amplitude estimator. Defaults to
+        ``"generalized_gaussian"`` because this project's primary profiles are
+        Voigt and generalized-Gaussian, and the amplitude (hence CNR) must be
+        estimated without shape bias. A fixed Gaussian template -- or fft-cnr's
+        default peak method -- is accurate on a true Gaussian but biased on the
+        heavy-tailed / flat-topped shapes that bracket Voigt and
+        generalized-Gaussian: the fft-cnr shape-sensitivity study (case 3) puts
+        a Gaussian fit 5-17 % off across that kurtosis range while the
+        generalized-Gaussian fit stays within ~1 %, with the Gaussian falling
+        out as the p=2 special case. Because the truncation bias scales as
+        ~A/CNR^2, a biased CNR feeds straight into a biased correction, so the
+        shape-robust estimator matters here. The generalized-Gaussian fit
+        returns a finite confidence interval (it falls back to the peak method
+        if the fit fails), so there is no missing-CI pathology.
 
     Returns
     -------
@@ -47,4 +63,5 @@ def per_frame_cnr(profiles: np.ndarray) -> np.ndarray:
             "install it with `pip install weighting-wall[cnr]`."
         )
     profiles = np.atleast_2d(np.asarray(profiles, float))
-    return np.array([float(_fft_cnr(row).cnr) for row in profiles])
+    return np.array(
+        [float(_fft_cnr(row, fit_model=fit_model).cnr) for row in profiles])
