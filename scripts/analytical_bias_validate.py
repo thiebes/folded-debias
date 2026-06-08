@@ -84,6 +84,48 @@ def box_bias_gaussian(x: np.ndarray, sigma: float, amp: float,
     return -(noise_sigma ** 2 / 2.0) * (Minv_vv * proj_v + Minv_vA * proj_A)
 
 
+def box_bias_numeric(profile_v, v: float, amp: float, mean: float,
+                     noise_sigma: float, x_scale: float = 1.0,
+                     h_rel: float = 1e-4) -> float:
+    """Box variance-bias for any profile parametrised by (v, amp, mean).
+
+    `profile_v(v, amp, mean)` returns the noise-free profile sampled on a fixed
+    pixel grid. The reported variance is `v` itself, so finite-differencing the
+    profile w.r.t. theta = (v, amp, mean) and applying Box's multi-parameter
+    formula returns the variance bias directly -- valid for any profile shape
+    (Gaussian, Voigt, generalized-Gaussian) by MLE reparameterisation
+    equivariance. The full 3x3 information inverse is used (no block-diagonal
+    assumption), so cross-parameter curvature is captured exactly on the grid.
+    """
+    theta = np.array([v, amp, mean], float)
+    h = np.array([h_rel * v, h_rel * amp, h_rel * x_scale])
+
+    def f(th):
+        return profile_v(th[0], th[1], th[2])
+
+    p = theta.size
+    n = f(theta).size
+    F = np.empty((n, p))
+    for k in range(p):
+        tp = theta.copy(); tp[k] += h[k]
+        tm = theta.copy(); tm[k] -= h[k]
+        F[:, k] = (f(tp) - f(tm)) / (2.0 * h[k])
+    H = np.empty((n, p, p))
+    for j in range(p):
+        for k in range(p):
+            tpp = theta.copy(); tpp[j] += h[j]; tpp[k] += h[k]
+            tpm = theta.copy(); tpm[j] += h[j]; tpm[k] -= h[k]
+            tmp = theta.copy(); tmp[j] -= h[j]; tmp[k] += h[k]
+            tmm = theta.copy(); tmm[j] -= h[j]; tmm[k] -= h[k]
+            H[:, j, k] = (f(tpp) - f(tpm) - f(tmp) + f(tmm)) / (4.0 * h[j] * h[k])
+
+    FtF = F.T @ F
+    inv = np.linalg.inv(FtF)
+    d = np.einsum("jk,ijk->i", inv, H)          # tr[(F^TF)^-1 H_i] per pixel
+    bias_vec = -(noise_sigma ** 2 / 2.0) * (inv @ (F.T @ d))
+    return float(bias_vec[0])                    # the v component
+
+
 def box_bias_gaussian_continuum(dx: float, sigma: float, cnr: float) -> float:
     """Continuum closed form b = (2/sqrt(pi)) (dx sigma) / CNR^2.
 
@@ -91,6 +133,17 @@ def box_bias_gaussian_continuum(dx: float, sigma: float, cnr: float) -> float:
     version once the profile is interior (W/sigma >~ 4).
     """
     return (2.0 / np.sqrt(np.pi)) * dx * sigma / cnr ** 2
+
+
+def b_gaussian_closed(x: np.ndarray, sigma: float, amp: float,
+                      noise_sigma: float, cnr: float, c4: float = 0.055) -> float:
+    """Two-term Gaussian closed form: Box (1/CNR^2) + empirical C4/CNR^4.
+
+    The leading term is the exact discrete Box bias; the second term is the
+    next order in the asymptotic series, with C4 ~= 0.055 sigma0^2 pinned by MC
+    at base geometry (its geometry scaling is under test).
+    """
+    return box_bias_gaussian(x, sigma, amp, noise_sigma) + c4 * sigma ** 2 / cnr ** 4
 
 
 def moment_bulk_bias(x: np.ndarray, sigma: float, amp: float,
@@ -175,6 +228,57 @@ def gaussian_section(n_runs: int = 20000) -> None:
               f"{bm/bbox:>9.2f} {bd/bbox:>9.2f}")
 
 
+def correction_residual(cnr: float, sigma: float = 1.0, half_window: float = 6.0,
+                        n_pixels: int = 241, n_runs: int = 40000, seed: int = 7,
+                        which: str = "twoterm"):
+    """Apply the closed-form correction to an MC ensemble and report residuals.
+
+    Multiplicative, positivity-preserving correction (DERIVATION Sec 10):
+    v_corr = v_hat / (1 + g), g = b_analytical / sigma0^2. Returns the corrected
+    mean width and variance and their residuals from truth -- this is the actual
+    stop-condition statistic (`which` selects 'box' or 'twoterm' b).
+    """
+    x = np.linspace(-half_window, half_window, n_pixels)
+    exp = Experiment(sigma0=sigma, D=0.0, half_window=half_window,
+                     n_pixels=n_pixels, n_frames=1)
+    ns = noise_sigma_for_cnr0(exp, cnr)
+    ens = run_ensemble(exp, float(cnr), n_runs=n_runs, seed=seed,
+                       model=MODELS["gaussian"]())
+    v = ens.variance[:, 0]
+    v = v[np.isfinite(v)]
+    if which == "box":
+        b = box_bias_gaussian(x, sigma, 1.0, ns)
+    else:
+        b = b_gaussian_closed(x, sigma, 1.0, ns, cnr)
+    g = b / sigma ** 2
+    v_corr = v / (1.0 + g)
+    w_corr = np.sqrt(np.clip(v_corr, 0.0, None))
+    mean_w = float(w_corr.mean())
+    mean_v = float(v_corr.mean())
+    return {
+        "cnr": float(ens.cnr_frame[0]), "b": b,
+        "mean_w": mean_w, "w_resid": mean_w - sigma,
+        "mean_v": mean_v, "v_resid": mean_v - sigma ** 2,
+        "raw_w": float(np.sqrt(np.clip(v, 0, None)).mean()) - sigma,
+        "raw_v": float(v.mean()) - sigma ** 2,
+    }
+
+
+def stop_condition_section(n_runs: int = 40000) -> None:
+    print("=" * 78)
+    print("Stop-condition test: corrected WIDTH within 1% at CNR = 1.3")
+    print("Multiplicative correction; width residual is the criterion")
+    print("=" * 78)
+    print(f"\n{'CNR':>6} {'corr':>8} {'raw_w_res':>10} {'w_resid':>10} "
+          f"{'w_res/sig%':>10} {'v_resid':>10} {'v_res%':>8}")
+    for cnr in (8.0, 3.0, 2.0, 1.3):
+        for which in ("box", "twoterm"):
+            r = correction_residual(cnr, which=which, n_runs=n_runs)
+            print(f"{r['cnr']:>6.2f} {which:>8} {r['raw_w']:>10.4f} "
+                  f"{r['w_resid']:>10.4f} {100*r['w_resid']:>10.3f} "
+                  f"{r['v_resid']:>10.4f} {100*r['v_resid']:>8.2f}")
+
+
 def gaussian_geometry_sweep(n_runs: int = 20000) -> None:
     """Check the dx, W, sigma scaling of the Box coefficient at CNR = 8."""
     print("\n" + "=" * 78)
@@ -242,12 +346,52 @@ def moment_section(n_runs: int = 60000) -> None:
               f"{pz:>11.3e} {nan_frac:>9.3e}")
 
 
+def selftest_section() -> None:
+    """Cheap, MC-free checks of the numeric Box predictor against the analytic
+    Gaussian, and its values for Voigt / generalized-Gaussian profiles."""
+    from weighting_wall.models import (_voigt_peaknorm, _gen_gaussian,
+                                       _genstd_var_factor)
+    print("=" * 78)
+    print("Box predictor self-test (no MC): numeric vs analytic")
+    print("=" * 78)
+    sigma, W, N, cnr = 1.0, 6.0, 241, 8.0
+    x = np.linspace(-W, W, N)
+    v = sigma ** 2
+    ns = 1.0 / cnr
+
+    def gauss_v(vv, amp, mean):
+        return amp * np.exp(-0.5 * (x - mean) ** 2 / vv)
+    b_an = box_bias_gaussian(x, sigma, 1.0, ns)
+    b_num = box_bias_numeric(gauss_v, v, 1.0, 0.0, ns, x_scale=sigma)
+    print(f"\nGaussian:   analytic {b_an:.5e}  numeric {b_num:.5e}  "
+          f"ratio {b_num/b_an:.4f}  (continuum {(2/np.sqrt(np.pi))*(x[1]-x[0]):.5e}/CNR^2)")
+
+    for gamma in (0.1, 0.3, 0.5):
+        def voigt_v(vv, amp, mean, g=gamma):
+            return _voigt_peaknorm(x, amp, mean, np.sqrt(vv), g)
+        b = box_bias_numeric(voigt_v, v, 1.0, 0.0, ns, x_scale=sigma)
+        print(f"Voigt g={gamma}: numeric b = {b:.5e}  "
+              f"(b*CNR^2 = {b*cnr**2:.5e} sigma0^2)")
+
+    for p in (1.5, 2.0, 3.0):
+        fac = _genstd_var_factor(p)
+        def gen_v(vv, amp, mean, pp=p, ff=fac):
+            return _gen_gaussian(x, amp, mean, np.sqrt(vv / ff), pp)
+        b = box_bias_numeric(gen_v, v, 1.0, 0.0, ns, x_scale=sigma)
+        print(f"GenGauss p={p}: numeric b = {b:.5e}  "
+              f"(b*CNR^2 = {b*cnr**2:.5e} sigma0^2)")
+
+
 def main() -> None:
     section = sys.argv[1] if len(sys.argv) > 1 else "gaussian"
+    if section in ("selftest", "all"):
+        selftest_section()
     if section in ("gaussian", "all"):
         gaussian_section()
     if section in ("gaussian_geom", "all"):
         gaussian_geometry_sweep()
+    if section in ("stop", "all"):
+        stop_condition_section()
     if section in ("moment", "all"):
         moment_section()
 

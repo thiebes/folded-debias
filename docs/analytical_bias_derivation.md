@@ -13,6 +13,19 @@ the closed-form correction leaves the corrected mean width within 1% of true
 
 ## Progress log (newest first)
 
+- **Iter 2 (2026-06-08).** MC-validated the Gaussian Box coefficient. At CNR
+  8..12 the clean isolated-frame mean bias matches `b_Box` to within MC error
+  (`mean/Box = 0.98-1.02`), confirming the `2/sqrt(pi)` coefficient and
+  settling the discrepancy: `analytical_floor.py`'s `0.37` was `var_max` tail
+  contamination of the mean in the full diffusion sweep, not the true bias. The
+  median bias is `~= -b_Box` (right-skew), so the mean is the correct target.
+  Below CNR ~ 3 a positive excess appears (`mean/Box` = 1.10 at CNR 3, 1.57 at
+  CNR 1.3); `(mean - b_Box) * CNR^4 ~= 0.055 sigma0^2` is roughly constant, a
+  clean **second term**: `b = b2/CNR^2 + C4/CNR^4`, `C4 ~= 0.055 sigma0^2` at
+  base geometry. At CNR 1.3 the Box-only variance residual is 0.019 (1.9% of
+  sigma^2); the two-term form removes it. Next: (i) confirm the stop criterion
+  on the corrected WIDTH (not just variance), (ii) pin `C4`'s geometry scaling,
+  (iii) run the moment-estimator and geometry sweeps.
 - **Iter 1 (2026-06-08).** Set up branch `analytical-bias-derivation`,
   deliverable skeleton, parameter grid. Derived the high-CNR additive bias for
   the Gaussian fit from Box's (1971) nonlinear-least-squares second-order bias
@@ -147,14 +160,39 @@ Gaussian fit:
 Independent of window `W` and pixel count `N` once the profile is interior
 (`W/sigma >~ 4`); the dependence enters only through `dx = 2W/(N-1)`.
 
-**Discrepancy to resolve with MC.** `scripts/analytical_floor.py` fit
-`var_bias ~ 0.37/CNR^2 sigma_0^2` (mean statistic) on `CNR > 8`, whereas the Box
-coefficient predicts `(2/sqrt(pi)) dx = 0.0564` at `dx = 0.05`. The factor ~6.5
-is most likely tail contamination of the *mean* by `var_max` pile-up (the
-`linearity_test` already showed the mean is corrupted while the median tracks
-the clean scaling). The running MC measures mean and median at CNR = 8..50 with
-large N to settle whether the clean high-CNR mean matches the Box coefficient or
-the Box term is incomplete. Result pending.
+**MC validation (iter 2).** Isolated-frame mean bias (20000 fits/cell, base
+geometry) against `b_Box`:
+
+| CNR | b_MC_mean (sigma0^2) | b_Box | mean/Box | med/Box |
+| ----- | ------------- | ------------- | ------- | ------- |
+| 12 | 3.84e-4 | 3.92e-4 | 0.98 | -1.08 |
+| 8 | 8.97e-4 | 8.82e-4 | 1.02 | -0.92 |
+| 5 | 2.38e-3 | 2.26e-3 | 1.05 | -1.06 |
+| 3 | 6.92e-3 | 6.27e-3 | 1.10 | -0.96 |
+| 2 | 1.67e-2 | 1.41e-2 | 1.19 | -0.98 |
+| 1.3 | 5.24e-2 | 3.34e-2 | 1.57 | -1.03 |
+
+The coefficient is confirmed; `analytical_floor.py`'s `0.37` (mean over deep-CNR
+frames of a full diffusion sweep) was `var_max`-tail-inflated. The median bias
+is `~= -b_Box`: the estimator distribution is right-skewed, so the mean lies a
+Box-bias above truth and the median a Box-bias below -- which is why the mean is
+the de-biasing target and the median must not be substituted for it.
+
+### 1.3 Low-CNR second term
+
+Below CNR ~ 3 the mean exceeds `b_Box`. The excess `b_MC - b_Box` times `CNR^4`
+is roughly constant (0.04-0.075 sigma0^2 across CNR 1.3..8), i.e. a clean
+next-order term:
+
+    b_Gauss(CNR) = (2/sqrt(pi)) (dx sigma)/CNR^2 + C4/CNR^4,   C4 ~= 0.055 sigma0^2.
+
+This is the third-order NLS-bias correction (non-Gaussianity of the width MLE as
+CNR falls), *not* a wall effect: at CNR 1.3 the lower wall (sigma_min ~ 1 pixel)
+sits ~5 width-noise sigma below the mean and the `var_max` ceiling is far above,
+so neither fold nor saturation is active yet -- the excess is the asymptotic
+series continuing. `C4`'s geometry scaling (does it track `(dx sigma)`, or
+`(dx sigma)^2`, or carry a `W` dependence?) is pinned by the geometry sweep
+next. With both terms the CNR 1.3 variance residual falls from 1.9% to MC noise.
 
 ## 2. Gaussian fit -- low-CNR corrections (pending)
 
@@ -162,9 +200,41 @@ The fold (folded-normal mean shift) and the `var_max` saturation ceiling
 (Sec. 9-10 of `DERIVATION.md`) enter below CNR ~ a few. To reach the CNR = 1.3
 stop point these must be added to the Box term. Pending.
 
-## 3. Voigt fit (pending)
+## 3. Voigt and generalized-Gaussian fits -- unified numeric Box predictor
 
-## 4. Generalized-Gaussian fit (pending)
+The Box machinery is not Gaussian-specific. Parametrise any profile by the
+diffusive variance `v` (the reported quantity) plus amplitude and centre; by
+MLE reparameterisation equivariance the Box bias for `v` is the variance bias,
+whatever the profile shape. `box_bias_numeric` finite-differences the profile
+w.r.t. `(v, A, c)` on the pixel grid and evaluates the full multi-parameter Box
+formula (no block-diagonal assumption). It reproduces the analytic Gaussian
+coefficient to 4 places (ratio 1.0000), so it is trustworthy for shapes whose
+integrals are not closed form.
+
+High-CNR coefficient `b * CNR^2` (sigma0^2 units, base geometry dx = 0.05,
+sigma = 1, CNR = 8), from the numeric predictor (MC validation pending):
+
+| Shape | parameter | b * CNR^2 | vs Gaussian 0.0564 |
+| ------- | ------------- | ------------- | ------------- |
+| Gaussian | -- | 0.0564 | 1.00 |
+| Voigt | gamma = 0.1 | 0.0619 | 1.10 |
+| Voigt | gamma = 0.3 | 0.0740 | 1.31 |
+| Voigt | gamma = 0.5 | 0.0875 | 1.55 |
+| GenGauss | p = 1.5 (heavy tail) | -0.189 | -3.34 |
+| GenGauss | p = 2.0 | 0.0564 | 1.00 |
+| GenGauss | p = 3.0 (flat top) | 0.0287 | 0.51 |
+
+Readings: (i) the Voigt coefficient grows with the fixed Lorentzian width
+`gamma` -- a broader instrument PSF dilutes the Gaussian-width information, so
+the same noise produces a larger width bias; (ii) GenGauss p = 2 recovers the
+Gaussian exactly (consistency check); flat-topped profiles (p > 2) bias less;
+**heavy-tailed profiles (p < 2) flip the sign** -- the curvature term
+`sum f' f''` changes sign, so the leading bias is negative. The p = 1.5 sign
+flip is a concrete prediction to confirm against MC.
+
+These coefficients (0.06-0.09 for Voigt) are again ~5-6x below
+`analytical_floor.py`'s `0.42` (Voigt) / `0.37` (GenGauss), consistent with the
+same `var_max`-tail inflation of the mean identified for the Gaussian.
 
 ## 5. Moment estimator (pending)
 
