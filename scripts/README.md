@@ -44,6 +44,22 @@ working; re-run when calibration or validation logic changes.
   Wall time ≈ 3 hours on a typical machine.
   Output: `output/dense_calibration_and_test.txt`.
 
+### Real-data calibration and tooling
+
+- **`build_calibration.py --tag <name> ...`** — Builds a geometry-specific
+  joint `var_bias(CNR, σ²)` calibration for an arbitrary experiment (real or
+  simulated): pass the pixel grid, σ range, CNR range, profile model, and MC
+  budget. Saves `output/calibration_<tag>.npz`, loadable with
+  `CalibrationGrid.load()`. *Used to build the Marc-geometry calibrations
+  (`marc_{gaussian,voigt,gengauss}_filtered`) the realistic-transport
+  validations consume.* Wall time ≈ 2.5–4 h for a 100×100-cell, 1000-runs/cell
+  build. See the module docstring for example invocations.
+
+- **`plot_calibration.py <calibration.npz>`** — Diagnostic heatmaps of a saved
+  joint calibration: the `var_bias` and `rel_variance` surfaces over the
+  (CNR, σ²) grid, with the Marc-data trajectory overlaid when applicable.
+  Output: `output/<tag>_diagnostic.png`.
+
 ### Where the correction works
 
 - **`per_profile_floor.py [profile_model]`** — Isolated single-profile
@@ -79,6 +95,47 @@ working; re-run when calibration or validation logic changes.
   Output: `output/per_frame_in_diffusion_experiment.txt` (overwritten
   per run; one shape per invocation).
 
+### Realistic-transport validation (Marc Meléndez's models)
+
+These run the correction on Marc's reaction-diffusion diffusion maps — genuinely
+non-Fickian transport with the model author's own `σ²(t)` as ground truth. They
+need the Marc-geometry calibrations built by `build_calibration.py` and the
+`.dat` data in `mc_experiments/marc_mn_trapping/data/` (gitignored; from Marc).
+
+- **`marc_mn_trapping_plan_a.py`** — Per-frame variance recovery on the 0.51% Mn
+  diffmap (Magdaleno et al. 2025). Test A: Gaussian fit on the as-is diffmap.
+  Test B: Voigt fit on the PSF-convolved diffmap (gated on
+  `calibration_marc_voigt_filtered.npz`). Compares corrected vs noiseless fit.
+  Outputs: `output/marc_mn_trapping_plan_a.{png,txt}`.
+
+- **`marc_diffmap_validation.py`** — The correction across **three estimators**
+  (Gaussian, Voigt, generalized-Gaussian) on all four doping cases, each against
+  its own noiseless-fit reference, plus the `MomentModel` as the non-truncated
+  comparator. Separates the **correction residual** (vs noiseless fit) from the
+  **shape gap** (noiseless fit vs true second moment). *Source for the poster
+  Panel 6 realistic-transport result.*
+  Outputs: `output/marc_diffmap_validation.{png,txt}`.
+
+### Poster figures
+
+- **`poster_figures.py`** — Regenerates the data-driven poster figures and the
+  rough panel schematics in one place: Panel 1 (measurement schematic), Panel 2A
+  (wall-and-fold schematic), Panel 4 (√CRLB/D precision floor), Panel 5
+  (corrected bias, three shapes), and the Panel 5 floor inset. DICE palette,
+  ticks inside the frame. The fft-cnr panel (Panel 4 of the CNR-centric spine)
+  is pulled separately from the sibling `fft-cnr-paper` repo.
+  Outputs: `output/poster_panel*.png`.
+
+### Parked / analytical exploration
+
+- **`linearity_test.py`** — Tests the dimensional/CRLB scaling claim that the
+  folded-normal bias `bias/σ²` is a function of `s = CNR·√(σ/dx)` alone, not CNR
+  alone. The median bias tracks the analytical `λ(−s)/s` form in an intermediate
+  band, but the mean is corrupted by broken-fit saturation outliers. *Parked:
+  the closed-form derivation is paper-scope, not poster-blocking; result written
+  up in DERIVATION.md §10.*
+  Outputs: `output/linearity_test.{png,txt}`.
+
 ### Comparators
 
 - **`moment_estimator_failure.py`** — Five-way method comparison
@@ -108,5 +165,17 @@ the current canonical pipeline:
   used to find the bias-prone regime. The current canonical regime is
   locked at `D = 0.02 σ₀²/τ` (`L_D / FWHM ≈ 0.085`); this script's job
   is complete.
+- **`legacy/dense_calibration_and_test_robust.py`** — Robust multiplicative
+  scheme (median-bias + MAD significance gate + multiplicative correction)
+  added as a fifth scheme. Inert at the tested CNR₀: the gate zeroes the
+  correction, so it reproduces `inverse_variance` rather than improving on
+  `folded_normal`. The robust / closed-form line is parked behind the poster;
+  kept as the record of the negative result.
 
 The corresponding output files live in `output/legacy/`.
+
+**Note:** the `legacy/` scripts set their import path with `../src`, which
+resolves to `scripts/src` from `scripts/legacy/` and so does not find the
+package — a leftover from when they were moved down a level. Run them with
+`PYTHONPATH=src`, or fix the path to `../../src`
+(`dense_calibration_and_test_robust.py` already uses the corrected form).
