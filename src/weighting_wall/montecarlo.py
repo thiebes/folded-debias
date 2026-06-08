@@ -8,9 +8,20 @@ analysis.
 The profile model (Gaussian / Voigt / generalized-Gaussian) is pluggable --
 see :mod:`weighting_wall.models`.  The default is the Gaussian model, so
 existing callers are unaffected.
+
+Realisations are independent, so the ensemble is embarrassingly parallel across
+runs.  ``run_ensemble`` can fan the per-realisation fits out over worker
+processes (see the ``workers`` argument).  Seeding is per realisation via
+:class:`numpy.random.SeedSequence`, so the result depends only on
+``(seed, n_runs)`` -- it is identical whether the run is serial or parallel,
+and independent of the worker count.  The fitting bottleneck is many small
+nonlinear least-squares fits, which is CPU- not BLAS-bound; more cores give a
+near-linear speedup.
 """
 from __future__ import annotations
 
+import os
+from concurrent.futures import ProcessPoolExecutor
 from dataclasses import dataclass
 
 import numpy as np
@@ -51,35 +62,119 @@ def _msd_from_variance(variance: np.ndarray) -> np.ndarray:
     return variance - variance[:, [0]]
 
 
+def _fit_realisation(model, x: np.ndarray, clean: np.ndarray,
+                     noise_sigma: float, n_frames: int,
+                     rng: np.random.Generator):
+    """Fit one noisy realisation of the clean profile stack.
+
+    This is the single source of truth for per-realisation work, shared by the
+    serial and parallel paths so they are guaranteed to behave identically --
+    including the per-frame fallback in ``model.fit_variance`` that keeps a
+    failed fit's broad guess rather than dropping it (dropping would delete the
+    heavy right tail that carries the bias).
+    """
+    noisy = clean + rng.normal(0.0, noise_sigma, size=clean.shape)
+    variance = np.full(n_frames, np.nan)
+    at_wall = np.zeros(n_frames, dtype=bool)
+    ok = np.zeros(n_frames, dtype=bool)
+    for f in range(n_frames):
+        ff = model.fit_variance(x, noisy[f])
+        variance[f] = ff.variance
+        at_wall[f] = ff.at_wall
+        ok[f] = ff.ok
+    return variance, at_wall, ok
+
+
+# --------------------------------------------------------------------------
+# Parallel worker plumbing.  The clean profile stack is shipped once per
+# worker process via the initialiser (not once per realisation), and each task
+# carries only its run index and SeedSequence child.
+# --------------------------------------------------------------------------
+_WORKER: dict = {}
+
+
+def _init_worker(model, x, clean, noise_sigma, n_frames) -> None:
+    _WORKER.update(model=model, x=x, clean=clean,
+                   noise_sigma=noise_sigma, n_frames=n_frames)
+
+
+def _run_one(task):
+    run_index, seed_seq = task
+    rng = np.random.default_rng(seed_seq)
+    variance, at_wall, ok = _fit_realisation(
+        _WORKER["model"], _WORKER["x"], _WORKER["clean"],
+        _WORKER["noise_sigma"], _WORKER["n_frames"], rng,
+    )
+    return run_index, variance, at_wall, ok
+
+
+def _resolve_workers(workers, n_runs: int) -> int:
+    """Resolve the worker count.
+
+    ``workers=None`` (the default) reads ``WEIGHTING_WALL_WORKERS`` from the
+    environment, falling back to serial (1) when it is unset -- so every script
+    that routes through ``run_ensemble`` parallelises just by exporting that
+    variable, with no code change.  ``workers<=0`` (or the env var set to 0)
+    uses every available core.  The count is clamped to ``n_runs``.
+    """
+    if workers is None:
+        env = os.environ.get("WEIGHTING_WALL_WORKERS")
+        workers = int(env) if env else 1
+    if workers <= 0:
+        workers = os.cpu_count() or 1
+    return max(1, min(int(workers), n_runs))
+
+
 def run_ensemble(exp: Experiment, cnr0: float, n_runs: int = 600,
-                 seed: int = 0, model=None) -> Ensemble:
+                 seed: int = 0, model=None, workers=None) -> Ensemble:
     """Run ``n_runs`` independent noisy realisations of ``exp`` at ``cnr0``.
 
     ``model`` is a profile model from :mod:`weighting_wall.models`
     (default :class:`~weighting_wall.models.GaussianModel`).  The per-frame CNR
     is taken from the actual noise-free profile peak, so it is correct for any
     profile shape.
+
+    ``workers`` controls process-level parallelism over realisations; see
+    :func:`_resolve_workers`.  The result is independent of the worker count
+    because each realisation draws from its own ``SeedSequence`` child.
     """
     if model is None:
         model = GaussianModel()
     noise_sigma = noise_sigma_for_cnr0(exp, cnr0)
     x = exp.x
+    n_frames = exp.n_frames
 
     clean = model.noise_free_series(exp)            # (n_frames, n_pixels)
     cnr_frame = clean.max(axis=1) / noise_sigma     # peak / noise RMS
 
-    rng = np.random.default_rng(seed)
-    variance = np.full((n_runs, exp.n_frames), np.nan)
-    at_wall = np.zeros((n_runs, exp.n_frames), dtype=bool)
-    ok = np.zeros((n_runs, exp.n_frames), dtype=bool)
+    # One independent RNG stream per realisation, deterministic in ``seed`` and
+    # order-independent -- so serial and parallel runs agree bit for bit.
+    child_seeds = np.random.SeedSequence(seed).spawn(n_runs)
 
-    for r in range(n_runs):
-        noisy = clean + rng.normal(0.0, noise_sigma, size=clean.shape)
-        for f in range(exp.n_frames):
-            ff = model.fit_variance(x, noisy[f])
-            variance[r, f] = ff.variance
-            at_wall[r, f] = ff.at_wall
-            ok[r, f] = ff.ok
+    variance = np.full((n_runs, n_frames), np.nan)
+    at_wall = np.zeros((n_runs, n_frames), dtype=bool)
+    ok = np.zeros((n_runs, n_frames), dtype=bool)
+
+    n_workers = _resolve_workers(workers, n_runs)
+    if n_workers == 1:
+        for r in range(n_runs):
+            rng = np.random.default_rng(child_seeds[r])
+            variance[r], at_wall[r], ok[r] = _fit_realisation(
+                model, x, clean, noise_sigma, n_frames, rng)
+    else:
+        # Chunk so each worker pulls a batch of realisations per round-trip,
+        # amortising the inter-process hand-off over many fits.
+        chunksize = max(1, n_runs // (n_workers * 4))
+        with ProcessPoolExecutor(
+            max_workers=n_workers,
+            initializer=_init_worker,
+            initargs=(model, x, clean, noise_sigma, n_frames),
+        ) as pool:
+            for r, v_row, w_row, o_row in pool.map(
+                    _run_one, list(enumerate(child_seeds)), chunksize=chunksize):
+                variance[r] = v_row
+                at_wall[r] = w_row
+                ok[r] = o_row
 
     msd = _msd_from_variance(variance)
     return Ensemble(exp=exp, cnr0=cnr0, noise_sigma=noise_sigma,
