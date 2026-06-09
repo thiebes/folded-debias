@@ -9,9 +9,16 @@ projects each 2-D frame to a 1-D profile.
 First pass uses the Gaussian fit and the NC-solid-geometry calibration
 (`calibration_nc_solid_gaussian.npz`, built at this pixel grid). The paper fits
 a Voigt to each slice, so a Voigt pass is the natural refinement once this
-validates the mechanics. As with the Mn maps we score the correction against
-the NOISELESS fit (isolating the truncation correction) and report the shape
-gap (noiseless fit vs true second moment) separately.
+validates the mechanics.
+
+Per docs/VALIDATION_DESIGN.md the reference is the carrier (true) second moment
+`var_true`. The NC-solid emission is linear in carrier density -- the imposed
+decay is a per-frame scalar, so it sets the per-frame contrast-to-noise without
+changing the spatial moment -- so the recorded-profile second moment equals the
+carrier moment, and the near-Gaussian shape makes the noiseless Gaussian fit
+match it (a negligible shape gap, reported here as a check). D and alpha are
+scored against the carrier second moment; the folded-normal correction removes
+the per-frame noise bias.
 
 Run from the repository root::
 
@@ -127,7 +134,7 @@ def main() -> None:
     lines = [
         "=" * 70,
         "Disordered NC-solid validation (Solari et al.) -- folded-normal",
-        "Gaussian fit; reference = noiseless fit; decay tau = "
+        "Gaussian fit; reference = carrier 2nd moment (var_true); decay tau = "
         f"{cases[0].tau_ns:.0f} ns",
         "=" * 70,
         f"n_seeds per CNR_0: {N_SEEDS};  reliable regime: per-frame "
@@ -138,18 +145,21 @@ def main() -> None:
     for case in cases:
         nf = fit_each_row(case.x, case.profiles)              # noiseless fit
         gap = _residual(nf, case.var_true)
-        D_nf, a_nf = fit_msd_powerlaw(case.t, nf)             # noiseless truth
+        D_true, a_true = fit_msd_powerlaw(case.t, case.var_true)  # carrier truth
+        D_nf, a_nf = fit_msd_powerlaw(case.t, nf)             # noiseless-fit check
         lines.append("-" * 70)
         lines.append(f"=== {case.name} ===   noiseless fit "
                      f"[{np.nanmin(nf):.4g}, {np.nanmax(nf):.4g}] um^2, "
                      f"shape gap {gap:.4g} um^2")
-        lines.append(f"  noiseless-truth MSD fit:  D = {D_nf:.4g} um^2/ns, "
-                     f"alpha = {a_nf:.3f}")
+        lines.append(f"  carrier-moment truth MSD fit:  D = {D_true:.4g} "
+                     f"um^2/ns, alpha = {a_true:.3f}")
+        lines.append(f"  noiseless Gaussian-fit MSD:    D = {D_nf:.4g} um^2/ns, "
+                     f"alpha = {a_nf:.3f}  (shape-gap check vs truth)")
         lines.append("  naive = all-frames raw fit;  method = corrected + "
                      "sub-floor frames dropped (CNR >= 1)")
         lines.append("  CNR_0 | min CNR | n>=1 | D naive/method | "
                      "alpha naive/method  (truth D={:.3g}, alpha={:.2f})"
-                     .format(D_nf, a_nf))
+                     .format(D_true, a_true))
         for cnr0 in CNR_GRID:
             raw, cor, cnr_frame = validation_pass(case, trunc, cnr0, N_SEEDS)
             work = cnr_frame >= FLOOR_CNR
@@ -173,9 +183,10 @@ def main() -> None:
     for ax, case in zip(axes[0], cases):
         cnr_frame, raw, cor, nf = fig_rows[case.name]
         work = cnr_frame >= FLOOR_CNR
-        ax.plot(case.t, nf, color="k", lw=1.7, label="noiseless fit (ref)")
-        ax.plot(case.t, case.var_true, color="#888888", lw=1.0, ls=":",
-                label="true 2nd moment")
+        ax.plot(case.t, case.var_true, color="k", lw=1.7,
+                label="carrier 2nd moment (truth)")
+        ax.plot(case.t, nf, color="#888888", lw=1.0, ls=":",
+                label="noiseless Gaussian fit")
         ax.plot(case.t, raw, ".", color=DICE_GOLD, ms=4, alpha=0.7,
                 label="raw fit")
         ax.plot(case.t, cor, ".", color=DICE_BLUE, ms=4, label="corrected")

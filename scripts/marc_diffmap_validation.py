@@ -1,26 +1,36 @@
-"""Validate the folded-normal correction on Marc Melendez's diffusion maps.
+"""Validate the per-frame correction on Marc Melendez's Mn diffusion maps.
 
 Marc supplied noiseless diffusion maps and ground-truth variance curves for four
 Mn-doping cases (undoped, 0.51%, 0.81%, 4.04% Mn) from the Magdaleno et al. 2025
-reaction-diffusion model. This runs the per-frame correction directly on his
-published maps -- no regeneration through our port -- the strongest
-realistic-transport test of the method: the transport is genuinely non-Fickian
-(two trapping channels) and the ground truth is the model author's own
-sigma^2(t).
+reaction-diffusion model. The maps are multi-population: a free-exciton
+population and two trapped populations of different width emit independently, so
+the photoluminescence is a linear sum of population terms and its second moment
+is an intensity-weighted average -- the apparent (effective) transport.
 
-Three fit models are compared, each with its own joint (CNR, sigma^2)
-calibration on Marc's geometry: Gaussian, Voigt (fixed Lorentzian gamma), and
-generalized-Gaussian. For each, two quantities are separated:
+Per docs/VALIDATION_DESIGN.md the truth is the carrier (transport) second
+moment, supplied here as ``case.var_true``. Because the emission is linear in
+the populations, that recorded second moment equals the carrier moment, so no
+forward-model stage is needed (unlike the nonlinear Saha bed); the
+width-extraction stage alone can reach it -- but only with the right estimator.
+The profile is a mixture, so no single peaked shape matches it, and the
+framework routes this bed to the moment estimator. Two paths are reported:
 
-  * **Correction residual** -- |corrected fit - NOISELESS fit| in the working
-    regime (per-frame CNR >= 1). The noiseless fit is the bias-free target for
-    *that estimator* (no noise, no fold), so this isolates the truncation
-    correction from everything else.
-  * **Shape gap** -- |noiseless fit - true 2nd moment|. A single peaked fit of a
-    multi-population (free + trapped) profile does not equal its second moment;
-    this gap is the estimator's shape mismatch, which the truncation correction
-    neither causes nor removes. Comparing the gap across estimators shows which
-    one best captures the true transport width.
+  * **Moment estimator -- the in-principle carrier path.** The non-truncated
+    second moment closes the shape gap by construction (its noiseless value
+    equals ``case.var_true``), so it is scored directly against the carrier
+    moment. It takes no folded-normal correction (it has no wall); the cost is
+    variance. On these maps that cost is severe -- under realistic noise the
+    cross-seed SD reaches order 1e4-1e5 um^2 and the NaN fraction ~0.2, so the
+    bare moment is not usable here. The practical carrier-recovery path for this
+    mixture is therefore the forward fit of the reaction-diffusion model
+    (paper-scope, as on the nonlinear Saha bed), not the bare moment.
+  * **Single-shape fits + folded-normal.** A Gaussian, Voigt, or
+    generalized-Gaussian fit, each with its joint (CNR, sigma^2) calibration on
+    Marc's geometry. Scored two ways: ``|corrected - noiseless fit|`` isolates
+    the noise (truncation) correction, which it removes; ``|corrected -
+    var_true|`` shows the residual shape gap to the carrier moment, which the
+    correction does not close. The noiseless-fit-vs-var_true shape gap is
+    tabulated across estimators.
 
 Run from the repository root::
 
@@ -118,13 +128,15 @@ def main() -> None:
     cases = load_all()
     lines = [
         "=" * 72,
-        "Marc diffusion-map validation -- folded-normal across three estimators",
-        "(joint 2-D calibration; subtractive folded_normal + fixed-point)",
+        "Marc Mn diffusion-map validation -- carrier-moment truth (var_true)",
+        "Moment estimator = carrier-recovery path; single-shape fits + folded",
+        "= noise-debiased but shape-gap-limited.  (joint 2-D calibration)",
         "=" * 72,
         f"n_seeds per CNR_0: {N_SEEDS};  reliable regime: per-frame "
         f"CNR >= {FLOOR_CNR}",
-        "Correction residual = |corrected - noiseless fit| (working regime).",
-        "Shape gap = mean|noiseless fit - true 2nd moment| over all frames.",
+        "Noise correction = |corrected - noiseless fit| (isolates distortion 1).",
+        "Shape gap = mean|noiseless fit - true 2nd moment (carrier)| per frame.",
+        "Carrier residual = |corrected - var_true| (total error vs the truth).",
         "",
     ]
 
@@ -152,8 +164,8 @@ def main() -> None:
                          f"[{np.nanmin(nf):.4g}, {np.nanmax(nf):.4g}] um^2, "
                          f"shape gap {gap:.4g} um^2 "
                          f"(true 2nd-moment max {case.var_true.max():.4g})")
-            lines.append("   CNR_0 | min CNR | frames>=1 | "
-                         "|resid vs noiseless fit| (raw / corrected)")
+            lines.append("   CNR_0 | min CNR | frames>=1 | raw/cor vs noiseless "
+                         "fit | cor vs carrier moment")
             for cnr0 in CNR_GRID:
                 raw, cor, cnr_frame = validation_pass(
                     case, trunc, fit_fn, cnr0, N_SEEDS)
@@ -161,9 +173,10 @@ def main() -> None:
                 n_work = int(work.sum())
                 r_raw = _residual(raw, nf, work)
                 r_cor = _residual(cor, nf, work)
+                r_cor_truth = _residual(cor, case.var_true, work)
                 lines.append(f"   {cnr0:5.0f} | {cnr_frame.min():7.2f} | "
                              f"{n_work:4d}/{cnr_frame.size} | "
-                             f"{r_raw:8.4g}  /  {r_cor:8.4g}")
+                             f"{r_raw:8.4g} / {r_cor:8.4g} | {r_cor_truth:8.4g}")
             lines.append("")
 
     # --- MomentModel: the non-truncated estimator -------------------------
@@ -177,8 +190,10 @@ def main() -> None:
     moment = MomentModel()
     noiseless_fits[MOMENT_KEY] = {}
     lines.append("#" * 72)
-    lines.append(f"### Estimator: {MOMENT_LABEL}  (no calibration; NON-truncated,"
-                 " no folded correction)")
+    lines.append(f"### Estimator: {MOMENT_LABEL}  -- the carrier-recovery path"
+                 " (NON-truncated, no folded correction)")
+    lines.append("   Scored against var_true (carrier moment); cost is variance"
+                 " (cross-seed SD, NaN frac).")
     lines.append("#" * 72)
     for case in cases:
         nm = fit_each_row(case.x, case.diffmap, moment.fit_variance)
@@ -187,7 +202,7 @@ def main() -> None:
         lines.append(f"-- {case.name}: noiseless moment "
                      f"[{np.nanmin(nm):.4g}, {np.nanmax(nm):.4g}] um^2, "
                      f"shape gap {shape_gaps[(MOMENT_KEY, case.name)]:.4g} um^2")
-        lines.append("   CNR_0 | min CNR | frames>=1 | mean|noisy-noiseless| | "
+        lines.append("   CNR_0 | min CNR | frames>=1 | mean|noisy - var_true| | "
                      "cross-seed SD | NaN frac")
         n_frames = case.diffmap.shape[0]
         peak0 = float(case.diffmap[0].max())
@@ -201,7 +216,7 @@ def main() -> None:
                 prof = case.diffmap + rng.normal(0.0, noise_sigma,
                                                  case.diffmap.shape)
                 noisy[s] = fit_each_row(case.x, prof, moment.fit_variance)
-            resid = _residual(np.nanmean(noisy, axis=0), nm, work)
+            resid = _residual(np.nanmean(noisy, axis=0), case.var_true, work)
             sd = (float(np.nanmean(np.nanstd(noisy, axis=0)[work]))
                   if work.any() else float("nan"))
             nan_frac = (float(np.mean(np.isnan(noisy[:, work])))

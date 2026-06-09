@@ -1,47 +1,58 @@
-"""Does the folded-normal correction recover alpha under non-Fickian transport?
+"""Where the folded-normal correction acts on a nonlinear, multi-population bed.
 
-The truncation correction is derived and calibrated on simple analytic profiles
-whose MSD is linear in time (Fickian). This experiment feeds it the harder case:
-emission profiles from the Saha reaction-diffusion model
-(`reaction_diffusion_saha.py`), where excitons and free charges diffuse at
-different rates and the local mix is set by density through the Saha equation.
-The effective diffusivity then drifts as the population decays and spreads, so
-the MSD is curved -- non-Fickian, with a tunable anomalous exponent alpha in
-both directions -- and the observable is non-Gaussian (the n^2 free-charge term
-sharpens the peak).
+This experiment places the Saha reaction-diffusion bed inside the validation
+framework of `docs/VALIDATION_DESIGN.md`. The deliverable of an exciton-diffusion
+measurement is the *carrier distribution* and its transport, not the recorded
+emission profile. Three distortions sit between the two:
 
-The test reuses the shipped pipeline. Marc's noise-free profiles replace the
-analytic Gaussian series; the per-frame Gaussian width fit, the 2-D (CNR,
-sigma^2) calibration, the folded-normal subtraction with its fixed-point
-inversion, and the slope are all `weighting_wall` code.
+1. measurement noise (and the truncation bias it puts in any bounded width fit),
+2. the instrument point-spread function,
+3. the emission-to-carrier mapping.
 
-Two issues are kept deliberately separate, because they have different causes
-(the same split seen on the Mn maps):
+The folded-normal correction in `weighting_wall` removes distortion 1 only. The
+Saha emission is nonlinear in carrier density -- E = qe nu (1-x) n + qf rho x^2
+n^2 -- so distortion 3 is present and large, and no width estimator plus noise
+correction can reach the carrier transport on its own. That is the forward-model
+stage's job (the second stage of the pipeline; `profile_likelihood_demo.py` is
+that stage made concrete on real reduced-MSD data).
 
-1. **Estimator shape bias.** A Gaussian fit of a non-Gaussian (peak-sharpened)
-   profile already distorts the width, and therefore alpha, before any noise.
-   Quantified by comparing the noise-free Gaussian-fit alpha against the
-   true second-moment alpha. This needs no calibration and runs cheaply.
-2. **Truncation correction.** Whether folded-normal recovers the noise-free
-   Gaussian-fit trajectory (and its alpha) under noise. The honest reference is
-   the noise-free *fit* width, not the second moment.
+So this script does the width-extraction (first) stage honestly and quantifies
+what is left for the forward stage. For each operating point it reports, with no
+noise, three trajectories and the two gaps between them:
 
-Design choices, per coordination with the weighting-wall side:
+* carrier second moment, from the simulated population n(y, t) -- the truth;
+* recorded-emission second moment, from the emission profile -- the first
+  stage's target;
+* single-shape (Gaussian) fit of the emission -- a single shape applied to a
+  mixture.
 
-* The calibration is the 2-D (CNR, sigma^2) joint lookup, geometry-matched to
-  the Saha pixel grid, built once by `scripts/build_calibration.py` and loaded
-  here. The 1-D D-free path is invalid here: the fitted width spreads by 1.6-3x
-  over the window, far outside its small-spread premise.
-* Only `folded_normal` (subtractive) with the fixed-point inversion is scored
-  as the correction; `mas` is excluded (its gate currently zeroes the
-  correction). `ols` and `inverse_variance` remain as the uncorrected baselines.
-* Frames whose per-frame CNR falls below the inversion floor (~0.6) are flagged,
-  not silently fit.
-* The calibration is built from Gaussian profiles, so it is independent of the
-  x-vs-x^2 emission choice; both `free_charge_emission_power` values are run
-  through the one calibration and the spread reported.
+The gap (recorded-emission moment) - (carrier moment) is the emission-to-carrier
+distortion; only the forward model closes it. The gap (Gaussian fit) -
+(recorded-emission moment) is the shape gap; it is a selection issue, removed by
+using the moment estimator rather than a single shape, not by the noise
+correction.
 
-Build the calibration first (do not run it against another large build)::
+Under noise it then checks the first stage two ways:
+
+* the moment estimator (non-truncated, no folded-normal) recovers the
+  recorded-emission moment where the per-frame contrast-to-noise allows it
+  (it is unstable below CNR ~ 3);
+* a Gaussian fit plus the folded-normal correction recovers the *noise-free
+  Gaussian fit* -- this isolates distortion 1, and is a first-stage diagnostic,
+  not a claim about the carrier transport.
+
+Neither first-stage quantity equals the carrier transport; the residual is the
+emission-to-carrier gap, reported against the carrier truth.
+
+The Voigt estimator with a Lorentzian instrument point-spread function is not
+exercised here. It assumes a single Gaussian convolved with a Lorentzian and is
+mismatched to the Saha mixture exactly as the Gaussian estimator is; its
+validation belongs on a dedicated single-population point-spread bed, not on this
+mixture (see `docs/VALIDATION_AUDIT.md`).
+
+Build the 2-D (CNR, sigma^2) calibration first (needed only for the Gaussian +
+folded-normal first-stage diagnostic; the moment path and the gap report need no
+calibration)::
 
     .venv/Scripts/python.exe scripts/build_calibration.py \\
         --tag saha --model gaussian \\
@@ -49,7 +60,7 @@ Build the calibration first (do not run it against another large build)::
         --sigma-min 0.15 --sigma-max 1.2 --n-sigma 100 \\
         --cnr-min 0.3 --cnr-max 150 --n-cnr 100 --n-runs 1000
 
-Then run this experiment from the repository root::
+Then run from the repository root::
 
     .venv/Scripts/python.exe mc_experiments/saha_reaction_diffusion/nonfickian_validation.py
 
@@ -74,14 +85,13 @@ sys.path.insert(0, _HERE)
 
 import reaction_diffusion_saha as rd  # noqa: E402
 from weighting_wall.calibration import CalibrationGrid  # noqa: E402
-from weighting_wall.fit import fit_D  # noqa: E402
-from weighting_wall.models import GaussianModel, VoigtModel  # noqa: E402
+from weighting_wall.models import GaussianModel, MomentModel  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
-# Physical pixel grid the Saha profiles are resampled onto, in um. Matched by
-# the calibration build above (n_pixels / half_window identical). The absolute
-# scale is free; pixels-per-sigma, not dx, is what the bias depends on. Here
+# Physical pixel grid the Saha emission is resampled onto, in um. Matched by the
+# calibration build above (n_pixels / half_window identical). The absolute scale
+# is free; pixels-per-sigma, not dx, is what the bias depends on. Here
 # sigma0 ~ 0.3 um gives ~15 pixels/sigma, and var_max/sigma^2_max = 44 (no pinch).
 HALF_WINDOW_UM = 4.0
 N_PIXELS = 401
@@ -90,24 +100,22 @@ N_FRAMES = 12
 
 CALIBRATION_PATH = os.path.join("output", "calibration_saha.npz")
 
-# Correction-reliability floor. The diagnostic (diagnose_overcorrection.py)
-# shows the 2-D var_bias matches the actual per-frame fit bias for per-frame
-# CNR >~ 1.3, but over-estimates it (folded over-subtracts, flattening the late
-# MSD and pulling alpha below the reference) in the band CNR ~ 0.6-1.3. So the
-# correction is trusted only above ~1.3; frames below are flagged and dropped
-# from the alpha fit. (Sharpens the "per-profile CNR floor ~1".)
+# First-stage estimators. The moment estimator returns the recorded-emission
+# second moment directly (no truncation, no calibration); the Gaussian fit is
+# the bounded estimator the folded-normal correction debiases.
+GAUSS = GaussianModel()
+MOMENT = MomentModel()
+
+# Correction-reliability floor for the Gaussian + folded-normal diagnostic. The
+# diagnostic (diagnose_overcorrection.py) shows the 2-D var_bias matches the
+# actual per-frame fit bias for per-frame CNR >~ 1.3 but over-subtracts in the
+# band CNR ~ 0.6-1.3; frames below 1.3 are flagged and dropped. The moment
+# estimator has its own, separate floor near CNR ~ 3 (variance, not truncation).
 CNR_FLOOR = 1.3
+MOMENT_CNR_FLOOR = 3.0
 
 EVAL_CNR0 = 60.0          # initial CNR for the correction figures
 N_RUNS = 400
-
-# Estimator and instrument PSF, set from the CLI in main(). The Saha emission is
-# near-Gaussian (beta ~ 1.93) and the simulation carries no instrument response,
-# so the Voigt estimator only bites once a Lorentzian PSF is convolved in:
-# PSF_GAMMA_UM (HWHM, um) broadens the emission and is also the Voigt fixed
-# gamma. Default: Gaussian estimator, no PSF.
-ESTIMATOR = GaussianModel()
-PSF_GAMMA_UM = 0.0
 
 # Base Saha parameters (paper-anchored). De/Df contrast drives the non-Fickian
 # effect; A is swept to move alpha. Stability needs Df*dt/dx^2 < 0.5.
@@ -126,18 +134,31 @@ A_SWEEP = np.geomspace(30.0, 2000.0, 11)
 
 @dataclass
 class Regime:
-    """One operating point: noise-free profiles and reference trajectories."""
+    """One operating point: noise-free profiles and reference trajectories.
+
+    Three reference width trajectories, plus the alphas read from each:
+
+    * ``carrier_var`` -- second moment of the simulated population n(y, t).
+      This is the truth (the carrier distribution's transport).
+    * ``emission_var`` -- second moment of the recorded emission profile. The
+      first (width-extraction) stage targets this; it differs from the carrier
+      moment by the emission-to-carrier distortion.
+    * ``gauss_var`` -- noise-free Gaussian fit of the emission. A single shape
+      on a mixture; it differs from ``emission_var`` by the shape gap.
+    """
 
     A: float
     emission_power: int
     times: np.ndarray          # frame times (ns)
     clean: np.ndarray          # (n_frames, n_pixels) noise-free emission (um grid)
-    peak: np.ndarray           # per-frame noise-free peak (for CNR bookkeeping)
-    fit_var: np.ndarray        # noise-free estimator-fit variance per frame (um^2)
-    moment_var: np.ndarray     # noise-free second-moment variance per frame (um^2)
-    alpha_fit: float           # alpha from the estimator-fit trajectory
-    alpha_moment: float        # alpha from the second-moment trajectory
-    width_ratio: float         # late / initial fitted width
+    peak: np.ndarray           # per-frame noise-free emission peak (CNR bookkeeping)
+    carrier_var: np.ndarray    # truth: population second moment per frame (um^2)
+    emission_var: np.ndarray   # recorded-emission second moment per frame (um^2)
+    gauss_var: np.ndarray      # noise-free Gaussian-fit variance per frame (um^2)
+    alpha_carrier: float       # alpha from the carrier (truth) trajectory
+    alpha_emission: float      # alpha from the recorded-emission moment
+    alpha_gauss: float         # alpha from the noise-free Gaussian fit
+    width_ratio: float         # late / initial emission fitted width
 
 
 def _alpha(times: np.ndarray, var: np.ndarray) -> float:
@@ -149,37 +170,23 @@ def _alpha(times: np.ndarray, var: np.ndarray) -> float:
     return float(np.polyfit(np.log(times[keep]), np.log(msd[keep]), 1)[0])
 
 
-def _second_moment_var(profile: np.ndarray) -> float:
-    """Second central moment of a (non-negative) emission profile on PIXEL_X."""
+def _moment_on_grid(grid: np.ndarray, profile: np.ndarray) -> float:
+    """Second central moment of a (non-negative) profile on an arbitrary grid."""
     w = np.clip(profile, 0.0, None)
     s = w.sum()
     if s <= 0:
         return np.nan
-    mean = float((PIXEL_X * w).sum() / s)
-    return float(((PIXEL_X - mean) ** 2 * w).sum() / s)
-
-
-def _psf_broaden(profile: np.ndarray, gamma: float) -> np.ndarray:
-    """Convolve a profile with a Lorentzian instrument PSF of HWHM gamma (um).
-
-    Real transport-microscopy profiles are a diffusing population convolved with
-    the instrument response; the Saha simulation omits it, so adding it here is
-    what makes the observable genuinely Voigt-shaped and the Voigt estimator the
-    correct one. The kernel is normalised to conserve integrated intensity.
-    """
-    dx = float(PIXEL_X[1] - PIXEL_X[0])
-    half = max(1, int(np.ceil(8.0 * gamma / dx)))
-    offsets = np.arange(-half, half + 1) * dx
-    kernel = (gamma / np.pi) / (offsets ** 2 + gamma ** 2)
-    kernel /= kernel.sum()
-    return np.convolve(profile, kernel, mode="same")
+    mean = float((grid * w).sum() / s)
+    return float(((grid - mean) ** 2 * w).sum() / s)
 
 
 def build_regime(A: float, emission_power: int) -> Regime:
-    """Run the Saha model at density coupling A and resample onto PIXEL_X (um).
+    """Run the Saha model at density coupling A and build the reference set.
 
     No per-regime width normalization: the profiles stay in physical um so the
-    single geometry-matched calibration applies to every regime.
+    single geometry-matched calibration applies to every regime. The carrier
+    truth is taken from the population on the simulation's own grid; the
+    emission references are taken on PIXEL_X, the grid the fits will run on.
     """
     par = rd.Parameters(L=BASE["L"], nbins=BASE["nbins"], De=BASE["De"],
                         Df=BASE["Df"], nu=BASE["nu"], rho=BASE["rho"], A=A,
@@ -193,43 +200,62 @@ def build_regime(A: float, emission_power: int) -> Regime:
     times = res.times[idx]
     clean = np.array([np.interp(PIXEL_X, xs, res.emission[i], left=0.0, right=0.0)
                       for i in idx])
-    if PSF_GAMMA_UM > 0.0:
-        clean = np.array([_psf_broaden(row, PSF_GAMMA_UM) for row in clean])
 
-    fit_var = np.array([ESTIMATOR.fit_variance(PIXEL_X, row).variance
-                        for row in clean])
-    moment_var = np.array([_second_moment_var(row) for row in clean])
+    # Truth: carrier (population) second moment, on the simulation's own grid.
+    carrier_var = np.array([_moment_on_grid(xs, res.population[i]) for i in idx])
+    # Recorded-emission second moment and noise-free Gaussian fit, on PIXEL_X.
+    emission_var = np.array([_moment_on_grid(PIXEL_X, row) for row in clean])
+    gauss_var = np.array([GAUSS.fit_variance(PIXEL_X, row).variance
+                          for row in clean])
     return Regime(
         A=A, emission_power=emission_power, times=times, clean=clean,
-        peak=clean.max(axis=1), fit_var=fit_var, moment_var=moment_var,
-        alpha_fit=_alpha(times, fit_var), alpha_moment=_alpha(times, moment_var),
-        width_ratio=float(np.sqrt(fit_var.max() / fit_var[0])),
+        peak=clean.max(axis=1), carrier_var=carrier_var,
+        emission_var=emission_var, gauss_var=gauss_var,
+        alpha_carrier=_alpha(times, carrier_var),
+        alpha_emission=_alpha(times, emission_var),
+        alpha_gauss=_alpha(times, gauss_var),
+        width_ratio=float(np.sqrt(gauss_var.max() / gauss_var[0])),
     )
 
 
-def corrected_trajectory(regime: Regime, cnr0: float, model: TruncationModel,
-                         n_runs: int = N_RUNS, seed: int = 0):
-    """Mean folded-normal-corrected variance trajectory under noise at cnr0.
+def first_stage_trajectories(regime: Regime, cnr0: float,
+                             model: TruncationModel | None,
+                             n_runs: int = N_RUNS, seed: int = 0):
+    """Mean first-stage width trajectories under noise at cnr0.
 
-    Returns (mean_raw, mean_corrected, cnr_frame, below_floor). Mirrors
-    `run_ensemble`: noise at the profile level, a per-frame Gaussian fit, then
-    the scheme's per-frame correction averaged over realisations.
+    Returns a dict of mean trajectories over realisations:
+
+    * ``moment`` -- the non-truncated moment estimator (targets the
+      recorded-emission moment; no folded-normal);
+    * ``gauss_folded`` -- the Gaussian fit with the folded-normal correction
+      (targets the noise-free Gaussian fit; isolates distortion 1). ``None``
+      when no calibration is supplied.
+
+    Plus ``cnr_frame`` and the two per-frame floor masks.
     """
     noise_sigma = regime.peak[0] / cnr0
     cnr_frame = regime.peak / noise_sigma
     rng = np.random.default_rng(seed)
 
-    raw = np.full((n_runs, N_FRAMES), np.nan)
-    cor = np.full((n_runs, N_FRAMES), np.nan)
+    mom = np.full((n_runs, N_FRAMES), np.nan)
+    gf = np.full((n_runs, N_FRAMES), np.nan)
     for r in range(n_runs):
         noisy = regime.clean + rng.normal(0.0, noise_sigma, size=regime.clean.shape)
-        var_row = np.array([ESTIMATOR.fit_variance(PIXEL_X, noisy[f]).variance
-                            for f in range(N_FRAMES)])
-        raw[r] = var_row
-        cor[r] = corrected_variance("folded_normal", var_row, cnr_frame, model)
+        mom[r] = np.array([MOMENT.fit_variance(PIXEL_X, noisy[f]).variance
+                           for f in range(N_FRAMES)])
+        if model is not None:
+            var_row = np.array([GAUSS.fit_variance(PIXEL_X, noisy[f]).variance
+                                for f in range(N_FRAMES)])
+            gf[r] = corrected_variance("folded_normal", var_row, cnr_frame, model)
 
-    return (np.nanmean(raw, axis=0), np.nanmean(cor, axis=0),
-            cnr_frame, cnr_frame < CNR_FLOOR)
+    out = {
+        "moment": np.nanmean(mom, axis=0),
+        "gauss_folded": np.nanmean(gf, axis=0) if model is not None else None,
+        "cnr_frame": cnr_frame,
+        "below_fit_floor": cnr_frame < CNR_FLOOR,
+        "below_moment_floor": cnr_frame < MOMENT_CNR_FLOOR,
+    }
+    return out
 
 
 def load_model(path: str = CALIBRATION_PATH) -> TruncationModel | None:
@@ -245,52 +271,111 @@ def load_model(path: str = CALIBRATION_PATH) -> TruncationModel | None:
     return TruncationModel.from_calibration(calib)
 
 
-def shape_bias_report() -> dict[int, list[Regime]]:
-    """The estimator shape-bias half: needs no calibration, runs cheaply.
+def gap_report() -> dict[int, list[Regime]]:
+    """The two gaps, with no noise: needs no calibration, runs cheaply.
 
-    For each emission power, builds the A-sweep and reports the noise-free
-    Gaussian-fit alpha against the true second-moment alpha -- the distortion a
-    Gaussian fit of a non-Gaussian profile introduces before any noise.
+    For each emission power, builds the A-sweep and reports the carrier (truth)
+    alpha, the recorded-emission alpha, and the single-shape-fit alpha, so both
+    gaps can be read: emission-to-carrier (truth vs emission) and shape
+    (emission vs fit).
     """
     out = {}
     for power in (1, 2):
-        print(f"\nEstimator shape bias, free_charge_emission_power={power} "
+        print(f"\nReference alphas and the two gaps, "
+              f"free_charge_emission_power={power} "
               f"({'Marc C code' if power == 1 else 'paper eq. 9'})")
-        print("      A    alpha_fit  alpha_moment  width_ratio")
+        print("      A   alpha_carrier  alpha_emission  alpha_gaussfit   "
+              "emis-carr   shape    width_ratio")
         regimes = [build_regime(float(a), power) for a in A_SWEEP]
         for rg in regimes:
-            print(f"  {rg.A:7.0f}    {rg.alpha_fit:7.3f}     "
-                  f"{rg.alpha_moment:7.3f}      {rg.width_ratio:.2f}")
+            emis_carr = rg.alpha_emission - rg.alpha_carrier
+            shape = rg.alpha_gauss - rg.alpha_emission
+            print(f"  {rg.A:7.0f}     {rg.alpha_carrier:7.3f}        "
+                  f"{rg.alpha_emission:7.3f}         {rg.alpha_gauss:7.3f}     "
+                  f"{emis_carr:+6.3f}   {shape:+6.3f}     {rg.width_ratio:.2f}")
         out[power] = regimes
     return out
 
 
-def correction_report(regimes_by_power: dict[int, list[Regime]],
-                      model: TruncationModel, cnr0_list: list[float]) -> None:
-    """The truncation-correction half: recover alpha from corrected trajectory."""
+def first_stage_report(regimes_by_power: dict[int, list[Regime]],
+                       model: TruncationModel | None,
+                       cnr0_list: list[float]) -> None:
+    """First-stage recovery under noise, scored against each stage's own target.
+
+    The moment estimator is scored against the recorded-emission alpha (its
+    target); the Gaussian + folded-normal path against the noise-free
+    Gaussian-fit alpha (distortion-1 diagnostic). Both are then compared to the
+    carrier truth, whose residual is the emission-to-carrier gap the forward
+    stage must close.
+    """
     for power, regimes in regimes_by_power.items():
         for ci, cnr0 in enumerate(cnr0_list):
-            print(f"\nAlpha recovery at CNR_0={cnr0}, "
+            print(f"\nFirst-stage recovery at CNR_0={cnr0}, "
                   f"free_charge_emission_power={power}")
-            print("      A   alpha_ref  alpha_raw(uncorr)  alpha_folded  "
-                  "frames_below_floor")
-            recovered = []
+            print("      A   a_carrier   a_moment(noisy)  a_gauss+folded   "
+                  "frames<fit  frames<mom")
+            results = []
             for k, rg in enumerate(regimes):
-                mean_raw, mean_cor, cnr_frame, below = corrected_trajectory(
-                    rg, cnr0, model, seed=100 + k + 1000 * ci)
-                keep = ~below
-                ok = keep.sum() >= 2
-                a_raw = _alpha(rg.times[keep], mean_raw[keep]) if ok else np.nan
-                a_cor = _alpha(rg.times[keep], mean_cor[keep]) if ok else np.nan
-                recovered.append((rg, mean_raw, mean_cor, cnr_frame, below, a_cor))
-                print(f"  {rg.A:7.0f}    {rg.alpha_fit:6.3f}       {a_raw:6.3f}"
-                      f"          {a_cor:6.3f}          {int(below.sum())}")
-            # Figure for the lowest (most-stressed) CNR_0 only.
+                tr = first_stage_trajectories(rg, cnr0, model,
+                                              seed=100 + k + 1000 * ci)
+                keep_mom = ~tr["below_moment_floor"]
+                keep_fit = ~tr["below_fit_floor"]
+                a_mom = (_alpha(rg.times[keep_mom], tr["moment"][keep_mom])
+                         if keep_mom.sum() >= 2 else np.nan)
+                if tr["gauss_folded"] is not None and keep_fit.sum() >= 2:
+                    a_gf = _alpha(rg.times[keep_fit], tr["gauss_folded"][keep_fit])
+                else:
+                    a_gf = np.nan
+                results.append((rg, tr, a_mom, a_gf))
+                print(f"  {rg.A:7.0f}    {rg.alpha_carrier:6.3f}      "
+                      f"{a_mom:6.3f}          {a_gf:6.3f}           "
+                      f"{int(tr['below_fit_floor'].sum())}          "
+                      f"{int(tr['below_moment_floor'].sum())}")
             if ci == 0:
-                _plot_correction(power, recovered, cnr0)
+                _plot_first_stage(power, results, cnr0)
 
 
-def _plot_shape_bias(regimes_by_power) -> None:
+def _plot_first_stage(power, results, cnr0) -> None:
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return
+    # For the lowest, middle, and highest-alpha regimes, show all three
+    # reference trajectories and the two first-stage means, so the two gaps and
+    # where the first stage lands are visible.
+    alphas = np.array([r[0].alpha_carrier for r in results])
+    order = np.argsort(alphas)
+    picks = [results[order[0]], results[order[len(order) // 2]],
+             results[order[-1]]]
+    fig, axes = plt.subplots(1, 3, figsize=(13.8, 4.3), sharey=False)
+    for ax, (rg, tr, a_mom, a_gf) in zip(axes, picks):
+        t = rg.times
+        ax.plot(t, rg.carrier_var, "k-", lw=2, label="carrier moment (truth)")
+        ax.plot(t, rg.emission_var, "-", color="tab:blue",
+                label="recorded-emission moment")
+        ax.plot(t, rg.gauss_var, ":", color="tab:purple",
+                label="noise-free Gaussian fit")
+        ax.plot(t, tr["moment"], "o", color="tab:cyan", ms=4,
+                label="moment estimator (noisy)")
+        if tr["gauss_folded"] is not None:
+            ax.plot(t, tr["gauss_folded"], "s", color="tab:green", ms=4,
+                    label="Gaussian + folded (noisy)")
+        ax.set_xlabel("time (ns)")
+        ax.set_title(rf"$\alpha_{{carrier}}$={rg.alpha_carrier:.2f}")
+    axes[0].set_ylabel(r"variance (um$^2$)")
+    axes[-1].legend(fontsize=7)
+    fig.suptitle(f"First-stage references and recovery "
+                 f"(emission power {power}, CNR$_0$={cnr0:.0f})")
+    fig.tight_layout()
+    out = os.path.join("output", f"nonfickian_first_stage_power{power}.png")
+    os.makedirs("output", exist_ok=True)
+    fig.savefig(out, dpi=150)
+    print(f"Figure written to {out}")
+
+
+def _plot_gaps(regimes_by_power) -> None:
     try:
         import matplotlib
         matplotlib.use("Agg")
@@ -301,101 +386,59 @@ def _plot_shape_bias(regimes_by_power) -> None:
     fig, ax = plt.subplots(figsize=(6.2, 4.6))
     for power, c in ((1, "tab:green"), (2, "tab:purple")):
         regimes = regimes_by_power[power]
-        amom = np.array([rg.alpha_moment for rg in regimes])
-        afit = np.array([rg.alpha_fit for rg in regimes])
-        order = np.argsort(amom)
-        ax.plot(amom[order], afit[order], "o-", color=c,
-                label=f"emission power {power}")
+        acar = np.array([rg.alpha_carrier for rg in regimes])
+        aemis = np.array([rg.alpha_emission for rg in regimes])
+        agf = np.array([rg.alpha_gauss for rg in regimes])
+        order = np.argsort(acar)
+        ax.plot(acar[order], aemis[order], "o-", color=c,
+                label=f"emission moment (power {power})")
+        ax.plot(acar[order], agf[order], "s--", color=c, alpha=0.5,
+                label=f"Gaussian fit (power {power})")
     lims = ax.get_xlim()
-    ax.plot(lims, lims, ls=":", c="grey", lw=1, label="no shape bias")
-    ax.set_xlabel(r"true second-moment $\alpha$")
-    ax.set_ylabel(r"noise-free Gaussian-fit $\alpha$")
-    ax.set_title("Estimator shape bias (before any noise)")
+    ax.plot(lims, lims, ls=":", c="grey", lw=1, label="no gap (= carrier truth)")
+    ax.set_xlabel(r"carrier (truth) $\alpha$")
+    ax.set_ylabel(r"recovered $\alpha$")
+    ax.set_title("Emission-to-carrier and shape gaps (before any noise)")
     ax.legend(fontsize=8)
     fig.tight_layout()
     os.makedirs("output", exist_ok=True)
-    out = os.path.join("output", "nonfickian_shape_bias.png")
+    out = os.path.join("output", "nonfickian_gaps.png")
     fig.savefig(out, dpi=150)
     print(f"\nFigure written to {out}")
 
 
-def _plot_correction(power, recovered, cnr0) -> None:
-    try:
-        import matplotlib
-        matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
-    except ImportError:
-        return
-    # Core figure: corrected variance trajectory vs the noise-free-fit
-    # reference, for the lowest, middle, and highest-alpha regimes.
-    alphas = np.array([r[0].alpha_fit for r in recovered])
-    order = np.argsort(alphas)
-    picks = [recovered[order[0]], recovered[order[len(order) // 2]],
-             recovered[order[-1]]]
-    fig, axes = plt.subplots(1, 3, figsize=(13.8, 4.3), sharey=False)
-    for ax, (rg, mean_raw, mean_cor, cnr_frame, below, a_rec) in zip(axes, picks):
-        t = rg.times
-        ax.plot(t, rg.fit_var, "k-", lw=2, label="noise-free fit (reference)")
-        ax.plot(t, mean_raw, "s--", color="tab:orange",
-                label="uncorrected (raw)")
-        ax.plot(t, mean_cor, "o-", color="tab:green",
-                label="folded-normal corrected")
-        if below.any():
-            ax.plot(t[below], mean_cor[below], "x", color="tab:red",
-                    ms=9, label=f"below CNR floor ({int(below.sum())})")
-        ax.set_xlabel("time (ns)")
-        ax.set_title(rf"$\alpha_{{ref}}$={rg.alpha_fit:.2f}, "
-                     rf"$\alpha_{{rec}}$={a_rec:.2f}")
-    axes[0].set_ylabel(r"variance (um$^2$)")
-    axes[-1].legend(fontsize=8)
-    fig.suptitle(f"Corrected variance trajectory (emission power {power}, "
-                 f"CNR$_0$={cnr0:.0f})")
-    fig.tight_layout()
-    out = os.path.join("output", f"nonfickian_trajectory_power{power}.png")
-    fig.savefig(out, dpi=150)
-    print(f"Figure written to {out}")
-
-
 def main() -> None:
-    global ESTIMATOR, PSF_GAMMA_UM
     parser = argparse.ArgumentParser(
-        description="Non-Fickian validation of the folded-normal correction.")
+        description="Saha non-Fickian bed in the validation framework: "
+                    "carrier-moment truth, the two gaps, first-stage recovery.")
     parser.add_argument("--calibration", default=CALIBRATION_PATH,
-                        help="path to the 2-D calibration .npz")
+                        help="path to the 2-D calibration .npz (Gaussian + "
+                             "folded-normal diagnostic only)")
     parser.add_argument("--cnr0", default=str(EVAL_CNR0),
                         help="comma-separated initial CNR values")
-    parser.add_argument("--estimator", choices=("gaussian", "voigt"),
-                        default="gaussian", help="per-frame width estimator")
-    parser.add_argument("--psf-gamma", type=float, default=0.0,
-                        help="Lorentzian instrument-PSF HWHM in um; convolved "
-                             "into the emission and used as the Voigt fixed "
-                             "gamma. Must match the calibration's gamma.")
     args = parser.parse_args()
-
-    PSF_GAMMA_UM = args.psf_gamma
-    ESTIMATOR = (VoigtModel(gamma=args.psf_gamma) if args.estimator == "voigt"
-                 else GaussianModel())
     cnr0_list = [float(c) for c in args.cnr0.split(",")]
 
-    print("Non-Fickian validation of the folded-normal correction")
+    print("Saha non-Fickian bed in the validation framework")
     print(f"  Saha model: De={BASE['De']}, Df={BASE['Df']} um^2/ns "
           f"(contrast {BASE['Df'] / BASE['De']:.0f}x), "
           f"nu={BASE['nu']}, rho={BASE['rho']} /ns")
     print(f"  grid: +/-{HALF_WINDOW_UM} um, {N_PIXELS} pixels, {N_FRAMES} frames")
-    psf_note = f", PSF gamma={args.psf_gamma} um" if args.psf_gamma > 0 else ""
-    print(f"  estimator: {args.estimator}{psf_note}")
+    print("  truth = carrier (population) second moment; emission is nonlinear "
+          "in n (x^2 term), so the forward stage is required for carrier alpha")
 
-    regimes_by_power = shape_bias_report()
-    _plot_shape_bias(regimes_by_power)
+    regimes_by_power = gap_report()
+    _plot_gaps(regimes_by_power)
 
     model = load_model(args.calibration)
     if model is None:
-        print(f"\n[no calibration at {args.calibration}] -- shape-bias half "
-              "done; build the calibration (see module docstring) to run the "
-              "correction half.")
-        return
-    print(f"\nUsing calibration: {args.calibration}")
-    correction_report(regimes_by_power, model, cnr0_list)
+        print(f"\n[no calibration at {args.calibration}] -- running the "
+              "moment-estimator first-stage path only; build the calibration "
+              "(see module docstring) to add the Gaussian + folded-normal "
+              "diagnostic.")
+    else:
+        print(f"\nUsing calibration: {args.calibration}")
+    first_stage_report(regimes_by_power, model, cnr0_list)
 
 
 if __name__ == "__main__":
