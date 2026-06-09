@@ -60,6 +60,7 @@ a specific material.
 """
 from __future__ import annotations
 
+import argparse
 import os
 import sys
 from dataclasses import dataclass
@@ -73,7 +74,8 @@ sys.path.insert(0, _HERE)
 
 import reaction_diffusion_saha as rd  # noqa: E402
 from weighting_wall.calibration import CalibrationGrid  # noqa: E402
-from weighting_wall.fit import fit_D, fit_variance  # noqa: E402
+from weighting_wall.fit import fit_D  # noqa: E402
+from weighting_wall.models import GaussianModel, VoigtModel  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
@@ -99,6 +101,14 @@ CNR_FLOOR = 1.3
 EVAL_CNR0 = 60.0          # initial CNR for the correction figures
 N_RUNS = 400
 
+# Estimator and instrument PSF, set from the CLI in main(). The Saha emission is
+# near-Gaussian (beta ~ 1.93) and the simulation carries no instrument response,
+# so the Voigt estimator only bites once a Lorentzian PSF is convolved in:
+# PSF_GAMMA_UM (HWHM, um) broadens the emission and is also the Voigt fixed
+# gamma. Default: Gaussian estimator, no PSF.
+ESTIMATOR = GaussianModel()
+PSF_GAMMA_UM = 0.0
+
 # Base Saha parameters (paper-anchored). De/Df contrast drives the non-Fickian
 # effect; A is swept to move alpha. Stability needs Df*dt/dx^2 < 0.5.
 #
@@ -123,9 +133,9 @@ class Regime:
     times: np.ndarray          # frame times (ns)
     clean: np.ndarray          # (n_frames, n_pixels) noise-free emission (um grid)
     peak: np.ndarray           # per-frame noise-free peak (for CNR bookkeeping)
-    fit_var: np.ndarray        # noise-free Gaussian-fit variance per frame (um^2)
+    fit_var: np.ndarray        # noise-free estimator-fit variance per frame (um^2)
     moment_var: np.ndarray     # noise-free second-moment variance per frame (um^2)
-    alpha_fit: float           # alpha from the Gaussian-fit trajectory
+    alpha_fit: float           # alpha from the estimator-fit trajectory
     alpha_moment: float        # alpha from the second-moment trajectory
     width_ratio: float         # late / initial fitted width
 
@@ -149,6 +159,22 @@ def _second_moment_var(profile: np.ndarray) -> float:
     return float(((PIXEL_X - mean) ** 2 * w).sum() / s)
 
 
+def _psf_broaden(profile: np.ndarray, gamma: float) -> np.ndarray:
+    """Convolve a profile with a Lorentzian instrument PSF of HWHM gamma (um).
+
+    Real transport-microscopy profiles are a diffusing population convolved with
+    the instrument response; the Saha simulation omits it, so adding it here is
+    what makes the observable genuinely Voigt-shaped and the Voigt estimator the
+    correct one. The kernel is normalised to conserve integrated intensity.
+    """
+    dx = float(PIXEL_X[1] - PIXEL_X[0])
+    half = max(1, int(np.ceil(8.0 * gamma / dx)))
+    offsets = np.arange(-half, half + 1) * dx
+    kernel = (gamma / np.pi) / (offsets ** 2 + gamma ** 2)
+    kernel /= kernel.sum()
+    return np.convolve(profile, kernel, mode="same")
+
+
 def build_regime(A: float, emission_power: int) -> Regime:
     """Run the Saha model at density coupling A and resample onto PIXEL_X (um).
 
@@ -167,8 +193,11 @@ def build_regime(A: float, emission_power: int) -> Regime:
     times = res.times[idx]
     clean = np.array([np.interp(PIXEL_X, xs, res.emission[i], left=0.0, right=0.0)
                       for i in idx])
+    if PSF_GAMMA_UM > 0.0:
+        clean = np.array([_psf_broaden(row, PSF_GAMMA_UM) for row in clean])
 
-    fit_var = np.array([fit_variance(PIXEL_X, row).variance for row in clean])
+    fit_var = np.array([ESTIMATOR.fit_variance(PIXEL_X, row).variance
+                        for row in clean])
     moment_var = np.array([_second_moment_var(row) for row in clean])
     return Regime(
         A=A, emission_power=emission_power, times=times, clean=clean,
@@ -194,7 +223,7 @@ def corrected_trajectory(regime: Regime, cnr0: float, model: TruncationModel,
     cor = np.full((n_runs, N_FRAMES), np.nan)
     for r in range(n_runs):
         noisy = regime.clean + rng.normal(0.0, noise_sigma, size=regime.clean.shape)
-        var_row = np.array([fit_variance(PIXEL_X, noisy[f]).variance
+        var_row = np.array([ESTIMATOR.fit_variance(PIXEL_X, noisy[f]).variance
                             for f in range(N_FRAMES)])
         raw[r] = var_row
         cor[r] = corrected_variance("folded_normal", var_row, cnr_frame, model)
@@ -328,25 +357,44 @@ def _plot_correction(power, recovered, cnr0) -> None:
 
 
 def main() -> None:
+    global ESTIMATOR, PSF_GAMMA_UM
+    parser = argparse.ArgumentParser(
+        description="Non-Fickian validation of the folded-normal correction.")
+    parser.add_argument("--calibration", default=CALIBRATION_PATH,
+                        help="path to the 2-D calibration .npz")
+    parser.add_argument("--cnr0", default=str(EVAL_CNR0),
+                        help="comma-separated initial CNR values")
+    parser.add_argument("--estimator", choices=("gaussian", "voigt"),
+                        default="gaussian", help="per-frame width estimator")
+    parser.add_argument("--psf-gamma", type=float, default=0.0,
+                        help="Lorentzian instrument-PSF HWHM in um; convolved "
+                             "into the emission and used as the Voigt fixed "
+                             "gamma. Must match the calibration's gamma.")
+    args = parser.parse_args()
+
+    PSF_GAMMA_UM = args.psf_gamma
+    ESTIMATOR = (VoigtModel(gamma=args.psf_gamma) if args.estimator == "voigt"
+                 else GaussianModel())
+    cnr0_list = [float(c) for c in args.cnr0.split(",")]
+
     print("Non-Fickian validation of the folded-normal correction")
     print(f"  Saha model: De={BASE['De']}, Df={BASE['Df']} um^2/ns "
           f"(contrast {BASE['Df'] / BASE['De']:.0f}x), "
           f"nu={BASE['nu']}, rho={BASE['rho']} /ns")
     print(f"  grid: +/-{HALF_WINDOW_UM} um, {N_PIXELS} pixels, {N_FRAMES} frames")
+    psf_note = f", PSF gamma={args.psf_gamma} um" if args.psf_gamma > 0 else ""
+    print(f"  estimator: {args.estimator}{psf_note}")
 
-    cal_path = sys.argv[1] if len(sys.argv) > 1 else CALIBRATION_PATH
-    cnr0_list = ([float(c) for c in sys.argv[2].split(",")]
-                 if len(sys.argv) > 2 else [EVAL_CNR0])
     regimes_by_power = shape_bias_report()
     _plot_shape_bias(regimes_by_power)
 
-    model = load_model(cal_path)
+    model = load_model(args.calibration)
     if model is None:
-        print(f"\n[no calibration at {cal_path}] -- shape-bias half done; "
-              "build the calibration (see module docstring) to run the "
+        print(f"\n[no calibration at {args.calibration}] -- shape-bias half "
+              "done; build the calibration (see module docstring) to run the "
               "correction half.")
         return
-    print(f"\nUsing calibration: {cal_path}")
+    print(f"\nUsing calibration: {args.calibration}")
     correction_report(regimes_by_power, model, cnr0_list)
 
 
