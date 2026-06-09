@@ -1,138 +1,152 @@
-# Validation design: estimator selection, truth, and the two workflows
+# Validation design: recovering the carrier distribution, truth, and the two workflows
 
-This note fixes how the pipeline's diffusion coefficient and anomalous exponent
-are validated: what "truth" means, how it is obtained, and how to choose the
-width estimator for a given experiment. It applies to every test bed in the
-repository (the analytic profiles, the Saha reaction-diffusion model, the
+This note fixes the goal of the pipeline, what "truth" means, how truth is
+obtained, and how to choose the width estimator. It applies to every test bed in
+the repository (the analytic profiles, the Saha reaction-diffusion model, the
 Mn-doped and nanocrystal-solid maps) and to real measurements.
 
-The method is a selection framework, not a single recipe. The scientist chooses
-the estimator that matches their experiment's profile; the truncation correction
-applies to the parametric-fit choices; and the physical second moment is the
-common yardstick that validates every path.
+## The goal
 
-## Truth is the physical second moment
+In the experimental frame the deliverable is the **carrier distribution** and
+its transport: where the carriers are at each time, and therefore the
+mean-squared displacement and the diffusion coefficient (or, for two coexisting
+species, De and Df). The recorded profile is not the carrier distribution.
+Recovering the carrier distribution accurately, with the measurement-noise bias
+removed, is the objective; everything the pipeline computes serves that.
 
-The quantity to recover is the spatial second central moment of the profile at
-each time, σ²(t), and the anomalous exponent α read from its growth, with
-MSD(t) = σ²(t) − σ²(0) proportional to t^α. The second moment is the model-free
-physical width. Parametric width fits (Gaussian, Voigt, generalized-Gaussian)
-are proxies for it. For a profile whose shape matches the estimator, the matched
-fit equals the second moment. For a profile outside the estimator's family, most
-importantly a mixture of populations of different width, the fit and the second
-moment differ. Validation truth is the second moment, on every path.
+## Three distortions between the measurement and the carrier distribution
 
-## Two workflows, two sources of truth
+The recorded profile differs from the carrier distribution in three independent
+ways. Recovering the carrier distribution means inverting all three, and they
+need different tools:
 
-The repository supports two workflows that differ only in where the truth comes
-from.
+1. **Measurement noise**, and the truncation bias it induces in any bounded
+   width estimator at low CNR. A fitted width cannot go negative, so its
+   sampling distribution is left-truncated and biased high. This is what the
+   folded-normal correction in this repository removes, and it is the only one
+   of the three the correction addresses.
+2. **The instrument point-spread function.** The recorded profile is the
+   emission convolved with the instrument response. Removed by deconvolution, by
+   a Voigt (mixed Gaussian-Lorentzian) fit with the known Lorentzian width, or
+   inside a forward model.
+3. **The emission-to-carrier mapping.** The emission is a nonlinear function of
+   the carrier density n and the Saha free-charge fraction x, namely
+   E = qe·ν·(1−x)·n + qf·ρ·x²·n². The emission profile is therefore a distorted
+   view of the carrier distribution, with a sharper peak and a
+   population-dependent shape. This is inverted only with the forward model; no
+   width fit recovers it.
 
-**Validation (simulation).** The profiles are generated from a forward model
-with known inputs, so the truth is known a priori: the input parameter (for
-example a set σ²(t) = σ0² + 2 D t) or a quantity derived from the inputs (the
-second moment of the noise-free profile the inputs produce). For the Saha model
-the truth is the second moment of the deterministic noise-free emission map,
-fixed by De, Df, ρ, ν and the initial profile. The truth is not estimated here;
-it is possessed. The purpose is to add noise, run the chosen estimator and any
-correction, and confirm recovery against that known second moment.
+So the pipeline is two stages. A **width-extraction** stage produces an
+accurate, noise-debiased measurement of the recorded profile's width over time
+(distortion 1, and distortion 2 if the estimator deconvolves the
+point-spread function). A **forward-model** stage turns that measurement into
+the carrier distribution and its transport (distortions 2 and 3). The
+folded-normal correction lives in the first stage.
 
-**Experimental.** Real data give a noisy profile and no truth. The physical
-second moment must be recovered: by fitting the forward simulation to the data
-and reading the truth from the inferred parameters, or, if one is derived,
-through an analytical relationship. The calibration built in the validation
-workflow is the bridge: proven against known truth there, then applied here.
+A useful simplification: when emission is linear in carrier density (a single
+population emitting in proportion to n, for example excitonic emission), the
+emission profile is proportional to the carrier profile, the emission width
+equals the carrier width, and distortion 3 vanishes. There the first stage alone
+-- a matched width fit with the noise correction -- recovers the carrier
+transport. The forward-model stage is needed only when emission is nonlinear in
+n (multiple populations, bimolecular emission), which is the perovskite case.
 
-## Selecting the estimator
+## Truth and the two workflows
 
-Choose by the profile's shape and population structure:
+Truth is the **carrier distribution**: its second central moment at each time,
+and the anomalous exponent α or coefficient D from the moment's growth. It is
+not the recorded profile's moment.
 
-| Experiment / profile | Estimator | Note |
+**Validation (simulation).** Truth is known a priori. The carrier distribution
+is generated from the forward model with known inputs, so its second moment is
+an exact, computed quantity, derived from the inputs. The recorded emission
+profile's moment is an intermediate the pipeline must map back through; it equals
+the carrier moment only when emission is linear in n. Validate the full pipeline
+-- noise debias, point-spread function, emission inversion -- against the
+carrier-distribution truth.
+
+**Experimental.** Truth is not available. The carrier distribution is recovered
+by fitting the forward model (carrier transport, the emission expression, the
+point-spread function, and a noise model) to the data, or by an analytical
+relationship if one is derived. The sample second moment of the recorded profile
+is an estimator here, not truth, and a distorted one when emission is nonlinear;
+it cannot adjudicate.
+
+## The width-extraction stage: estimator selection and the noise correction
+
+Choose the estimator by the recorded profile's shape and population structure:
+
+| Recorded profile | Estimator | Note |
 | ------------------------------------------------ | ----------------------------------- | ------------------------------------------ |
-| Single population, Gaussian | Gaussian | matched: noise-free fit equals second moment |
-| Single population with instrument point-spread | Voigt (mixed Gaussian-Lorentzian), fixed γ | recovers the diffusive Gaussian width |
+| Single population, Gaussian | Gaussian | matched: noise-free fit equals the profile's second moment |
+| Single population with instrument point-spread | Voigt, fixed γ | recovers the diffusive Gaussian width |
 | Single population, anomalous / non-Gaussian shape | generalized-Gaussian, matched exponent | matched single shape |
-| Mixture of populations of different width (free charges + excitons; free + trapped) | second moment (effective transport), or forward-model fit (underlying De, Df) | no single shape matches |
+| Mixture of populations of different width (free charges + excitons; free + trapped) | second moment, or forward-model fit | no single shape matches the recorded profile |
 
-The matched-shape rows share one property: with no noise the fit equals the
-second moment, so there is no shape gap and the only error to remove is the
-noise bias. The multi-population row has no matched single shape; the fit would
-differ from the second moment even with no noise, which is why it routes to the
-second moment or the forward fit rather than to a single-shape fit.
+On the parametric-fit choices the bounded width fit is precise but biased high at
+low CNR; the folded-normal correction calibrates that additive noise bias against
+per-frame CNR and subtracts it (see `docs/DERIVATION.md`). It removes the noise
+bias only; it is not a shape correction and not an emission inversion.
 
-## The truncation correction is the tool for the parametric-fit paths
+The moment estimator is the alternative for the multi-population recorded
+profile. It admits negative values, so it does not truncate and is approximately
+unbiased, returning the recorded profile's second moment directly. Its cost is
+variance: it is noisy at low CNR and unstable below CNR ≈ 3, so it needs adequate
+CNR or averaging, and it takes no folded-normal correction. It is not clean when
+the profile carries a Lorentzian point-spread function, which has a divergent
+second moment; deconvolve first, or use the forward fit.
 
-On the parametric-fit paths the bounded width fit is precise but biased high at
-low CNR: the width cannot go negative, so its sampling distribution is
-left-truncated and right-skewed. The folded-normal correction calibrates that
-additive noise bias against per-frame CNR and subtracts it (see
-`docs/DERIVATION.md`). It removes the noise bias only; it is not a shape
-correction.
+## Two gaps, kept distinct
 
-The moment estimator is the alternative for the multi-population path. It admits
-negative values, so it does not truncate and is approximately unbiased,
-returning the second moment directly. Its cost is variance: it is noisy at low
-CNR and unstable below CNR ≈ 3, so it needs adequate CNR or averaging. It does
-not use the folded-normal correction.
+- The **shape gap** is within the width-extraction stage: a single-shape fit of
+  the recorded profile differs from that profile's own second moment when the
+  profile is multi-population. It is a selection issue (use a matched estimator
+  or the moment estimator), not something the noise correction removes. On the
+  Saha emission, a generalized-Gaussian fit at the profile's best-fit exponent
+  (≈ 1.93) gives the same α as a Gaussian fit to within 0.001, and both exceed
+  the recorded profile's second-moment α by up to ≈ 0.09; the Mn maps show the
+  same (Gaussian-fit width 0.089 µm² against a recorded second moment of
+  0.122 µm²).
+- The **emission-to-carrier gap** is the forward-model stage: the recorded
+  profile's second moment differs from the carrier distribution's second moment
+  when emission is nonlinear in n. It is inverted by the model, not by any width
+  estimator.
 
-The moment route is not clean when the sample is observed through an instrument
-point-spread function. A Lorentzian point-spread function has a divergent second
-moment, so the second moment of the observed (convolved) profile is not usable.
-Deconvolve the point-spread function first, or, more robustly, fit the forward
-model with the point-spread function and both populations included. For
-realistic multi-population data observed through a point-spread function (the
-perovskite transport-microscopy case), forward-model fitting is the clean path,
-not the bare moment.
-
-For the underlying two-population parameters (De, Df) rather than an effective
-width, fit the forward model to the data; a per-frame width reduction used as
-input to that fit is debiased by the folded-normal correction on its fit path.
-
-## Keep the noise bias and the shape gap separate
-
-Do not fold the shape gap into the truncation calibration, and do not anchor the
-validation reference to the estimator's own noise-free fit on a multi-population
-profile. The truncation bias is a noise effect and depends on CNR. The shape gap
-is CNR-independent: it is present with no noise at all, and no choice of
-single-shape estimator removes it. On the Saha emission, fitting with a
-generalized-Gaussian at the profile's own best-fit exponent (≈ 1.93) gives the
-same α as a Gaussian fit, to within 0.001, and both exceed the second-moment α
-by up to ≈ 0.09; the Mn-doped maps show the same effect, with a noise-free
-Gaussian-fit width of 0.089 µm² against a true second moment of 0.122 µm². The
-correct response is selection, not patching: route a multi-population sample to
-the moment estimator or the forward fit.
+Conflating the two, or folding either into the noise calibration, is the error to
+avoid. The folded-normal correction's scope is distortion 1 only.
 
 ## Computing the second moment
 
-- Define it on the underlying diffusive profile, before any instrument
-  point-spread function. A Lorentzian point-spread function has a divergent
-  second moment, so the convolved profile's second moment is not usable; the
-  Voigt fit recovers the diffusive (Gaussian-component) width, and the truth is
-  the diffusive second moment.
-- The second moment is sensitive to the tails and to the integration window.
-  Compute it on the noise-free profile as the simulation produces it, on a
-  window wide enough to capture the tails.
-- The second-moment estimator is unbiased only when negative values are
-  admitted. Clipping negatives or leaving a positive background reintroduces an
-  upward floor bias.
+- Distinguish the carrier moment (the truth) from the recorded-profile moment
+  (the width-extraction target). They coincide only for linear emission.
+- Take it on the underlying profile, before any instrument point-spread
+  function. A Lorentzian point-spread function has a divergent second moment, so
+  the moment of the convolved profile is not usable.
+- The second moment is sensitive to the tails and the integration window;
+  compute it on the noise-free profile as the simulation produces it, on a wide
+  enough window.
+- The moment estimator is unbiased only when negative values are admitted;
+  clipping negatives or leaving a positive background reintroduces a floor bias.
 
-## The validation recipe (any path)
+## Validation recipe
 
-1. Reference: the input-derived second moment of the noise-free profile, and the
-   α from its slope.
-2. Estimator: selected per the table above.
-3. Correction: folded-normal on the parametric-fit paths; none on the moment
-   path.
-4. Success: the corrected estimate recovers the known second-moment α within the
-   path's reliable CNR band (the per-profile floor for the fit paths; the
+1. Reference: the carrier distribution's second moment from the known inputs, and
+   its α.
+2. Width extraction: the matched estimator on the recorded profile, with the
+   folded-normal correction on the parametric paths (or the moment estimator).
+3. Carrier recovery: forward-model inversion of the point-spread function and the
+   emission mapping (trivial when emission is linear in n).
+4. Success: the recovered carrier-distribution α matches the known input within
+   the reliable CNR band (the per-profile floor for the fit paths; the
    variance/stability floor near CNR ≈ 3 for the moment path).
 
 ## Where this lives in the code
 
-- Estimators: `models.py` (`GaussianModel`, `VoigtModel`,
-  `GeneralizedGaussianModel`, and the non-truncated `MomentModel`, which returns
-  the second moment directly).
-- Truncation correction and calibration: `weights.py`, `truncation.py`,
-  `calibration.py` (the per-frame CNR-to-bias lookup).
-- The MSD-to-D and per-frame fits: `fit.py`; the validation sweep: `validate.py`.
-- Saha reaction-diffusion bed and its harness:
-  `mc_experiments/saha_reaction_diffusion/`.
+- Estimators (width extraction): `models.py` (`GaussianModel`, `VoigtModel`,
+  `GeneralizedGaussianModel`, and the non-truncated `MomentModel`).
+- Noise correction and its calibration: `weights.py`, `truncation.py`,
+  `calibration.py`.
+- Per-frame and MSD-to-D fits, and the validation sweep: `fit.py`, `validate.py`.
+- Forward models (the emission-to-carrier mapping, for both simulation and the
+  experimental inversion): `simulate.py` and the per-bed models under
+  `mc_experiments/`, including `mc_experiments/saha_reaction_diffusion/`.
