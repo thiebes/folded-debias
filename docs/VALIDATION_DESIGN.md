@@ -74,6 +74,15 @@ returning the second moment directly. Its cost is variance: it is noisy at low
 CNR and unstable below CNR ≈ 3, so it needs adequate CNR or averaging. It does
 not use the folded-normal correction.
 
+The moment route is not clean when the sample is observed through an instrument
+point-spread function. A Lorentzian point-spread function has a divergent second
+moment, so the second moment of the observed (convolved) profile is not usable.
+Deconvolve the point-spread function first, or, more robustly, fit the forward
+model with the point-spread function and both populations included. For
+realistic multi-population data observed through a point-spread function (the
+perovskite transport-microscopy case), forward-model fitting is the clean path,
+not the bare moment.
+
 For the underlying two-population parameters (De, Df) rather than an effective
 width, fit the forward model to the data; a per-frame width reduction used as
 input to that fit is debiased by the folded-normal correction on its fit path.
