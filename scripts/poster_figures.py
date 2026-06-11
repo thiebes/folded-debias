@@ -42,6 +42,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import to_rgb  # noqa: E402
 
+from curved_text import CurvedText  # noqa: E402
+
 from weighting_wall.simulate import Experiment, gaussian  # noqa: E402
 from precision_limit.crlb import crlb_D  # noqa: E402
 
@@ -57,19 +59,20 @@ _FFTCNR_CASE11 = (Path(__file__).resolve().parents[2] / "fft-cnr-paper"
                   / "validation" / "results" / "case11_gengauss_cnr_sweep.npz")
 FFTCNR_NPZ = _FFTCNR_DENSE if _FFTCNR_DENSE.exists() else _FFTCNR_CASE11
 
-# --- Poster palette (cubehelix role colours) ---------------------------------
-# A cubehelix-derived sequence chosen for the poster: five roles that climb in
-# lightness monotonically, so the ordering survives colour-vision deficiency and
-# grayscale printing. Roles 1-3 (dark green, blue, purple) read crisply on white
-# and carry the primary data lines; role 4 (rose) is the contrast partner for the
-# true value; role 5 (sand, lightest) is reserved for fills and region markers,
-# not thin standalone lines. Poster-only -- the DICE constants are retained as a
-# fallback for the other scripts that still reference them.
-ROLE1 = (0.058184, 0.273631, 0.191837)   # dark green  -- the true value
-ROLE2 = (0.239379, 0.369361, 0.547850)   # blue
-ROLE3 = (0.618071, 0.403068, 0.697898)   # purple
-ROLE4 = (0.852116, 0.555525, 0.605505)   # rose        -- the biased/inflated value
-ROLE5 = (0.845481, 0.805456, 0.646697)   # sand        -- fills, region bands
+# --- Poster palette (Okabe-Ito colourblind-safe set, Madrid-localised names) -
+# The Okabe-Ito categorical palette: five hues chosen to stay distinguishable
+# under all common colour-vision deficiencies, every one legible on white (no
+# pale member to wash out). Roles carry fixed meaning: blue = the true value,
+# red = the biased/inflated value (so true-vs-biased reads as blue-vs-red at a
+# glance); blue / gold / green are the three profile shapes; purple is reserved
+# for fills and region bands at low alpha (the set has no pale member, so the
+# softness comes from alpha, not the hue). Poster-only -- the DICE constants are
+# retained as a fallback for the other scripts that still reference them.
+ROLE1 = "#0072B2"   # mediterranean blue  -- the true value / Gaussian shape
+ROLE2 = "#E69F00"   # flag gold           -- fitted-variance curve / Voigt shape
+ROLE3 = "#009E73"   # olive green         -- generalized-Gaussian shape
+ROLE4 = "#D55E00"   # spanish red         -- the biased/inflated value
+ROLE5 = "#CC79A7"   # castilian purple    -- fills, region bands (use low alpha)
 
 # DICE palette (Montana State; retained as a fallback for non-poster scripts).
 DICE_BLUE = "#003f7f"
@@ -101,6 +104,7 @@ def _lerp(c0: str, c1: str, f: float) -> tuple[float, float, float]:
     """Linear blend between two hex colours; f in [0, 1]."""
     a, b = np.array(to_rgb(c0)), np.array(to_rgb(c1))
     return tuple((1.0 - f) * a + f * b)
+
 
 
 # --------------------------------------------------------------------------
@@ -154,39 +158,48 @@ def figure_schematic_wall_fold() -> Path:
     g_ref = np.exp(-0.5 * ((-v - m_true) / sd) ** 2) / g_un.max()
     folded = g + g_ref                                  # fitted-variance pdf
 
-    # The fitted-variance distribution is the original right side plus the
-    # reflected negative tail. Draw the reflected tail explicitly (gold dashed,
-    # the literal mirror of the left ghost) so the fold reads; the solid curve
-    # is their sum, which piles up against the wall and is right-skewed -- it
-    # is twice the dashed curves at the wall, not a Gaussian. A light gold fill
-    # gives the distribution body.
-    axL.fill_between(v[pos], 0, folded[pos], color=ROLE5, alpha=0.45, lw=0)
-    axL.plot(v, g, color="#999", ls="--", lw=1.5, label="unbounded estimate")
-    axL.plot(v[pos], g_ref[pos], color=ROLE4, ls="--", lw=1.5,
-             label="reflected tail")
-    axL.plot(v[pos], folded[pos], color=ROLE2, lw=2.4,
-             label="fitted variance")
-    axL.axvline(0.0, color="k", lw=1.6)
-
-    # The impossible negative tail (ghost), labelled on the empty left side.
-    axL.text(-1.65, 0.62, "negative:\nimpossible", fontsize=7.5, color="#777",
-             ha="center", va="bottom")
-    axL.text(-0.06, 2.08, "wall at 0", fontsize=8, rotation=90, va="top",
-             ha="right")
-
-    # True value (centre of the unbounded estimate) and the inflated folded
-    # mean -- keyed in the legend so they do not clutter the curve.
+    # Reflection view: the forbidden tail (dotted, < 0) folds across the wall as
+    # its own reflected curve. A light fill under both the realizable estimate and
+    # the reflected tail overlaps near the wall, so the colour doubles there -- the
+    # pile-up that skews the distribution. The distribution of fits is their sum
+    # (dashed, in the fill colour).
     m_folded = (np.trapezoid(v[pos] * folded[pos], v[pos])
                 / np.trapezoid(folded[pos], v[pos]))
-    axL.axvline(m_true, color=ROLE1, ls=":", lw=1.8, label="true")
-    axL.axvline(m_folded, color=ROLE4, ls=":", lw=1.8, label="biased mean")
-    axL.set_xlabel("distribution of fitted variances")
+
+    axL.fill_between(v[pos], 0, g[pos], color=ROLE4, alpha=0.15, lw=0)
+    axL.fill_between(v[pos], 0, g_ref[pos], color=ROLE4, alpha=0.15, lw=0)
+    # One hue (the three are one story); alpha ranks them: faint = the
+    # hypothetical unbounded estimate, medium = the reflected mechanism, full =
+    # the resulting distribution of fits.
+    axL.plot(v[pos], g[pos], color=ROLE4, lw=1.8, alpha=0.40)              # realizable
+    axL.plot(v[~pos], g[~pos], color=ROLE4, lw=1.4, alpha=0.40,
+             ls=(0, (1, 1.6)))                                            # forbidden
+    axL.plot(v[pos], g_ref[pos], color=ROLE4, lw=1.6, alpha=0.70)          # reflected
+    axL.plot(v[pos], folded[pos], color=ROLE4, lw=1.8, ls=(0, (4, 2)))     # sum (fits)
+    axL.axvline(0.0, color="k", lw=1.6)
+    axL.axvline(m_true, color=ROLE1, ls=":", lw=1.1)
+    axL.axvline(m_folded, color="#7a2f00", ls=":", lw=1.1)
+
+    # The bias is the gap between the two; the names run vertically along their
+    # own dotted lines. Bias sits to the right of the arrow, level with it.
+    axL.text(-0.12, 1.25, "wall at 0", fontsize=8, rotation=90, va="center",
+             ha="center", color="#333")
+    axL.annotate("", xy=(m_folded, 1.66), xytext=(m_true, 1.66),
+                 arrowprops=dict(arrowstyle="<->", color="k", lw=1.0,
+                                 mutation_scale=8))
+    axL.text(m_folded + 0.09, 1.66, "bias", fontsize=8, ha="left", va="center")
+    axL.text(m_true - 0.13, 2.40, "true $\\sigma^2$", fontsize=7, color=ROLE1,
+             rotation=90, rotation_mode="anchor", va="center", ha="right")
+    axL.text(m_folded - 0.13, 2.40, "mean $\\langle\\hat\\sigma^2\\rangle$",
+             fontsize=7, color="#7a2f00", rotation=90, rotation_mode="anchor",
+             va="center", ha="right")
+
+    axL.set_xlabel("fitted variance,  $\\hat\\sigma^2$")
     axL.set_ylabel("probability density")
     axL.set_xlim(-3.0, 4.0)
-    axL.set_ylim(0, 2.2)
+    axL.set_ylim(0, 2.45)
     axL.set_xticks([])
     axL.set_yticks([])
-    axL.legend(fontsize=7, loc="upper right", frameon=False)
 
     # --- Right: the tilted MSD slope --------------------------------------
     t = np.linspace(0, 3.0, 7)
@@ -196,20 +209,47 @@ def figure_schematic_wall_fold() -> Path:
     inflation = 0.012 * (t / t.max()) ** 2 + 0.004
     biased = true_line + inflation
     fit = np.polyfit(t, biased, 1)
+    fit_line = np.polyval(fit, t)
 
-    axR.plot(t, true_line, color=ROLE1, lw=2.0, label="true slope $\\propto D$")
-    axR.plot(t, np.polyval(fit, t), color=ROLE4, lw=2.0,
-             label="fitted slope (inflated)")
+    axR.plot(t, true_line, color=ROLE1, lw=2.0)
+    axR.plot(t, fit_line, color=ROLE4, lw=2.0)
     axR.plot(t, biased, "o", color=ROLE4, ms=5)
     for ti, tr, bi in zip(t, true_line, biased):
         axR.plot([ti, ti], [tr, bi], color="#bbb", lw=0.8, zorder=0)
+
+    # Direct labels at the line ends; annotate the slope gap (the payload).
+    axR.text(2.25, 0.04 * 2.25 - 0.012, "true slope $\\propto D$",
+             fontsize=8, color=ROLE1, ha="left", va="top")
+    axR.text(1.15, np.polyval(fit, 1.15) + 0.007, "inflated fit",
+             fontsize=8, color=ROLE4, ha="left", va="bottom")
+    axR.annotate("", xy=(2.93, fit_line[-1]), xytext=(2.93, true_line[-1]),
+                 arrowprops=dict(arrowstyle="<->", color="k", lw=0.9,
+                                 mutation_scale=8))
+    axR.text(2.84, (true_line[-1] + fit_line[-1]) / 2, "$D$ over-\nestimated",
+             fontsize=7.5, ha="right", va="center")
+
     axR.set_xlabel("time")
     axR.set_ylabel("mean-squared displacement")
+    axR.set_xlim(-0.08, 3.25)
+    axR.set_ylim(-0.004, 0.155)
     axR.set_xticks([])
     axR.set_yticks([])
-    axR.legend(fontsize=7, loc="upper left", frameon=False)
 
     fig.tight_layout()
+    # Curve names run parallel to each curve and close to it (the rotation needs
+    # the settled display transform, so this comes after the layout).
+    fm = (v >= -2.4) & (v <= -0.3)
+    CurvedText(v[fm], g[fm], "forbidden:  variance < 0", axL, offset=5.0,
+                pos=0.5, anchor="center", color=ROLE4, alpha=0.7, fontsize=7)
+    sm = (v >= 0.3) & (v <= 2.3)
+    CurvedText(v[sm], folded[sm], "distribution of fits", axL, offset=5.0,
+                pos=0.6, anchor="center", color=ROLE4, fontsize=7)
+    um = (v >= 1.0) & (v <= 3.2)
+    CurvedText(v[um], g[um], "unbounded estimate", axL, offset=-6.0,
+                pos=0.4, anchor="center", color=ROLE4, fontsize=7)
+    rm = (v >= 0.4) & (v <= 2.4)
+    CurvedText(v[rm], g_ref[rm], "reflected tail", axL, offset=5.5,
+                pos=0.65, anchor="center", color=ROLE4, fontsize=7)
     path = OUTPUT / "poster_panel2_wall_fold.png"
     fig.savefig(path, dpi=300)
     plt.close(fig)
@@ -289,7 +329,7 @@ def figure_corrected_bias(dense_path: Path) -> Path | None:
         return None
 
     fig, ax = plt.subplots(figsize=(4.6, 3.4))
-    ax.axhspan(0.95, 1.05, color=ROLE5, alpha=0.45,
+    ax.axhspan(0.95, 1.05, color=ROLE5, alpha=0.20,
                label=r"$\pm 0.05$ band")
     ax.axhline(1.0, color="#666666", lw=1.0)
     for shape, d in shapes.items():

@@ -121,10 +121,12 @@ need the Marc-geometry calibrations built by `build_calibration.py` and the
 - **`poster_figures.py`** — Regenerates the data-driven poster figures and the
   rough panel schematics in one place: Panel 1 (measurement schematic), Panel 2A
   (wall-and-fold schematic), Panel 4 (√CRLB/D precision floor), Panel 5
-  (corrected bias, three shapes), and the Panel 5 floor inset. DICE palette,
-  ticks inside the frame. The fft-cnr panel (Panel 4 of the CNR-centric spine)
-  is pulled separately from the sibling `fft-cnr-paper` repo.
+  (corrected bias, three shapes), and the Panel 5 floor inset. Okabe-Ito
+  (Spain CVD) palette, ticks inside the frame. The fft-cnr panel (Panel 4 of the
+  CNR-centric spine) is pulled separately from the sibling `fft-cnr-paper` repo.
   Outputs: `output/poster_panel*.png`.
+  Requires the sibling `curved-text` package (the Panel 2A curve labels):
+  `.venv/Scripts/python.exe -m pip install -e ../curved-text`.
 
 ### Parked / analytical exploration
 
