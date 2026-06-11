@@ -64,7 +64,8 @@ def _msd_from_variance(variance: np.ndarray) -> np.ndarray:
 
 def _fit_realisation(model, x: np.ndarray, clean: np.ndarray,
                      noise_sigma: float, n_frames: int,
-                     rng: np.random.Generator):
+                     rng: np.random.Generator, noise_model=None,
+                     cnr0: float | None = None):
     """Fit one noisy realisation of the clean profile stack.
 
     This is the single source of truth for per-realisation work, shared by the
@@ -72,8 +73,15 @@ def _fit_realisation(model, x: np.ndarray, clean: np.ndarray,
     including the per-frame fallback in ``model.fit_variance`` that keeps a
     failed fit's broad guess rather than dropping it (dropping would delete the
     heavy right tail that carries the bias).
+
+    ``noise_model`` (see :mod:`weighting_wall.noise`) swaps the noise law; when
+    it is ``None`` the original constant-sigma white-noise draw is used, so
+    existing callers are bit-for-bit unchanged.
     """
-    noisy = clean + rng.normal(0.0, noise_sigma, size=clean.shape)
+    if noise_model is None:
+        noisy = clean + rng.normal(0.0, noise_sigma, size=clean.shape)
+    else:
+        noisy = noise_model.sample(clean, cnr0, rng)
     variance = np.full(n_frames, np.nan)
     at_wall = np.zeros(n_frames, dtype=bool)
     ok = np.zeros(n_frames, dtype=bool)
@@ -93,9 +101,11 @@ def _fit_realisation(model, x: np.ndarray, clean: np.ndarray,
 _WORKER: dict = {}
 
 
-def _init_worker(model, x, clean, noise_sigma, n_frames) -> None:
+def _init_worker(model, x, clean, noise_sigma, n_frames,
+                 noise_model=None, cnr0=None) -> None:
     _WORKER.update(model=model, x=x, clean=clean,
-                   noise_sigma=noise_sigma, n_frames=n_frames)
+                   noise_sigma=noise_sigma, n_frames=n_frames,
+                   noise_model=noise_model, cnr0=cnr0)
 
 
 def _run_one(task):
@@ -104,6 +114,7 @@ def _run_one(task):
     variance, at_wall, ok = _fit_realisation(
         _WORKER["model"], _WORKER["x"], _WORKER["clean"],
         _WORKER["noise_sigma"], _WORKER["n_frames"], rng,
+        _WORKER["noise_model"], _WORKER["cnr0"],
     )
     return run_index, variance, at_wall, ok
 
@@ -126,13 +137,19 @@ def _resolve_workers(workers, n_runs: int) -> int:
 
 
 def run_ensemble(exp: Experiment, cnr0: float, n_runs: int = 600,
-                 seed: int = 0, model=None, workers=None) -> Ensemble:
+                 seed: int = 0, model=None, workers=None,
+                 noise_model=None) -> Ensemble:
     """Run ``n_runs`` independent noisy realisations of ``exp`` at ``cnr0``.
 
     ``model`` is a profile model from :mod:`weighting_wall.models`
     (default :class:`~weighting_wall.models.GaussianModel`).  The per-frame CNR
     is taken from the actual noise-free profile peak, so it is correct for any
     profile shape.
+
+    ``noise_model`` (see :mod:`weighting_wall.noise`) swaps the measurement-
+    noise law (white vs shot). ``None`` keeps the original constant-sigma white
+    noise, so existing callers are unaffected; a model also supplies the
+    per-frame CNR, which for shot noise differs from peak / RMS.
 
     ``workers`` controls process-level parallelism over realisations; see
     :func:`_resolve_workers`.  The result is independent of the worker count
@@ -145,7 +162,10 @@ def run_ensemble(exp: Experiment, cnr0: float, n_runs: int = 600,
     n_frames = exp.n_frames
 
     clean = model.noise_free_series(exp)            # (n_frames, n_pixels)
-    cnr_frame = clean.max(axis=1) / noise_sigma     # peak / noise RMS
+    if noise_model is None:
+        cnr_frame = clean.max(axis=1) / noise_sigma     # peak / noise RMS
+    else:
+        cnr_frame = noise_model.cnr_frame(clean, cnr0)
 
     # One independent RNG stream per realisation, deterministic in ``seed`` and
     # order-independent -- so serial and parallel runs agree bit for bit.
@@ -160,7 +180,8 @@ def run_ensemble(exp: Experiment, cnr0: float, n_runs: int = 600,
         for r in range(n_runs):
             rng = np.random.default_rng(child_seeds[r])
             variance[r], at_wall[r], ok[r] = _fit_realisation(
-                model, x, clean, noise_sigma, n_frames, rng)
+                model, x, clean, noise_sigma, n_frames, rng,
+                noise_model, cnr0)
     else:
         # Chunk so each worker pulls a batch of realisations per round-trip,
         # amortising the inter-process hand-off over many fits.
@@ -168,7 +189,8 @@ def run_ensemble(exp: Experiment, cnr0: float, n_runs: int = 600,
         with ProcessPoolExecutor(
             max_workers=n_workers,
             initializer=_init_worker,
-            initargs=(model, x, clean, noise_sigma, n_frames),
+            initargs=(model, x, clean, noise_sigma, n_frames,
+                      noise_model, cnr0),
         ) as pool:
             for r, v_row, w_row, o_row in pool.map(
                     _run_one, list(enumerate(child_seeds)), chunksize=chunksize):

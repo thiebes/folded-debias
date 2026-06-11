@@ -1,7 +1,7 @@
 """Produce the data-driven poster figures and rough panel schematics.
 
 Five figures in one place so the poster carries a single, consistent style
-(DICE palette, ticks inside the frame):
+(cubehelix poster palette, ticks inside the frame):
 
   * Panel 1 schematic -- the measurement: a population that broadens (diffusion)
     and dims (decay) frame by frame, so the contrast-to-noise falls with time.
@@ -49,11 +49,29 @@ OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
 
 # The fft-cnr validation lives in the sibling repo (see POSTER_PLAN); the Panel 4
-# CNR-recovery figure is restyled from its case-11 sweep results.
-FFTCNR_NPZ = (Path(__file__).resolve().parents[2] / "fft-cnr-paper"
-              / "validation" / "results" / "case11_gengauss_cnr_sweep.npz")
+# CNR-recovery figure is restyled from its case-11 sweep. Prefer the dense
+# poster-local sweep (scripts/poster_fftcnr_dense.py) when present, so the ratio
+# curve is smooth; otherwise fall back to the sibling's canonical six-point file.
+_FFTCNR_DENSE = OUTPUT / "case11_gengauss_cnr_sweep_dense.npz"
+_FFTCNR_CASE11 = (Path(__file__).resolve().parents[2] / "fft-cnr-paper"
+                  / "validation" / "results" / "case11_gengauss_cnr_sweep.npz")
+FFTCNR_NPZ = _FFTCNR_DENSE if _FFTCNR_DENSE.exists() else _FFTCNR_CASE11
 
-# --- DICE palette (Montana State; from the sibling DICE repo) ----------------
+# --- Poster palette (cubehelix role colours) ---------------------------------
+# A cubehelix-derived sequence chosen for the poster: five roles that climb in
+# lightness monotonically, so the ordering survives colour-vision deficiency and
+# grayscale printing. Roles 1-3 (dark green, blue, purple) read crisply on white
+# and carry the primary data lines; role 4 (rose) is the contrast partner for the
+# true value; role 5 (sand, lightest) is reserved for fills and region markers,
+# not thin standalone lines. Poster-only -- the DICE constants are retained as a
+# fallback for the other scripts that still reference them.
+ROLE1 = (0.058184, 0.273631, 0.191837)   # dark green  -- the true value
+ROLE2 = (0.239379, 0.369361, 0.547850)   # blue
+ROLE3 = (0.618071, 0.403068, 0.697898)   # purple
+ROLE4 = (0.852116, 0.555525, 0.605505)   # rose        -- the biased/inflated value
+ROLE5 = (0.845481, 0.805456, 0.646697)   # sand        -- fills, region bands
+
+# DICE palette (Montana State; retained as a fallback for non-poster scripts).
 DICE_BLUE = "#003f7f"
 DICE_GOLD = "#f7941e"
 DICE_GREEN = "#0cce6b"
@@ -65,12 +83,12 @@ SHAPE_LABEL = {
     "generalized_gaussian": "generalized-Gaussian",
     "genGauss": "generalized-Gaussian",
 }
-# One DICE colour per profile shape: blue / gold / green.
+# One role colour per profile shape: roles 1 / 2 / 3 (the strong-contrast lines).
 SHAPE_COLOR = {
-    "gaussian": DICE_BLUE,
-    "voigt": DICE_GOLD,
-    "generalized_gaussian": DICE_GREEN,
-    "genGauss": DICE_GREEN,
+    "gaussian": ROLE1,
+    "voigt": ROLE2,
+    "generalized_gaussian": ROLE3,
+    "genGauss": ROLE3,
 }
 
 
@@ -97,20 +115,22 @@ def figure_schematic_measurement() -> Path:
 
     fig, ax = plt.subplots(figsize=(4.6, 3.2))
     for f, sig, amp in zip(times, sigmas, amps):
-        color = _lerp(DICE_BLUE, DICE_GOLD, f)
+        color = _lerp(ROLE2, ROLE4, f)
         ax.plot(x, gaussian(x, amp, 0.0, sig), color=color, lw=2.0)
     ax.annotate("", xy=(3.6, 0.92), xytext=(0.6, 0.92),
                 arrowprops=dict(arrowstyle="->", color="#444"))
     ax.text(2.1, 0.96, "time", color="#444", fontsize=9, ha="center")
     ax.text(0.0, 1.02, "early frame:\nnarrow, bright (high CNR)",
-            color=DICE_BLUE, fontsize=8, ha="center", va="bottom")
+            color=ROLE2, fontsize=8, ha="center", va="bottom")
     ax.text(4.6, 0.30, "late frame:\nwide, dim (low CNR)",
-            color=DICE_GOLD, fontsize=8, ha="center")
+            color=ROLE4, fontsize=8, ha="center")
     ax.set_xlabel("position")
     ax.set_ylabel("intensity")
-    ax.set_title("Diffusion broadens and decay dims each frame", fontsize=10)
+    ax.set_xlim(x[0], x[-1])             # curves run to the frame edges
     ax.set_ylim(0, 1.15)
-    _style(ax)
+    # A cartoon: axis labels only, no ticks or numbers.
+    ax.set_xticks([])
+    ax.set_yticks([])
     fig.tight_layout()
     path = OUTPUT / "poster_panel1_measurement.png"
     fig.savefig(path, dpi=300)
@@ -125,47 +145,48 @@ def figure_schematic_wall_fold() -> Path:
     fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.0, 3.4))
 
     # --- Left: the fold at the wall ---------------------------------------
-    v = np.linspace(-3.0, 5.0, 600)
+    v = np.linspace(-3.0, 4.0, 700)
     m_true, sd = 0.5, 1.1
-    g = np.exp(-0.5 * ((v - m_true) / sd) ** 2)        # unconstrained noise
-    g /= g.max()
-    # Folded (reflected at zero): mass that would fall below 0 reflects up.
+    g_un = np.exp(-0.5 * ((v - m_true) / sd) ** 2)     # estimate with no wall
+    g = g_un / g_un.max()
     pos = v >= 0
-    neg = v < 0
-    folded = (np.exp(-0.5 * ((v - m_true) / sd) ** 2)
-              + np.exp(-0.5 * ((-v - m_true) / sd) ** 2))
-    folded /= g.max()
+    # The forbidden negative tail, mirrored back across the wall (v -> -v).
+    g_ref = np.exp(-0.5 * ((-v - m_true) / sd) ** 2) / g_un.max()
+    folded = g + g_ref                                  # fitted-variance pdf
 
-    # The forbidden negative tail, and the resulting folded distribution.
-    axL.fill_between(v[neg], 0, g[neg], color=DICE_GOLD, alpha=0.35,
-                     label="mass that would be < 0")
-    axL.plot(v, g, color="#999", ls="--", lw=1.5, label="unconstrained noise")
-    axL.plot(v[pos], folded[pos], color=DICE_BLUE, lw=2.4,
-             label="fitted variance (folded)")
+    # The fitted-variance distribution is the original right side plus the
+    # reflected negative tail. Draw the reflected tail explicitly (gold dashed,
+    # the literal mirror of the left ghost) so the fold reads; the solid curve
+    # is their sum, which piles up against the wall and is right-skewed -- it
+    # is twice the dashed curves at the wall, not a Gaussian. A light gold fill
+    # gives the distribution body.
+    axL.fill_between(v[pos], 0, folded[pos], color=ROLE5, alpha=0.45, lw=0)
+    axL.plot(v, g, color="#999", ls="--", lw=1.5, label="unbounded estimate")
+    axL.plot(v[pos], g_ref[pos], color=ROLE4, ls="--", lw=1.5,
+             label="reflected tail")
+    axL.plot(v[pos], folded[pos], color=ROLE2, lw=2.4,
+             label="fitted variance")
     axL.axvline(0.0, color="k", lw=1.6)
-    axL.annotate("reflects\nto +", xy=(0.45, 0.62), xytext=(-1.7, 0.78),
-                 fontsize=8, color="#b5710a", ha="center",
-                 arrowprops=dict(arrowstyle="->", color="#b5710a",
-                                 connectionstyle="arc3,rad=-0.4"))
-    axL.text(-0.06, 1.18, "wall at 0", fontsize=8, rotation=90, va="top",
+
+    # The impossible negative tail (ghost), labelled on the empty left side.
+    axL.text(-1.65, 0.62, "negative:\nimpossible", fontsize=7.5, color="#777",
+             ha="center", va="bottom")
+    axL.text(-0.06, 2.08, "wall at 0", fontsize=8, rotation=90, va="top",
              ha="right")
 
-    # True value and inflated (folded) mean, labelled at the top inside.
-    m_folded = np.trapezoid(v[pos] * folded[pos], v[pos]) / np.trapezoid(
-        folded[pos], v[pos])
-    axL.axvline(m_true, color=DICE_GREEN, ls=":", lw=1.8)
-    axL.axvline(m_folded, color=DICE_GOLD, ls=":", lw=1.8)
-    axL.annotate("true", xy=(m_true, 1.02), color=DICE_GREEN, fontsize=8,
-                 ha="center", va="bottom")
-    axL.annotate("biased mean", xy=(m_folded, 1.02), color="#b5710a",
-                 fontsize=8, ha="center", va="bottom")
-    axL.set_xlabel(r"estimated variance  $\hat\sigma^2$")
-    axL.set_ylabel("density")
-    axL.set_title("Reflection at the wall", fontsize=10)
-    axL.set_xlim(-3.0, 5.0)
-    axL.set_ylim(0, 1.32)
-    axL.legend(fontsize=7, loc="upper right")
-    _style(axL)
+    # True value (centre of the unbounded estimate) and the inflated folded
+    # mean -- keyed in the legend so they do not clutter the curve.
+    m_folded = (np.trapezoid(v[pos] * folded[pos], v[pos])
+                / np.trapezoid(folded[pos], v[pos]))
+    axL.axvline(m_true, color=ROLE1, ls=":", lw=1.8, label="true")
+    axL.axvline(m_folded, color=ROLE4, ls=":", lw=1.8, label="biased mean")
+    axL.set_xlabel("distribution of fitted variances")
+    axL.set_ylabel("probability density")
+    axL.set_xlim(-3.0, 4.0)
+    axL.set_ylim(0, 2.2)
+    axL.set_xticks([])
+    axL.set_yticks([])
+    axL.legend(fontsize=7, loc="upper right", frameon=False)
 
     # --- Right: the tilted MSD slope --------------------------------------
     t = np.linspace(0, 3.0, 7)
@@ -176,17 +197,17 @@ def figure_schematic_wall_fold() -> Path:
     biased = true_line + inflation
     fit = np.polyfit(t, biased, 1)
 
-    axR.plot(t, true_line, color=DICE_BLUE, lw=2.0, label="true slope $\\propto D$")
-    axR.plot(t, np.polyval(fit, t), color=DICE_GOLD, lw=2.0,
+    axR.plot(t, true_line, color=ROLE1, lw=2.0, label="true slope $\\propto D$")
+    axR.plot(t, np.polyval(fit, t), color=ROLE4, lw=2.0,
              label="fitted slope (inflated)")
-    axR.plot(t, biased, "o", color=DICE_GOLD, ms=5)
+    axR.plot(t, biased, "o", color=ROLE4, ms=5)
     for ti, tr, bi in zip(t, true_line, biased):
         axR.plot([ti, ti], [tr, bi], color="#bbb", lw=0.8, zorder=0)
     axR.set_xlabel("time")
-    axR.set_ylabel("MSD  (width$^2 - $width$^2_0$)")
-    axR.set_title("Per-frame bias tilts the slope", fontsize=10)
-    axR.legend(fontsize=7, loc="upper left")
-    _style(axR)
+    axR.set_ylabel("mean-squared displacement")
+    axR.set_xticks([])
+    axR.set_yticks([])
+    axR.legend(fontsize=7, loc="upper left", frameon=False)
 
     fig.tight_layout()
     path = OUTPUT / "poster_panel2_wall_fold.png"
@@ -201,22 +222,18 @@ def figure_schematic_wall_fold() -> Path:
 def figure_crlb() -> Path:
     """sqrt(CRLB)/D vs CNR_0 at the poster's working D (L_D/FWHM_0 ~ 0.085)."""
     exp = Experiment()                 # defaults: D = 0.02 sigma_0^2/tau
-    ld_over_fwhm = np.sqrt(2.0 * exp.D) / FWHM0
     cnr0 = np.logspace(np.log10(2.0), np.log10(100.0), 60)
     rel = np.array([np.sqrt(crlb_D(exp, c)) / exp.D for c in cnr0])
 
     fig, ax = plt.subplots(figsize=(4.2, 3.4))
-    ax.loglog(cnr0, rel, color=DICE_BLUE, lw=2.2)
+    ax.loglog(cnr0, rel, color=ROLE2, lw=2.2)
     ax.axhline(1.0, color="#999999", ls="--", lw=1.0)
     ax.fill_between(cnr0, 1.0, rel, where=(rel >= 1.0),
-                    color=DICE_GOLD, alpha=0.20)
+                    color=ROLE4, alpha=0.25)
     ax.annotate("a single measurement\ncannot pin D (SD > D)",
-                xy=(3.0, 3.0), fontsize=8, color="#b5710a")
+                xy=(3.0, 3.0), fontsize=8, color=ROLE3)
     ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
     ax.set_ylabel(r"$\sqrt{\mathrm{CRLB}}\,/\,D$  (best possible SD, units of $D$)")
-    ax.set_title(f"Precision floor  ($L_D/\\mathrm{{FWHM}}_0 \\approx {ld_over_fwhm:.3f}$)",
-                 fontsize=10)
-    ax.grid(True, which="both", alpha=0.20)
     _style(ax)
     fig.tight_layout()
     path = OUTPUT / "poster_panel4_crlb.png"
@@ -272,19 +289,17 @@ def figure_corrected_bias(dense_path: Path) -> Path | None:
         return None
 
     fig, ax = plt.subplots(figsize=(4.6, 3.4))
-    ax.axhspan(0.95, 1.05, color="#cccccc", alpha=0.35,
+    ax.axhspan(0.95, 1.05, color=ROLE5, alpha=0.45,
                label=r"$\pm 0.05$ band")
     ax.axhline(1.0, color="#666666", lw=1.0)
     for shape, d in shapes.items():
         ax.semilogx(d["cnr"], d["folded"], "o-", ms=4, lw=1.8,
-                    color=SHAPE_COLOR.get(shape, DICE_BLUE),
+                    color=SHAPE_COLOR.get(shape, ROLE2),
                     label=SHAPE_LABEL.get(shape, shape))
     ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
     ax.set_ylabel(r"corrected  $\langle \hat D\rangle / D_\mathrm{true}$")
-    ax.set_title("Folded-normal correction across profile shapes", fontsize=10)
     ax.set_ylim(0.7, 1.3)
-    ax.legend(fontsize=8, loc="upper right")
-    ax.grid(True, which="both", alpha=0.20)
+    ax.legend(fontsize=8, loc="upper right", frameon=False)
     _style(ax)
     fig.tight_layout()
     path = OUTPUT / "poster_panel5_corrected_bias.png"
@@ -339,15 +354,13 @@ def figure_floor() -> Path | None:
         cnr, resid, se = _parse_floor(path)
         order = np.argsort(cnr)
         ax.semilogx(cnr[order], np.abs(resid[order]), "o-", ms=3, lw=1.6,
-                    color=SHAPE_COLOR.get(shape, DICE_BLUE),
+                    color=SHAPE_COLOR.get(shape, ROLE2),
                     label=SHAPE_LABEL.get(shape, shape))
     ax.set_xlabel(r"per-profile contrast-to-noise  CNR")
     ax.set_ylabel(r"$|$residual$|$  (in $\sigma_0^2$)")
-    ax.set_title("Where the correction works", fontsize=10)
     ax.set_xlim(0.2, 100)
     ax.set_ylim(0, 1.4)
-    ax.legend(fontsize=8, loc="upper right")
-    ax.grid(True, which="both", alpha=0.20)
+    ax.legend(fontsize=8, loc="upper right", frameon=False)
     _style(ax)
     fig.tight_layout()
     path = OUTPUT / "poster_panel5_floor.png"
@@ -360,10 +373,10 @@ def figure_fftcnr(npz_path: Path) -> Path | None:
     """Panel 4 (CNR-centric spine): fft-cnr recovers CNR across profile shapes.
 
     Restyles the sibling fft-cnr-paper case-11 sweep (generalized-Gaussian fit
-    path -- the one weighting-wall uses) into the DICE palette: estimated CNR vs
-    true CNR hugging the 1:1 line, median + interquartile band, one line per
-    shape. The three poster-primary shapes carry the DICE colours; the flat-top
-    is a neutral secondary reference.
+    path -- the one weighting-wall uses) into the poster palette: the recovery
+    ratio (estimated / true CNR) vs true CNR, median + interquartile band, one
+    line per shape, centred on 1.0. The three poster-primary shapes carry roles
+    1-3; the flat-top is a neutral secondary reference.
     """
     if not npz_path.exists():
         print(f"  (fft-cnr case-11 data not found at {npz_path} -- skipping "
@@ -374,33 +387,92 @@ def figure_fftcnr(npz_path: Path) -> Path | None:
     shapes = list(d["shapes"])
     # Map the case-11 shapes to poster labels/colours.
     style = {
-        "Gaussian (p=2)": ("Gaussian", DICE_BLUE),
-        "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", DICE_GREEN),
-        "Voigt": ("Voigt", DICE_GOLD),
+        "Gaussian (p=2)": ("Gaussian", ROLE1),
+        "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", ROLE3),
+        "Voigt": ("Voigt", ROLE2),
         "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
     }
 
+    # Plot the recovery ratio (estimated / true) rather than estimated vs true:
+    # on the diagonal plot every shape collapses onto the 1:1 line and the
+    # shape-dependent spread is invisible. The ratio centres on 1.0 and pulls the
+    # interquartile bands apart, so the accuracy across shapes reads at a glance.
     fig, ax = plt.subplots(figsize=(4.4, 3.6))
-    lo, hi = true_cnr.min() * 0.8, true_cnr.max() * 1.2
-    ax.plot([lo, hi], [lo, hi], color="#666666", ls="--", lw=1.0, label="1 : 1")
+    lo, hi = true_cnr.min() * 0.85, true_cnr.max() * 1.15
+    ax.axhline(1.0, color="#666666", ls="--", lw=1.0, label="exact recovery")
     for i, shape in enumerate(shapes):
         gg = d[f"gg_{i}"]                       # (n_cnr, n_trials)
-        med = np.nanmedian(gg, axis=1)
-        q1 = np.nanpercentile(gg, 25, axis=1)
-        q3 = np.nanpercentile(gg, 75, axis=1)
+        ratio = gg / true_cnr[:, None]          # estimated / true, per trial
+        med = np.nanmedian(ratio, axis=1)
+        q1 = np.nanpercentile(ratio, 25, axis=1)
+        q3 = np.nanpercentile(ratio, 75, axis=1)
         label, color = style.get(shape, (shape, "#333333"))
         ax.fill_between(true_cnr, q1, q3, color=color, alpha=0.15)
-        ax.loglog(true_cnr, med, "o-", ms=4, lw=1.7, color=color, label=label)
+        ax.semilogx(true_cnr, med, "o-", ms=4, lw=1.7, color=color, label=label)
     ax.set_xlim(lo, hi)
-    ax.set_ylim(lo, hi)
     ax.set_xlabel(r"true contrast-to-noise  CNR")
-    ax.set_ylabel(r"estimated CNR  (fft-cnr)")
-    ax.set_title("fft-cnr recovers the per-frame CNR across shapes", fontsize=10)
-    ax.grid(True, which="both", alpha=0.20)
-    ax.legend(fontsize=7, loc="upper left")
+    ax.set_ylabel(r"recovered CNR / true CNR")
+    ax.legend(fontsize=7, loc="upper right", frameon=False)
     _style(ax)
     fig.tight_layout()
     path = OUTPUT / "poster_panel4_fftcnr.png"
+    fig.savefig(path, dpi=300)
+    plt.close(fig)
+    return path
+
+
+# Case-11 shape name -> (poster label, role colour); shared by the fft-cnr figures.
+_FFTCNR_STYLE = {
+    "Gaussian (p=2)": ("Gaussian", ROLE1),
+    "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", ROLE3),
+    "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
+    "Voigt": ("Voigt", ROLE2),
+}
+
+
+def figure_fftcnr_white_vs_shot(white_npz: Path, shot_npz: Path) -> Path | None:
+    """Compare fft-cnr CNR recovery under white vs shot (Poisson) noise.
+
+    Two panels share the CNR axis. Under white noise the recovery ratio sits at
+    1.0 (the noise is spatially uniform, so the spectral noise estimate equals
+    the peak noise). Under shot noise the variance follows the local signal and
+    concentrates under the peak, so fft-cnr's window-averaged noise sits below
+    the peak noise and the reported CNR overestimates the true peak SNR by a
+    profile-dependent factor (~2.6-3.2x). The split is the subject of fft-cnr
+    issue #1; here it is shown, not corrected.
+    """
+    if not (white_npz.exists() and shot_npz.exists()):
+        print("  (white and/or shot fft-cnr sweep missing -- skipping comparison)")
+        return None
+
+    fig, (axW, axS) = plt.subplots(2, 1, figsize=(4.6, 5.4), sharex=True)
+    for ax, npz, title in ((axW, white_npz, "white noise"),
+                           (axS, shot_npz, "shot noise (Poisson)")):
+        d = np.load(npz, allow_pickle=True)
+        true_cnr = d["true_cnr"]
+        ax.axhline(1.0, color="#666666", ls="--", lw=1.0)
+        for i, shape in enumerate(list(d["shapes"])):
+            ratio = d[f"gg_{i}"] / true_cnr[:, None]
+            med = np.nanmedian(ratio, axis=1)
+            q1 = np.nanpercentile(ratio, 25, axis=1)
+            q3 = np.nanpercentile(ratio, 75, axis=1)
+            label, color = _FFTCNR_STYLE.get(shape, (shape, "#333333"))
+            ax.fill_between(true_cnr, q1, q3, color=color, alpha=0.15)
+            ax.semilogx(true_cnr, med, "o-", ms=3.5, lw=1.6, color=color,
+                        label=label)
+        ax.set_ylabel("recovered / true CNR")
+        ax.text(0.03, 0.93, title, transform=ax.transAxes, fontsize=9,
+                va="top")
+        _style(ax)
+    axW.set_ylim(0.8, 1.2)
+    axS.axhline(0.0, color="none")          # keep the y=1 reference in view
+    axS.text(0.03, 0.07, "fft-cnr reads peak/(window-averaged noise),\n"
+             "not the peak SNR -- a ~3x offset", transform=axS.transAxes,
+             fontsize=7.5, va="bottom", color="#555")
+    axS.legend(fontsize=7, loc="center right", frameon=False)
+    axS.set_xlabel(r"true contrast-to-noise  CNR")
+    fig.tight_layout()
+    path = OUTPUT / "fftcnr_white_vs_shot.png"
     fig.savefig(path, dpi=300)
     plt.close(fig)
     return path

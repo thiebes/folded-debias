@@ -26,24 +26,26 @@ from .weights import SCHEMES, corrected_variance, msd_and_weights
 
 
 def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
-                seed: int = 1, model=None) -> list:
+                seed: int = 1, model=None, noise_model=None) -> list:
     """Per-frame statistics from a Monte Carlo CNR sweep.
 
     Returns one :class:`~weighting_wall.truncation.FrameStats` per CNR_0.  This
     is the raw material both for the truncation model and for the diagnostic
     panel of the POC figure, so callers can reuse it instead of resampling.
-    ``model`` selects the profile model (see :mod:`weighting_wall.models`).
+    ``model`` selects the profile model (see :mod:`weighting_wall.models`);
+    ``noise_model`` selects the noise law (see :mod:`weighting_wall.noise`,
+    ``None`` = white).
     """
     stats = []
     for i, cnr0 in enumerate(cnr0_grid):
         ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i,
-                           model=model)
+                           model=model, noise_model=noise_model)
         stats.append(frame_stats(ens))
     return stats
 
 
 def calibrate(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
-              seed: int = 1, model=None) -> TruncationModel:
+              seed: int = 1, model=None, noise_model=None) -> TruncationModel:
     """Build a truncation model from a Monte Carlo CNR sweep.
 
     The calibration uses ``exp.D`` to generate synthetic profile sequences, so
@@ -52,7 +54,8 @@ def calibrate(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
     a thin wrapper that calls this function with ``D = 0``.
     """
     return TruncationModel.from_stats(
-        sweep_stats(exp, cnr0_grid, n_runs=n_runs, seed=seed, model=model))
+        sweep_stats(exp, cnr0_grid, n_runs=n_runs, seed=seed, model=model,
+                    noise_model=noise_model))
 
 
 def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
@@ -60,7 +63,7 @@ def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
                      n_pixels: int = 241, n_frames: int = 12,
                      t_max: float = 3.0, amplitude0: float = 1.0,
                      n_runs: int = 400, seed: int = 1,
-                     model=None) -> TruncationModel:
+                     model=None, noise_model=None) -> TruncationModel:
     """Build a truncation model **without reference to the application's D**.
 
     Generates the calibration profile sequence at ``D = 0``, so every frame's
@@ -84,7 +87,8 @@ def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
     cal_exp = Experiment(sigma0=sigma0, D=0.0, tau=tau, amplitude0=amplitude0,
                          half_window=half_window, n_pixels=n_pixels,
                          n_frames=n_frames, t_max=t_max)
-    return calibrate(cal_exp, cnr0_grid, n_runs=n_runs, seed=seed, model=model)
+    return calibrate(cal_exp, cnr0_grid, n_runs=n_runs, seed=seed, model=model,
+                     noise_model=noise_model)
 
 
 @dataclass
@@ -190,12 +194,15 @@ def per_frame_diagnostic(exp: Experiment, cnr0: float, model: TruncationModel,
 
 def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
              n_runs: int = 400, seed: int = 20000,
-             profile_model=None) -> dict[str, SchemeResult]:
+             profile_model=None, noise_model=None) -> dict[str, SchemeResult]:
     """Fit D under every scheme and return the bias curves.
 
     ``model`` is the calibrated :class:`TruncationModel`; ``profile_model`` is
     the profile model (Gaussian / Voigt / generalized-Gaussian) and must match
-    the one used for calibration.
+    the one used for calibration. ``noise_model`` selects the noise law (see
+    :mod:`weighting_wall.noise`, ``None`` = white); to test robustness to a
+    noise-law mismatch, pass a ``model`` calibrated under one law and a
+    ``noise_model`` of another.
     """
     times = exp.times
     cnr0_grid = np.asarray(cnr0_grid, float)
@@ -206,7 +213,7 @@ def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
 
     for i, cnr0 in enumerate(cnr0_grid):
         ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i,
-                           model=profile_model)
+                           model=profile_model, noise_model=noise_model)
         for scheme in SCHEMES:
             ratios = []
             for r in range(ens.n_runs):

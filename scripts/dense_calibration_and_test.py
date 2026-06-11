@@ -52,7 +52,7 @@ D_TRUE = 0.02              # sigma_0^2 / tau; L_D / FWHM_0 ~ 0.085
 CNR0_RANGE = (2.0, 100.0)  # log-spaced range
 N_CALIB_POINTS = 100        # log-spaced calibration CNR_0 values
 N_TEST_POINTS = 100         # random log-distributed test CNR_0 values
-N_RUNS_CALIB = 1000
+N_RUNS_CALIB = 5000
 N_RUNS_TEST = 1000
 
 # Worker count: leave 1 core for the OS

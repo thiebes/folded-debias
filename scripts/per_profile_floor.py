@@ -51,7 +51,7 @@ from weighting_wall.truncation import TruncationModel, frame_stats  # noqa: E402
 # --- Calibration (matches the dense run) -----------------------------------
 CAL_CNR0_RANGE = (2.0, 100.0)
 N_CAL_POINTS = 100
-N_RUNS_CAL = 1000
+N_RUNS_CAL = 5000
 
 # --- Test sweep ------------------------------------------------------------
 TEST_CNR_RANGE = (0.05, 100.0)
