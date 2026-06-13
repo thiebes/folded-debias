@@ -217,11 +217,8 @@ def figure_schematic_wall_fold() -> Path:
     for ti, tr, bi in zip(t, true_line, biased):
         axR.plot([ti, ti], [tr, bi], color="#bbb", lw=0.8, zorder=0)
 
-    # Direct labels at the line ends; annotate the slope gap (the payload).
-    axR.text(2.25, 0.04 * 2.25 - 0.012, "true slope $\\propto D$",
-             fontsize=8, color=ROLE1, ha="left", va="top")
-    axR.text(1.15, np.polyval(fit, 1.15) + 0.007, "inflated fit",
-             fontsize=8, color=ROLE4, ha="left", va="bottom")
+    # The slope-gap annotation is the payload; the two line labels are added after
+    # layout (below), rotated to the line slope and pushed to opposite sides.
     axR.annotate("", xy=(2.93, fit_line[-1]), xytext=(2.93, true_line[-1]),
                  arrowprops=dict(arrowstyle="<->", color="k", lw=0.9,
                                  mutation_scale=8))
@@ -236,6 +233,14 @@ def figure_schematic_wall_fold() -> Path:
     axR.set_yticks([])
 
     fig.tight_layout()
+
+    # Right panel: label both lines with CurvedText at the same fractional
+    # position on each line, offset to opposite sides so they hug their lines.
+    CurvedText(t, fit_line, "inflated fit", axR, pos=0.4, anchor="center",
+               offset=5.0, color=ROLE4, fontsize=7)
+    CurvedText(t, true_line, "true slope $\\propto D$", axR, pos=0.4,
+               anchor="center", offset=-5.0, color=ROLE1, fontsize=7)
+
     # Curve names run parallel to each curve and close to it (the rotation needs
     # the settled display transform, so this comes after the layout).
     fm = (v >= -2.4) & (v <= -0.3)
