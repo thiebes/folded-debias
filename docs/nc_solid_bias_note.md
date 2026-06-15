@@ -68,7 +68,10 @@ Figure 1 (`output/nc_solid_alpha_vs_cnr.png`) shows the apparent exponent
 against CNR₀ for the three maps. Below CNR₀ ≈ 12 the fit sits at the ceiling
 α = 2 (ballistic). The true subdiffusive value returns only once the deepest
 fitted frame keeps a CNR of about 2 to 3, which here corresponds to CNR₀ ≈ 35 to
-50 across the three maps.
+50 across the three maps. These thresholds are approximate: the maps carry their
+own Monte Carlo sampling noise (quantified below), which limits how precisely a
+threshold can be read from them. The robust statement is qualitative — a
+subdiffusive exponent driven to the ballistic ceiling at low contrast.
 
 | map | CNR₀ at recovery | deepest-frame CNR there | single-shot s.d. of α |
 | ------- | ------- | ------- | ------- |
@@ -157,6 +160,36 @@ the data — through some combination of bright signal, a fit window that stops
 before the contrast falls, discarding the late low-contrast frames, or operating
 near the photon-limited regime where the bias is weak. Which of these applies is
 not determined by the simulation.
+
+## Monte Carlo sampling noise in the maps, and what it limits
+
+The maps are histograms of about 50,000 discrete walkers per frame (pixel values
+are exact multiples of 1/49984). The one-dimensional projected peak holds 700 to
+1500 counts depending on the sample, so its Poisson sampling noise gives an
+intrinsic peak contrast-to-noise of about 27 (small), 30 (medium), and 39
+(large). Because each frame is renormalised to the same walker count, this
+intrinsic noise does not decay with the signal. It has two consequences for using
+the maps as a ground truth.
+
+First, it caps the effective contrast at the bright frames. Adding white
+measurement noise at a nominal CNR₀ of 50 yields an effective frame-0 contrast of
+only about 24 to 31, and at CNR₀ = 100 only about 26 to 36, because the sampling
+noise is already present. The high-contrast end of the sweep is therefore not
+truly noiseless, and the recovery plateau is reached only approximately.
+
+Second, it sets the precision of the ground truth. Recovering the smooth density
+from the histogram requires de-noising, and the de-noising choice (Gaussian
+reconstruction, a generalized-Gaussian fit, or smoothing) shifts the fitted true
+exponent by about 0.1. The maps are near-Gaussian (generalized-Gaussian shape
+exponent p ≈ 1.9 to 2.0), so the choice is small but not negligible.
+
+At the late, low-contrast frames where the bias appears, the added measurement
+noise dominates the sampling noise, so the qualitative result — a subdiffusive
+exponent driven to the ballistic ceiling — is robust to both effects. What the
+sampling noise limits is the precise threshold, not the existence or direction of
+the effect. Precise CNR thresholds are better taken from the synthetic beds,
+where the ground truth is analytic and the noise is fully controlled; on these
+maps the thresholds (CNR₀ of order a few tens) should be read as approximate.
 
 ## Limits, and what would settle it
 
