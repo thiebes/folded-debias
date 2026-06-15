@@ -189,7 +189,7 @@ def main():
     if not CAL_PATH.exists():
         print(f"Calibration not found: {CAL_PATH.name}.")
         return
-    cases = load_all()
+    cases = load_all(denoise=True)
     if not cases:
         print("No NC-solid maps on the pshare.")
         return
@@ -204,7 +204,8 @@ def main():
             tasks.append((("main", case.name, cnr0),
                           case.x, case.t, case.profiles, cnr0, N_SEEDS, white, 0))
     # Lifetime sensitivity on the 'small' map, same machinery.
-    tau_cases = {tau: load_case("small", tau_ns=tau) for tau in TAU_SWEEP}
+    tau_cases = {tau: load_case("small", tau_ns=tau, denoise=True)
+                 for tau in TAU_SWEEP}
     for tau, c in tau_cases.items():
         for cnr0 in (20.0, 50.0):
             tasks.append((("tau", tau, cnr0), c.x, c.t, c.profiles, cnr0,
@@ -227,7 +228,7 @@ def main():
     cache = OUTPUT / "nc_solid_alpha_vs_cnr_cache.pkl"
     meta = dict(n_seeds=N_SEEDS, cnr=tuple(CNR_GRID), tau=tuple(TAU_SWEEP),
                 noise=tuple(label for label, _m, _c in NOISE_LAWS),
-                scheme="v2-poisson")
+                scheme="v3-denoise")
     results = None
     if cache.exists():
         blob = pickle.loads(cache.read_bytes())

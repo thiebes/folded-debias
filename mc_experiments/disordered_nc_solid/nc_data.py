@@ -25,6 +25,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
+from scipy.optimize import curve_fit
 
 PSHARE = Path("P:/Marc/shared_data/disordered_perovskite_nanocrystals_solids")
 L_UM = 1.5            # box length (um); 1500 nm
@@ -50,20 +51,64 @@ class NCCase:
     tau_ns: float
 
 
-def load_case(tag: str, tau_ns: float = DEFAULT_TAU_NS, n0: float = 1.0) -> NCCase:
-    """Load one map by tag (``small`` / ``medium`` / ``large``), with decay applied."""
+def _denoise_row(x: np.ndarray, row: np.ndarray) -> tuple[np.ndarray, float]:
+    """Smooth Gaussian density underlying a finite-walker histogram row.
+
+    Marc's maps are histograms of ~50,000 discrete excitons, so each bin carries
+    Poisson (shot-like) sampling noise from the finite walker count. That scatter
+    is neither the smooth physical density a continuum measurement would image nor
+    the measurement noise we control -- and read through ``max`` it biases the
+    per-frame contrast-to-noise high (the peak appears to *rise* with spreading).
+    Fitting a Gaussian (centre, width) to the noiseless row recovers the smooth
+    density and removes the sampling noise; the reconstruction keeps the row's
+    integral, so the population stays conserved and the peak falls as 1/sigma with
+    spreading, as diffusion requires. Returns ``(smooth_row, sigma2)``.
+    """
+    tot = float(row.sum())
+    p = row / tot
+    c0 = float((p * x).sum())
+    s0 = float(np.sqrt(((x - c0) ** 2 * p).sum()))
+
+    def model(xx, c, s):
+        e = np.exp(-0.5 * ((xx - c) / s) ** 2)
+        return e / e.sum()
+
+    try:
+        (c, s), _ = curve_fit(model, x, p, p0=[c0, s0], maxfev=20000)
+    except (RuntimeError, ValueError):
+        c, s = c0, s0
+    return model(x, c, s) * tot, float(s) ** 2
+
+
+def load_case(tag: str, tau_ns: float = DEFAULT_TAU_NS, n0: float = 1.0,
+              denoise: bool = False) -> NCCase:
+    """Load one map by tag (``small`` / ``medium`` / ``large``), with decay applied.
+
+    With ``denoise=True`` each frame's projection is replaced by its smooth
+    Gaussian reconstruction (see :func:`_denoise_row`) before the decay envelope,
+    so the clean signal is the continuum density and the only noise in the Monte
+    Carlo is the measurement noise added downstream. ``var_true`` is then the
+    de-noised Gaussian width; otherwise it is the raw projection's second moment.
+    """
     cube = np.loadtxt(PSHARE / f"diffmap_{tag}.dat").reshape(NFRAMES, NBINS, NBINS)
     x = np.linspace(-L_UM / 2.0, L_UM / 2.0, NBINS)
     t = np.arange(NFRAMES) * DT_NS
     prof = cube.sum(axis=1)                              # project y -> (t, x)
+    if denoise:
+        smooth = np.empty_like(prof)
+        var = np.empty(NFRAMES)
+        for f in range(NFRAMES):
+            smooth[f], var[f] = _denoise_row(x, prof[f])
+        prof = smooth
     prof = prof * (n0 * np.exp(-t / tau_ns))[:, None]    # impose decay envelope
-    tot = prof.sum(axis=1)
-    xbar = (prof * x).sum(1) / tot
-    var = (prof * (x[None, :] - xbar[:, None]) ** 2).sum(1) / tot
+    if not denoise:
+        tot = prof.sum(axis=1)
+        xbar = (prof * x).sum(1) / tot
+        var = (prof * (x[None, :] - xbar[:, None]) ** 2).sum(1) / tot
     return NCCase(name=tag, x=x, t=t, profiles=prof, var_true=var, tau_ns=tau_ns)
 
 
-def load_all(tau_ns: float = DEFAULT_TAU_NS) -> list[NCCase]:
+def load_all(tau_ns: float = DEFAULT_TAU_NS, denoise: bool = False) -> list[NCCase]:
     """Load every map present on the pshare, in small/medium/large order."""
-    return [load_case(tag, tau_ns=tau_ns) for tag in CASES
+    return [load_case(tag, tau_ns=tau_ns, denoise=denoise) for tag in CASES
             if (PSHARE / f"diffmap_{tag}.dat").exists()]
