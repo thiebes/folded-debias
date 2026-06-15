@@ -91,6 +91,7 @@ class DFit:
     D: float              # estimated diffusion coefficient (slope / 2)
     intercept: float
     ok: bool
+    D_se: float = np.nan  # covariance-based standard error of D (= SE_slope / 2)
 
 
 def fit_D(times: np.ndarray, msd: np.ndarray, weights: np.ndarray) -> DFit:
@@ -99,6 +100,14 @@ def fit_D(times: np.ndarray, msd: np.ndarray, weights: np.ndarray) -> DFit:
     ``weights`` are the per-point fit weights (w_i, proportional to 1/variance
     in the standard scheme).  Frames with zero or non-finite weight are
     dropped.  This is the single point where every weighting scheme enters.
+
+    ``D_se`` is the textbook weighted-least-squares standard error of the slope,
+    halved (D = slope / 2): ``Var(slope) = Sw / (Sw*Swtt - Swt^2)``. It is exact
+    only when the weights are the true inverse point-variances *and the points
+    are independent* -- the latter fails for the MSD, whose points share the
+    fitted ``sigma_hat^2(0)``, so this SE is the (too-narrow) covariance interval
+    whose coverage ``scripts/coverage_check.py`` probes. For OLS-style unit
+    weights it omits the residual-variance scaling and is not a calibrated SE.
     """
     t = np.asarray(times, float)
     m = np.asarray(msd, float)
@@ -120,4 +129,7 @@ def fit_D(times: np.ndarray, msd: np.ndarray, weights: np.ndarray) -> DFit:
         return DFit(D=np.nan, intercept=np.nan, ok=False)
     slope = (sw * swtm - swt * swm) / denom
     intercept = (swm - slope * swt) / sw
-    return DFit(D=float(slope / 2.0), intercept=float(intercept), ok=True)
+    var_slope = sw / denom
+    d_se = float(np.sqrt(var_slope) / 2.0) if var_slope > 0 else np.nan
+    return DFit(D=float(slope / 2.0), intercept=float(intercept), ok=True,
+                D_se=d_se)

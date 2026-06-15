@@ -44,6 +44,58 @@ working; re-run when calibration or validation logic changes.
   Wall time ≈ 3 hours on a typical machine.
   Output: `output/dense_calibration_and_test.txt`.
 
+- **`subdiffusive_alpha.py [profile_model] [--quick] [--floor F]`** — Clean
+  single-population synthetic test that the correction de-biases the anomalous
+  exponent `α`, not only `D`. On the `AnomalousExperiment` bed
+  (`σ²(t) = σ₀² + 2 D t^α`, with `D` set per `α` to match the end-point
+  diffusion length `L_D / FWHM₀ ≈ 0.15`) it sweeps true `α ∈ {0.6, 0.8, 1.0,
+  1.2}` × CNR₀ and fits `MSD = 2 D t^α`, comparing the naive fit (raw, all
+  frames) against folded-normal + the per-frame CNR floor cut. The bias is read
+  from the mean trajectory; the per-realisation spread is the precision band.
+  Because the simulated peak tracks decay only, the per-frame CNR is
+  `CNR₀·exp(−t/τ)` for every `α` and `D`, so the exponents are compared at
+  matched noise. The D-free calibration is `α`-independent (built at `D = 0`)
+  and cached. *The clean synthetic version of the disordered-NC-solid `α`
+  result; source for the poster's `α`-recovery point (Figure 6).* Finding: the
+  naive exponent pins at the ballistic `α = 2.0` below the design floor
+  (CNR₀ ≲ 20), while the correction recovers true `α` to within
+  `|Δα| ≈ 0.02–0.10` for CNR₀ ≥ 20 across all four exponents.
+  Wall time ≈ 10 min (60-point × 1000s-run calibration, then 4 × 7 × 2000
+  evaluation); the cached calibration makes re-runs ≈ 3 min, and `--quick` is a
+  small sanity budget. `--floor` overrides the per-frame CNR floor cut
+  (default 1.0) for sensitivity studies, reusing the cached calibration.
+  Outputs: `output/subdiffusive_alpha[_<model>].{png,txt}`,
+  `output/calibration_subdiffusive[_<model>].npz`.
+
+- **`multiexp_decay.py`** — Confirms the correction is not invalidated by
+  multi-exponential decay. On fixed Fickian diffusion with three decay laws (one
+  single-exponential, two bi-exponential, the `MultiExpExperiment` bed), it shows
+  (a) the per-frame corrected residual collapses onto one curve vs *per-frame*
+  CNR (across-law spread ≤ 0.011 σ₀² for CNR ≥ 1), so the correction keys on
+  per-frame CNR not the decay law; (b) corrected `⟨D⟩/D_true` stays within
+  0.9–1.1 across decay laws; (c) the *naive* `⟨D⟩/D_true` is strongly
+  decay-specific (19× at CNR₀ = 8 for single-exponential vs ~1.3× bi-exponential),
+  so any CNR₀-indexed threshold (the `CNR₀ ≳ 20` design rule, NC-solid
+  `CNR₀ ≳ 50`) is single-exponential-specific — state thresholds in per-frame
+  CNR. Reuses the cached `calibration_subdiffusive.npz`; wall time ≈ 6 min.
+  Outputs: `output/multiexp_decay.{png,txt}`.
+
+- **`coverage_check.py`** — Does the reported confidence interval on `D` cover
+  `D_true` at the nominal rate (not just the mean)? `fit_D` now returns a
+  covariance-based `D_se`; this sweeps CNR₀ and reports empirical coverage of the
+  95% interval for the de-biased `folded_normal` (coverage is meaningless for the
+  biased `inverse_variance`, shown as the failing contrast), a parametric
+  bootstrap interval, and an analytical attribution
+  (`corr_inflation = √(Var_full/Var_diag)`). **Finding:** the shared `σ̂²₀` is
+  common-mode (it shifts the intercept, not the slope), so it is *not* the cause
+  of under-coverage (inflation 0.91–0.93 < 1) — correcting the anticipated
+  mechanism. The covariance CI instead under-covers erratically in the tight-CI
+  regime (0.74–0.79) because the D-free calibration mis-estimates the absolute
+  per-point variance at the application's D; the bootstrap covers ~0.94
+  throughout. Recommendation: report a bootstrap/profile interval, not the
+  covariance CI. Reuses `calibration_subdiffusive.npz`; wall time ≈ 5 min.
+  Outputs: `output/coverage_check.{png,txt}`.
+
 ### Real-data calibration and tooling
 
 - **`build_calibration.py --tag <name> ...`** — Builds a geometry-specific
@@ -115,6 +167,23 @@ need the Marc-geometry calibrations built by `build_calibration.py` and the
   **shape gap** (noiseless fit vs true second moment). *Source for the poster
   Panel 6 realistic-transport result.*
   Outputs: `output/marc_diffmap_validation.{png,txt}`.
+
+- **`br_halide_validation.py`** *(preliminary)* — The correction on Marc's Br-I
+  halide-mixing maps (kinetic MC of excitons on a halide-disorder landscape; data
+  read from the pshare via `mc_experiments/halide_mixing/br_data.py`, kept
+  uncommitted). Gaussian fit + folded-normal + floor cut; naive vs corrected vs
+  the particle (carrier) truth, across the three Br fractions and a CNR₀ sweep,
+  with a Gaussian D-free calibration at the Br-I geometry (cached). **Findings:**
+  halide mixing suppresses transport (apparent α 0.97 → 0.90 and D 3–10× below the
+  clean-layer D0 as the Br fraction rises) and the bounded fit recovers the
+  carrier-truth α where the moment estimator reads it low (the 150 nm box clips
+  the moment's tails). But the bed's 0.1 ns window keeps every frame's per-frame
+  CNR well above the floor, so the correction is *inactive* (naive ≈ corrected) —
+  a cross-material coverage + fit-vs-moment point, not a correction stress test.
+  A longer-window Br-I run (requested from Marc, `docs/email_collaborators.md`
+  Email 4) is needed to actually stress the correction.
+  Outputs: `output/br_halide_validation.{png,txt}`,
+  `output/calibration_br_halide.npz`.
 
 ### Poster figures
 

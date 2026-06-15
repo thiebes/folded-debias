@@ -383,8 +383,20 @@ application).
 
 ## 11. Open points
 
-- Subdiffusive transport (`MSD ∝ t^α`, α < 1) — confirm the correction
-  de-biases α as well as D.
+- **Resolved — subdiffusive transport (`MSD ∝ t^α`, α < 1).** The correction
+  de-biases α as well as D: `scripts/subdiffusive_alpha.py` on the
+  `AnomalousExperiment` bed recovers true α to `|α−α_true| ≈ 0.02–0.10` for
+  CNR₀ ≥ 20 (α ∈ {0.6, 0.8, 1.0, 1.2}), where the naive fit pins at the
+  ballistic α = 2.0. The exponent is read from the mean trajectory (§4's bias
+  carries into the slope's curvature, not only its slope).
+- **Resolved — decay-law independence.** The correction subtracts
+  `var_bias(per-frame CNR)`, so it depends on the per-frame CNR, not on how the
+  population decays. `scripts/multiexp_decay.py` (the `MultiExpExperiment` bed)
+  confirms the per-frame residual collapses across single- and bi-exponential
+  decay for per-frame CNR ≥ 1 (across-law spread ≤ 0.011 σ₀²) and corrected D
+  stays within 0.9–1.1. Thresholds quoted in the *initial* CNR₀ (the §9 design
+  rule `CNR₀ ≳ exp(t_max/τ)`) are single-exponential-specific; the invariant
+  form is the per-frame `CNR ≳ 1` of §9.
 - Voigt and generalized-Gaussian models showed a minor (~5%) clipping pile-up
   at CNR ≈ 1; a small censored term may be needed there, on top of the
   folded-normal correction, for the deepest-noise frames.

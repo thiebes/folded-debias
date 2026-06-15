@@ -11,8 +11,9 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from weighting_wall import (Experiment, GaussianModel, GeneralizedGaussianModel,
-                            MomentModel, VoigtModel, calibrate, evaluate,
+from weighting_wall import (AnomalousExperiment, Experiment, GaussianModel,
+                            GeneralizedGaussianModel, MomentModel,
+                            MultiExpExperiment, VoigtModel, calibrate, evaluate,
                             frame_stats, run_ensemble)
 from weighting_wall.fit import fit_D, fit_variance
 from weighting_wall.simulate import noise_free_series
@@ -36,6 +37,24 @@ def test_noise_free_fit_D_is_exact():
     d = fit_D(exp.times, msd, np.ones_like(msd))
     assert d.ok
     assert d.D == pytest.approx(exp.D, rel=1e-3)
+
+
+def test_fit_D_covariance_se():
+    """fit_D reports the weighted-LS covariance SE of D: it matches the closed
+    form Var(slope)=Sw/(Sw*Swtt-Swt^2) and shrinks as 1/sqrt(precision)."""
+    t = np.array([0.0, 1.0, 2.0, 3.0])
+    msd = np.array([0.0, 0.04, 0.08, 0.12])   # slope 0.04 -> D = 0.02
+    w = np.array([0.0, 1.0, 1.0, 1.0])        # t=0 carries no slope weight
+    d = fit_D(t, msd, w)
+    assert d.ok and np.isfinite(d.D_se) and d.D_se > 0
+    good = w > 0
+    sw = w[good].sum(); swt = (w[good] * t[good]).sum()
+    swtt = (w[good] * t[good] ** 2).sum()
+    assert d.D_se == pytest.approx(np.sqrt(sw / (sw * swtt - swt ** 2)) / 2,
+                                   rel=1e-9)
+    # 10x more precise data -> SE shrinks by sqrt(10).
+    assert fit_D(t, msd, 10.0 * w).D_se == pytest.approx(d.D_se / np.sqrt(10),
+                                                         rel=1e-6)
 
 
 def test_var_bias_is_positive_and_grows_at_low_cnr():
@@ -107,6 +126,57 @@ def test_moment_estimator_can_go_negative():
     ens = run_ensemble(exp, cnr0=4.0, n_runs=300, seed=0, model=MomentModel())
     finite = ens.variance[np.isfinite(ens.variance)]
     assert np.any(finite < 0.0)
+
+
+def test_anomalous_reduces_to_fickian_at_alpha_one():
+    """alpha = 1 must reproduce the Fickian Experiment exactly -- the
+    consistency check the subdiffusive validation leans on."""
+    fickian = Experiment(D=0.03)
+    anomalous = AnomalousExperiment(D=0.03, alpha=1.0)
+    assert np.allclose(anomalous.true_variance, fickian.true_variance)
+    assert np.allclose(anomalous.true_msd, fickian.true_msd)
+
+
+def test_anomalous_curvature_sign_matches_exponent():
+    """MSD(t) = 2 D t^alpha is concave for alpha < 1 and convex for alpha > 1.
+    That curvature is the disorder signature the correction must preserve."""
+    t = AnomalousExperiment(alpha=0.6).times
+    sub = AnomalousExperiment(D=0.02, alpha=0.6).true_msd
+    sup = AnomalousExperiment(D=0.02, alpha=1.4).true_msd
+    assert np.all(np.diff(sub[1:], 2) < 0)   # concave (drop the t=0 origin)
+    assert np.all(np.diff(sup, 2) > 0)       # convex
+
+
+def test_anomalous_noise_free_fit_recovers_imposed_variance():
+    """The bed must actually produce profiles whose fitted width follows the
+    imposed sigma^2(t) = sigma0^2 + 2 D t^alpha -- the premise of scoring the
+    recovered alpha against truth."""
+    exp = AnomalousExperiment(D=0.05, alpha=0.7, n_frames=8, t_max=3.0)
+    clean = noise_free_series(exp)
+    var = np.array([fit_variance(exp.x, row).variance for row in clean])
+    assert np.allclose(var, exp.true_variance, rtol=5e-3)
+
+
+def test_multiexp_single_component_reduces_to_single_exponential():
+    """One component must reproduce the inherited single-exponential decay."""
+    single = Experiment(tau=2.0)
+    multi = MultiExpExperiment(tau=2.0, fractions=(1.0,), taus=(2.0,))
+    assert np.allclose(multi.amplitude, single.amplitude)
+
+
+def test_multiexp_normalised_to_initial_amplitude():
+    """The summed decay is normalised so amplitude(0) = amplitude0, keeping the
+    meaning of CNR_0 fixed across decay laws."""
+    multi = MultiExpExperiment(amplitude0=1.0, fractions=(0.5, 0.5),
+                               taus=(0.3, 3.0))
+    assert multi.amplitude[0] == pytest.approx(1.0)
+    assert np.all(np.diff(multi.amplitude) < 0)   # monotone decay
+
+
+def test_multiexp_rejects_mismatched_components():
+    """fractions and taus must pair up; a mismatch is a silent-bug risk."""
+    with pytest.raises(ValueError):
+        MultiExpExperiment(fractions=(0.5, 0.5), taus=(1.0,))
 
 
 def test_generalized_gaussian_variance_factor():

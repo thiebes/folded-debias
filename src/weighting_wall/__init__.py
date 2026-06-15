@@ -22,7 +22,8 @@ Typical use::
     model = calibrate(exp, cnr0)
     results = evaluate(exp, cnr0, model)     # bias curves: ols / inverse_variance / folded_normal
 """
-from .simulate import Experiment, cnr_per_frame, noisy_series
+from .simulate import (AnomalousExperiment, Experiment, MultiExpExperiment,
+                       cnr_per_frame, noisy_series)
 from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
                      MomentModel, VoigtModel)
 from .montecarlo import Ensemble, run_ensemble
@@ -36,7 +37,8 @@ from .calibration import CalibrationGrid, calibrate_cnr_sigma2
 __version__ = "0.3.0"
 
 __all__ = [
-    "Experiment", "cnr_per_frame", "noisy_series",
+    "Experiment", "AnomalousExperiment", "MultiExpExperiment",
+    "cnr_per_frame", "noisy_series",
     "GaussianModel", "VoigtModel", "GeneralizedGaussianModel", "MomentModel",
     "MODELS",
     "Ensemble", "run_ensemble",
