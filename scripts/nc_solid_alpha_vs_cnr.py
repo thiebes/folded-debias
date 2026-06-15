@@ -10,13 +10,18 @@ choice, stated as the x-axis.
 
 Story the figure tells: the truncation bias lifts the late-time MSD, so it
 pushes apparent alpha *up* toward ballistic (alpha = 2). The true subdiffusive
-exponent (alpha ~ 0.87-0.91) only re-emerges once the deepest usable frame keeps
-CNR >~ 5, i.e. CNR_0 >~ 50. The bias therefore masks subdiffusion, never
+exponent (alpha ~ 0.88) only re-emerges once the deepest usable frame keeps
+CNR >~ 2-3, i.e. CNR_0 >~ 35-50. The bias therefore masks subdiffusion, never
 manufactures it: a measured alpha < 1 is robust to this effect, possibly
 conservative.
 
-Per-seed power-law fits give an honest spread (mean +/- s.d. over seeds) rather
-than a single fit to the seed-mean trajectory.
+The maps are ~50,000-walker Monte Carlo histograms, so each frame is de-noised
+(per-frame Gaussian reconstruction in ``nc_data.load_case(denoise=True)``) before
+measurement noise is added: reading the per-frame CNR from the raw histogram
+``max`` inflates it (the max bin rides the per-bin sampling noise and rises with
+time instead of falling as 1/sigma). Per-seed power-law fits give an honest
+spread (mean +/- s.d. over seeds) rather than a single fit to the seed-mean
+trajectory.
 
 Run from the repository root::
 
