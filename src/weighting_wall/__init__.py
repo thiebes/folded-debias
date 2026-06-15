@@ -25,7 +25,7 @@ Typical use::
 from .simulate import (AnomalousExperiment, Experiment, MultiExpExperiment,
                        cnr_per_frame, noisy_series)
 from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
-                     MomentModel, VoigtModel)
+                     MomentModel, UnboundedGaussianModel, VoigtModel)
 from .montecarlo import Ensemble, run_ensemble
 from .truncation import FrameStats, TruncationModel, frame_stats
 from .weights import SCHEMES, corrected_variance, msd_and_weights
@@ -40,7 +40,7 @@ __all__ = [
     "Experiment", "AnomalousExperiment", "MultiExpExperiment",
     "cnr_per_frame", "noisy_series",
     "GaussianModel", "VoigtModel", "GeneralizedGaussianModel", "MomentModel",
-    "MODELS",
+    "UnboundedGaussianModel", "MODELS",
     "Ensemble", "run_ensemble",
     "FrameStats", "TruncationModel", "frame_stats",
     "SCHEMES", "msd_and_weights", "corrected_variance",

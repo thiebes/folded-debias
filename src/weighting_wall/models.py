@@ -251,10 +251,104 @@ class MomentModel:
                         at_wall=False, ok=True)
 
 
+# --------------------------------------------------------------------------
+# Unbounded Gaussian -- the same shape-matched fit with the wall removed
+# --------------------------------------------------------------------------
+def _gaussian_precision(x: np.ndarray, mu: float, b: float,
+                        amp: float) -> np.ndarray:
+    """Gaussian parameterised by its *precision* ``b = 1 / sigma^2``.
+
+    ``b > 0`` is the ordinary peaked Gaussian; ``b = 0`` is a flat line; ``b <
+    0`` is convex (largest at the window edges). Unlike a variance
+    parameterisation -- which has an essential singularity at ``sigma^2 = 0``
+    that the optimiser cannot cross, so "removing the lower bound" on the
+    variance is illusory -- the precision passes *smoothly* through zero, so
+    the fit genuinely has no wall. The exponent is clipped from above so the
+    convex ``b < 0`` branch cannot overflow.
+    """
+    return amp * np.exp(np.minimum(-0.5 * b * (x - mu) ** 2, 50.0))
+
+
+class UnboundedGaussianModel:
+    """Gaussian width fit with the positivity wall removed (precision-fitted).
+
+    This is the head-to-head comparator for the folded-normal correction: the
+    *same* shape-matched Gaussian, fitted in the precision parameter
+    ``b = 1 / sigma^2`` so the fitted variance ``1 / b`` can take any sign. Its
+    sampling distribution is therefore not folded at zero, which is the
+    standard premise behind "an unconstrained fit needs no bias correction".
+    The question it answers is "is the correction even needed?".
+
+    The precision is bounded symmetrically to ``+/- 1 / var_min`` (var_min ~ one
+    pixel squared), with the reported variance ``1 / b`` clipped to ``+/-
+    span^2`` near ``b = 0``. The variance parameterisation is deliberately
+    avoided: ``sigma^2 = 0`` is an essential singularity of the profile, an
+    implicit wall the optimiser will not cross, so a variance-bounded "unbounded"
+    fit cannot actually reach negative values.
+
+    Finding (``scripts/unbounded_fit_comparison.py``): above per-frame CNR ~ 2-3
+    this fit is indistinguishable from the bounded one and both are unbiased, so
+    the correction is moot there. In the bias-prone band (per-frame CNR < ~1.5)
+    removing the wall only *partly* debiases the mean (e.g. at CNR 0.5 the mean
+    fitted variance falls from ~2.4 to ~1.6 sigma_0^2, still well above the true
+    1.0) and explodes the variance (the ``1 / b`` tail), because even without a
+    wall a nonlinear shape-matched fit overwhelmingly returns a positive width:
+    a localised positive noise bump fits better than a global convex trend, so
+    negative variances stay rare. The unbounded fit is therefore not a
+    substitute for the correction. The estimator is Gaussian-specific (a signed
+    precision has no clean meaning for the Voigt or generalized-Gaussian shape);
+    the shape-general unbounded counterpart is the linear, catastrophically
+    noisy :class:`MomentModel`, which is the one estimator that does robustly
+    admit negative variances.
+    """
+
+    name = "unbounded_gaussian"
+
+    def noise_free_series(self, exp: Experiment) -> np.ndarray:
+        return _gaussian_series(exp)
+
+    def fit_variance(self, x: np.ndarray, y: np.ndarray) -> FrameFit:
+        x = np.asarray(x, float)
+        y = np.asarray(y, float)
+        span = float(x[-1] - x[0])
+
+        var_max = span ** 2
+        var_min = (span / x.size) ** 2
+        b_max = 1.0 / var_min               # ~ a one-pixel spike
+        b0 = 1.0 / (span / 4.0) ** 2        # precision of the broad guess
+
+        margin = 0.3 * span
+        central = (x >= x[0] + margin) & (x <= x[-1] - margin)
+        idx = np.where(central)[0]
+        if idx.size:
+            mu0 = float(x[idx][int(np.argmax(np.abs(y[idx])))])
+        else:
+            mu0 = float(x[int(np.argmax(np.abs(y)))])
+        amp_max = float(np.max(np.abs(y))) or 1.0
+
+        p0 = [mu0, b0, amp_max]
+        lower = [x[0] + margin, -b_max, 0.0]
+        upper = [x[-1] - margin, b_max, 2.0 * amp_max]
+        try:
+            popt, _ = curve_fit(_gaussian_precision, x, y, p0=p0,
+                                bounds=(lower, upper), maxfev=5000)
+            b, amp = float(popt[1]), float(popt[2])
+            ok = True
+            var = float(np.clip(1.0 / b, -var_max, var_max)) if b != 0.0 \
+                else var_max
+        except (RuntimeError, ValueError):
+            var, amp, ok = (span / 4.0) ** 2, amp_max, False
+
+        # No wall: the precision passes smoothly through zero, so there is no
+        # lower bound to be pinned against.
+        return FrameFit(variance=var, amplitude=amp, at_wall=False, ok=ok)
+
+
 # Convenience registry for scripts that select a model by name.
 MODELS = {
     "gaussian": GaussianModel,
     "voigt": VoigtModel,
     "generalized_gaussian": GeneralizedGaussianModel,
     "moment": MomentModel,
+    "unbounded_gaussian": UnboundedGaussianModel,
 }

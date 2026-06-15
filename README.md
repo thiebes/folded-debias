@@ -24,8 +24,8 @@ Disordered perovskite nanocrystal solids show exciton diffusion lengths of tens
 of nanometres against a diffraction-limited spot — exactly the low-CNR,
 small-L_D/FWHM regime where this bias is largest. The bias also contaminates
 the *subdiffusive* exponent α extracted from non-Gaussian NC-solid transport,
-not just D. Prepared for the Gordon Research Conference on Colloidal
-Semiconductor Nanocrystals (2026).
+not just D. Prepared for the Gordon Research Seminar and Conference (GRS/GRC)
+on Colloidal Semiconductor Nanocrystals (2026).
 
 ## Install
 

@@ -13,7 +13,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
 from weighting_wall import (AnomalousExperiment, Experiment, GaussianModel,
                             GeneralizedGaussianModel, MomentModel,
-                            MultiExpExperiment, VoigtModel, calibrate, evaluate,
+                            MultiExpExperiment, UnboundedGaussianModel,
+                            VoigtModel, calibrate, evaluate,
                             frame_stats, run_ensemble)
 from weighting_wall.fit import fit_D, fit_variance
 from weighting_wall.simulate import noise_free_series
@@ -126,6 +127,51 @@ def test_moment_estimator_can_go_negative():
     ens = run_ensemble(exp, cnr0=4.0, n_runs=300, seed=0, model=MomentModel())
     finite = ens.variance[np.isfinite(ens.variance)]
     assert np.any(finite < 0.0)
+
+
+def test_unbounded_matches_bounded_at_high_cnr():
+    """With the wall removed, the fit must be identical to the bounded one when
+    the wall does not bind -- i.e. at healthy CNR, where the truncation bias and
+    its correction are moot."""
+    exp = Experiment(D=0.0)
+    clean = noise_free_series(exp)
+    rng = np.random.default_rng(0)
+    noisy = clean[0] + rng.normal(0.0, exp.amplitude0 / 30.0, exp.x.size)
+    bnd = fit_variance(exp.x, noisy)
+    unb = UnboundedGaussianModel().fit_variance(exp.x, noisy)
+    assert unb.variance == pytest.approx(bnd.variance, rel=1e-3)
+    assert not unb.at_wall   # the unbounded fit has no wall to pin against
+
+
+def test_unbounded_recovers_noise_free_variance():
+    """The unbounded fit must still recover the known variance from clean
+    profiles -- removing the wall must not break the high-CNR estimator."""
+    exp = Experiment(D=0.02, n_frames=6, t_max=2.0)
+    model = UnboundedGaussianModel()
+    clean = model.noise_free_series(exp)
+    for f in range(exp.n_frames):
+        ff = model.fit_variance(exp.x, clean[f])
+        assert ff.ok
+        assert ff.variance == pytest.approx(exp.true_variance[f], rel=5e-3)
+
+
+def test_unbounded_admits_negative_variance_in_deep_noise():
+    """The precision-fitted unbounded estimator must be *able* to return a
+    negative variance on peakless data -- the property a variance-parameterised
+    fit cannot have (sigma^2 = 0 is an uncrossable singularity). Negatives are
+    rare even here (a nonlinear fit favours a positive noise bump), so this
+    needs enough pure-noise trials to be a reliable smoke test, not a one-shot.
+    """
+    model = UnboundedGaussianModel()
+    x = Experiment().x
+    rng = np.random.default_rng(3)
+    saw_negative = False
+    for _ in range(400):
+        ff = model.fit_variance(x, rng.normal(0.0, 1.0, x.size))
+        if np.isfinite(ff.variance) and ff.variance < 0.0:
+            saw_negative = True
+            break
+    assert saw_negative
 
 
 def test_anomalous_reduces_to_fickian_at_alpha_one():

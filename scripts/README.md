@@ -218,6 +218,26 @@ need the Marc-geometry calibrations built by `build_calibration.py` and the
   the paper's "the moment estimator is not a viable substitute" leg.*
   Output: `output/method_comparison.png`.
 
+- **`unbounded_fit_comparison.py`** — Head-to-head answering "is the correction
+  even needed?": the folded-normal correction vs an *unbounded* width fit (the
+  same shape-matched Gaussian fitted in the precision `b = 1/σ²`, so the fitted
+  variance `1/b` can take any sign and the wall at zero is genuinely removed),
+  with the bounded+OLS baseline and the `MomentModel` as references. Reports
+  bias and precision at two levels: per-frame (isolated single profiles vs
+  per-frame CNR) and D-level (a full diffusion experiment vs CNR₀). **Findings:**
+  above per-frame CNR ≈ 2–3 the bounded and unbounded fits are identical and
+  both unbiased (the wall never binds, the correction is moot); below ≈ 1.5
+  removing the wall only *partly* debiases (per-frame CNR 0.5: mean σ̂² ≈ 2.4 →
+  1.6 σ₀², still well above the true 1.0) and explodes the variance, because a
+  nonlinear shape-matched fit intrinsically resists negative variances — a
+  localized positive noise bump fits better than a global convex trend, so
+  negatives stay rare even on pure noise (≈ 0.03 fraction). A variance-
+  parameterised "unbounded" fit cannot reach negatives at all (σ²=0 is an
+  uncrossable singularity). Only the linear `MomentModel` robustly un-folds, and
+  it is catastrophic. *The poster/paper "removing the positivity constraint does
+  not substitute for the correction" leg.*
+  Outputs: `output/unbounded_fit_comparison.{png,txt}`.
+
 ## Legacy / deprecated
 
 `scripts/legacy/` holds scripts that documented development decisions or
