@@ -229,3 +229,20 @@ white noise with standard deviation peak₀/CNR₀, and shot noise with Poisson
 counts and an optional read floor, whose per-frame CNR is
 peak / √(peak + read²). CNR₀ is the frame-0 peak CNR and means the same starting
 contrast across noise laws.
+
+## Poster figure caption (Figure 1)
+
+The figure is the severity panel: the point is the general one — that measuring
+exciton transport in disordered nanocrystal solids is biased by noise at the
+contrast these films actually reach — not a reproduction of any single result.
+
+> **Noise biases the measured transport exponent in disordered nanocrystal
+> solids.** Apparent mean-squared-displacement exponent α from a standard
+> frame-by-frame width fit, against the initial contrast-to-noise CNR₀, on
+> realistic nanocrystal-solid transport (model diffusion maps, Solari et al.).
+> The transport is genuinely subdiffusive (α ≈ 0.9, grey band), but as the
+> contrast falls into the range these small-diffusion-length films reach during a
+> measurement, the fit reads the motion as ballistic (α = 2, grey dotted line).
+> Because the bias can only raise the exponent, it masks subdiffusion but never
+> creates it. The effect is generic to the low-contrast, short-diffusion-length
+> regime, not specific to one material.
