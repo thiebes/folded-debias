@@ -40,12 +40,14 @@ then diffuses normally (alpha ~ 1, mean site energy flat). As the disorder is
 strengthened (lower kT), the exponent drops below 1 and the C16 < C12 < C8
 ordering emerges (the smallest crystals carry the most energetic disorder because
 E(d) is steepest at small d) -- reproducing the paper's counterintuitive result.
-But reaching the observed alpha ~ 0.42-0.70 needs sigma_E / kT well above 1, i.e.
-stronger disorder than figure-read sizes plus room temperature give. The two
-inputs that set sigma_E / kT -- the exact per-sample size distributions (SI
-Fig. S2) and the temperature -- are precisely what is missing from the available
-SI; they must come from Marc or be tuned so the simulated alpha matches the paper.
-Until then ``kt_mev`` is the calibration knob (lower = stronger disorder).
+Reaching the paper's exact alpha ~ 0.42-0.70 would need sigma_E / kT well above 1
+(stronger disorder than the figure-read sizes plus room temperature give; the
+exact size distributions in SI Fig. S2 and the temperature would close that gap).
+But reproducing their numbers is not the goal here: this is a clean, model
+NC-solid-like subdiffusive test bed for the noise-bias study, not a Solari
+reproduction. ``kt_mev`` is the disorder-strength knob (lower = stronger, more
+subdiffusive); a strong-disorder setting gives genuinely subdiffusive transport
+with the right C16 < C12 < C8 ordering, which is all the bias study needs.
 """
 from __future__ import annotations
 
