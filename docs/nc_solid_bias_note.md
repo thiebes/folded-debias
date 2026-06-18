@@ -10,10 +10,11 @@ figures are produced by [`scripts/nc_solid_alpha_vs_cnr.py`](../scripts/nc_solid
 
 A bounded width fit followed by a mean-squared-displacement (MSD) slope fit
 mis-estimates the transport exponent α when the per-frame contrast-to-noise
-ratio (CNR) is low. On the nanocrystal-solid maps the true transport is mildly
-subdiffusive (α ≈ 0.88), but under white measurement noise a standard
-all-frames fit reads the motion as ballistic (α at the fit ceiling of 2) until
-the initial CNR exceeds roughly 50. The bias direction is fixed: it always
+ratio (CNR) is low. We build a Gaussian test bed whose per-frame width is taken
+from the nanocrystal-solid maps, so its true exponent is subdiffusive (α ≈ 0.88)
+and exactly known. Under white measurement noise a standard all-frames fit reads
+the motion as ballistic (α at the fit ceiling of 2) until the initial CNR exceeds
+roughly 50. The bias direction is fixed: it always
 raises the apparent exponent. It can therefore hide subdiffusion but cannot
 manufacture it, so a measured subdiffusive exponent is robust to this effect.
 The size of the bias is set by the constant, signal-independent part of the
@@ -22,7 +23,7 @@ floor of a few counts restores it. The simulation fixes the threshold only for
 an assumed noise law; the real measurement's regime is set by its detector and
 is measurable from the raw frames.
 
-## The maps as transport ground truth
+## A Gaussian test bed from the maps' width trajectory
 
 Three maps (`small`, `medium`, `large`) record 20 frames of a normalised
 exciton concentration on a 250 × 250 grid over a 1500 × 1500 nm² area
@@ -34,13 +35,16 @@ project each 2-D frame to a 1-D profile by summing over one axis. The decay is a
 per-frame scalar, so it sets the amplitude — hence the per-frame CNR — without
 changing the spatial second moment.
 
-The maps are histograms of about 50,000 discrete random walkers, so each pixel
-carries Poisson sampling noise from the finite walker count — not the smooth
-physical density a continuum measurement would image. We recover that smooth
-density by fitting a Gaussian to each frame (the de-noising step in the Methods),
-and take its second moment as the transport ground truth: the true D and α
-follow from a fit to σ²(t). The diffusion length is small relative to the spot
-(L_D / FWHM ≈ 0.14), the regime characteristic of nanocrystal solids.
+We fit a Gaussian to each noiseless frame and take those Gaussians as the truth:
+a test bed whose per-frame width σ(t) and amplitude are the maps', but whose
+ground truth is Gaussian by construction. This makes no claim that the real
+exciton profile is Gaussian — it defines a realistic-width Gaussian bed on which
+the noise bias is measured against an exactly known truth. Fitting a Gaussian
+also sets aside the per-bin Poisson noise of the 50,000-walker histograms, which
+would otherwise inflate the peak (the raw `max` rises with time instead of
+falling as 1/σ). The true D and α follow from σ²(t); the diffusion length is
+small relative to the spot (L_D / FWHM ≈ 0.14), the regime characteristic of
+nanocrystal solids.
 
 | map | true α | true D (μm²/ns) |
 | ------- | ------- | ------- |
@@ -68,10 +72,11 @@ Figure 1 (`output/nc_solid_alpha_vs_cnr.png`) shows the apparent exponent
 against CNR₀ for the three maps. Below CNR₀ ≈ 12 the fit sits at the ceiling
 α = 2 (ballistic). The true subdiffusive value returns only once the deepest
 fitted frame keeps a CNR of about 2 to 3, which here corresponds to CNR₀ ≈ 35 to
-50 across the three maps. These thresholds are approximate: the maps carry their
-own Monte Carlo sampling noise (quantified below), which limits how precisely a
-threshold can be read from them. The robust statement is qualitative — a
-subdiffusive exponent driven to the ballistic ceiling at low contrast.
+50 across the three maps. These thresholds are the bed's own: because the truth
+is the Gaussian fit and the only noise added is the controlled measurement noise,
+they are not limited by the maps' sampling noise. The one caveat is that the bed
+is Gaussian — faithful here because the maps are near-Gaussian (kurtosis ≈ 0),
+but a strongly non-Gaussian profile could shift them.
 
 | map | CNR₀ at recovery | deepest-frame CNR there | single-shot s.d. of α |
 | ------- | ------- | ------- | ------- |
@@ -153,43 +158,34 @@ exponent is therefore robust to this effect: if anything, residual bias means
 the true transport is slightly more subdiffusive than the fit reports.
 
 This separates cleanly into two cases. The simulated subdiffusion is not at
-issue, because the maps are noiseless and α ≈ 0.87 is the disorder physics with
-no measurement noise. For an experimental exponent, recovering α < 1 in this
+issue: the bed's truth is the disordered-transport width trajectory itself, with
+no measurement noise, so α ≈ 0.88 is the simulated physics, not a noise artifact.
+For an experimental exponent, recovering α < 1 in this
 fragile regime implies that the measurement stayed in the high-contrast part of
 the data — through some combination of bright signal, a fit window that stops
 before the contrast falls, discarding the late low-contrast frames, or operating
 near the photon-limited regime where the bias is weak. Which of these applies is
 not determined by the simulation.
 
-## Monte Carlo sampling noise in the maps, and what it limits
+## Why the bed is built from Gaussian fits, not the raw maps
 
 The maps are histograms of about 50,000 discrete walkers per frame (pixel values
-are exact multiples of 1/49984). The one-dimensional projected peak holds 700 to
-1500 counts depending on the sample, so its Poisson sampling noise gives an
-intrinsic peak contrast-to-noise of about 27 (small), 30 (medium), and 39
-(large). Because each frame is renormalised to the same walker count, this
-intrinsic noise does not decay with the signal. It has two consequences for using
-the maps as a ground truth.
+are exact multiples of 1/49984), so each frame carries Poisson sampling noise.
+Read through the raw peak, that noise inflates the per-frame CNR: the histogram
+`max` rides the sampling noise and rises with time instead of falling as 1/σ.
+Fitting a Gaussian to each frame removes that — it sets the bed's truth from the
+smooth width and amplitude, and the measurement noise we then add is the only
+noise in the study. So the sampling noise does not propagate into the bias
+result; it is the reason to fit rather than to read the raw peak.
 
-First, it caps the effective contrast at the bright frames. Adding white
-measurement noise at a nominal CNR₀ of 50 yields an effective frame-0 contrast of
-only about 24 to 31, and at CNR₀ = 100 only about 26 to 36, because the sampling
-noise is already present. The high-contrast end of the sweep is therefore not
-truly noiseless, and the recovery plateau is reached only approximately.
-
-Second, it sets the precision of the ground truth. Recovering the smooth density
-from the histogram requires de-noising, and the de-noising choice (Gaussian
-reconstruction, a generalized-Gaussian fit, or smoothing) shifts the fitted true
-exponent by about 0.1. The maps are near-Gaussian (generalized-Gaussian shape
-exponent p ≈ 1.9 to 2.0), so the choice is small but not negligible.
-
-At the late, low-contrast frames where the bias appears, the added measurement
-noise dominates the sampling noise, so the qualitative result — a subdiffusive
-exponent driven to the ballistic ceiling — is robust to both effects. What the
-sampling noise limits is the precise threshold, not the existence or direction of
-the effect. Precise CNR thresholds are better taken from the synthetic beds,
-where the ground truth is analytic and the noise is fully controlled; on these
-maps the thresholds (CNR₀ of order a few tens) should be read as approximate.
+The cost is the Gaussian assumption. Here it is benign: the maps are
+near-Gaussian (generalized-Gaussian shape exponent p ≈ 1.9 to 2.0, kurtosis ≈ 0),
+so the fitted Gaussian and the actual profile agree, and the bias measured on the
+Gaussian bed is representative. On a strongly non-Gaussian profile the truncation
+bias could differ, and the bed would have to be built differently — either from a
+shape-matched fit or, more cleanly, from a model run at high walker count (the
+re-implemented hopping model in `nc_solid_sim.py` does this without any shape
+assumption).
 
 ## Limits, and what would settle it
 
@@ -217,15 +213,12 @@ applying the white-calibrated correction blindly.
 Maps are loaded read-only and processed by
 [`mc_experiments/disordered_nc_solid/nc_data.py`](../mc_experiments/disordered_nc_solid/nc_data.py).
 Each frame is a histogram of about 50,000 discrete random walkers (the pixel
-values are integer multiples of 1/49984), so it carries Poisson sampling noise
-from the finite walker count — a simulation artifact, not the smooth physical
-density and not the measurement noise under study. Before adding measurement
-noise we de-noise each frame: fit a Gaussian (centre, width) to the noiseless
-projection and rebuild it with the same integral. This recovers the continuum
-density, conserves the population, and makes the peak fall as 1/σ with spreading
-(the raw histogram `max` instead rises, biasing the per-frame CNR high). The
-de-noised second moment is the transport ground truth. Each per-frame width is
-then fit with the bounded Gaussian estimator
+values are integer multiples of 1/49984). We fit a Gaussian (centre, width) to
+each noiseless projection and rebuild it with the same integral, then take that
+Gaussian as the bed's truth. The reconstruction conserves the population and
+makes the peak fall as 1/σ with spreading (the raw histogram `max` instead rises,
+biasing the per-frame CNR high). Its second moment is the ground truth σ²(t).
+Each per-frame width is then fit with the bounded Gaussian estimator
 ([`weighting_wall.fit`](../src/weighting_wall/fit.py)); the MSD uses the fitted
 t = 0 width, MSD = σ̂²(t) − σ̂²(0). The exponent and diffusion coefficient come
 from a nonlinear least-squares fit of MSD = 2D·t^α with α ∈ [0.2, 2]. The bias

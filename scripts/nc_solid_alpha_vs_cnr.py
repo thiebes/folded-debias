@@ -1,27 +1,27 @@
-"""Apparent vs true MSD exponent on the Solari NC-solid maps as CNR falls.
+"""Apparent vs true MSD exponent on a Gaussian bed built from the NC-solid maps.
 
-Quantifies, on Marc's own Fig.-5 simulation maps, how a standard bounded-fit
-MSD-slope analysis mis-reads the transport exponent alpha (and the diffusion
-coefficient D) as the per-frame contrast-to-noise falls -- the regime a real
-transient-PL measurement enters at late times. The maps are the transport
-ground truth (their noiseless spatial second moment gives the true D, alpha), so
-this needs no experimental data: only the injected noise ladder is a modelling
-choice, stated as the x-axis.
+Quantifies how a standard bounded-fit MSD-slope analysis mis-reads the transport
+exponent alpha (and the diffusion coefficient D) as the per-frame
+contrast-to-noise falls -- the regime a real transient-PL measurement enters at
+late times.
+
+The bed: a Gaussian is fit to each of Marc's Fig.-5 simulation frames and *taken
+as the truth* -- a test bed whose per-frame width and amplitude are the maps' real
+subdiffusive transport, but whose ground truth is Gaussian by construction. This
+makes no claim that the real profile is Gaussian; it defines a realistic-width
+Gaussian bed with an exactly known truth (``nc_data.load_case(denoise=True)``).
+It also sets aside the per-bin Poisson noise of the ~50,000-walker histograms,
+which would otherwise inflate the per-frame CNR (the raw ``max`` rides the
+sampling noise and rises with time instead of falling as 1/sigma). The maps are
+near-Gaussian (kurtosis ~ 0), so the bed is faithful.
 
 Story the figure tells: the truncation bias lifts the late-time MSD, so it
 pushes apparent alpha *up* toward ballistic (alpha = 2). The true subdiffusive
 exponent (alpha ~ 0.88) only re-emerges once the deepest usable frame keeps
 CNR >~ 2-3, i.e. CNR_0 >~ 35-50. The bias therefore masks subdiffusion, never
 manufactures it: a measured alpha < 1 is robust to this effect, possibly
-conservative.
-
-The maps are ~50,000-walker Monte Carlo histograms, so each frame is de-noised
-(per-frame Gaussian reconstruction in ``nc_data.load_case(denoise=True)``) before
-measurement noise is added: reading the per-frame CNR from the raw histogram
-``max`` inflates it (the max bin rides the per-bin sampling noise and rises with
-time instead of falling as 1/sigma). Per-seed power-law fits give an honest
-spread (mean +/- s.d. over seeds) rather than a single fit to the seed-mean
-trajectory.
+conservative. Per-seed power-law fits give an honest spread (mean +/- s.d. over
+seeds) rather than a single fit to the seed-mean trajectory.
 
 Run from the repository root::
 

@@ -52,17 +52,18 @@ class NCCase:
 
 
 def _denoise_row(x: np.ndarray, row: np.ndarray) -> tuple[np.ndarray, float]:
-    """Smooth Gaussian density underlying a finite-walker histogram row.
+    """Gaussian fit to one frame, taken as the bed's truth for that frame.
 
-    Marc's maps are histograms of ~50,000 discrete excitons, so each bin carries
-    Poisson (shot-like) sampling noise from the finite walker count. That scatter
-    is neither the smooth physical density a continuum measurement would image nor
-    the measurement noise we control -- and read through ``max`` it biases the
-    per-frame contrast-to-noise high (the peak appears to *rise* with spreading).
-    Fitting a Gaussian (centre, width) to the noiseless row recovers the smooth
-    density and removes the sampling noise; the reconstruction keeps the row's
-    integral, so the population stays conserved and the peak falls as 1/sigma with
-    spreading, as diffusion requires. Returns ``(smooth_row, sigma2)``.
+    We do not claim the real profile is Gaussian: fitting a Gaussian to each frame
+    and treating it as the truth defines a realistic-width Gaussian test bed (its
+    width and amplitude are the maps', its ground truth is Gaussian by
+    construction). It also sets aside the per-bin Poisson sampling noise of the
+    ~50,000-walker histograms, which read through ``max`` would inflate the
+    per-frame contrast-to-noise (the peak appears to *rise* with spreading instead
+    of falling as 1/sigma). The reconstruction keeps the row's integral, so the
+    population is conserved and the peak falls as 1/sigma. Returns
+    ``(gaussian_row, sigma2)``. (The name ``denoise`` is kept for the call sites;
+    the operation is "fit a Gaussian and take it as truth", not shape recovery.)
     """
     tot = float(row.sum())
     p = row / tot
