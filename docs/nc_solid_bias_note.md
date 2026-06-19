@@ -232,27 +232,36 @@ contrast across noise laws.
 
 ## Poster figure caption (`output/nc_solid_poster_figure.png`)
 
-The figure is the severity panel: the point is the general one — that measuring
-exciton transport in disordered nanocrystal solids is biased by noise at the
-contrast these films actually reach — not a reproduction of any single result.
-One representative sample is shown (C16, the smallest crystals); the others
-behave the same. Produced by
+The figure is the severity panel, restricted to the realistic measurement regime:
+no MSD experiment is run below CNR₀ ≈ 30, and the point is that a residual bias
+survives well into the contrast people actually use; an inset extends the sweep to
+low contrast, where the estimate diverges to the ballistic ceiling. One
+representative sample is shown (C16, the smallest crystals); the others behave the
+same. Produced by
 [`scripts/nc_solid_poster_figure.py`](../scripts/nc_solid_poster_figure.py).
 
-> **Noise biases the measured transport exponent in disordered nanocrystal
-> solids.** Apparent mean-squared-displacement exponent α from a standard
-> frame-by-frame width fit, versus the initial contrast-to-noise CNR₀, for
-> exciton transport in a disordered perovskite nanocrystal solid (the C16 /
-> hexadecylamine-ligand sample, the smallest crystals). The transport is a
-> kinetic Monte Carlo of about 50,000 exciton walkers hopping on a polydisperse
-> nanocrystal array (Solari et al.), projected to a 1-D width per frame over a
-> 1500 nm field, 20 frames spanning 20 ns, in the small-diffusion-length regime
-> (L_D / FWHM ≈ 0.14). The true transport is subdiffusive (α ≈ 0.88, grey line);
-> white measurement noise is added at each CNR₀ and the bounded width is refit. At
-> low contrast the fit reads the motion as ballistic (α = 2, grey dotted),
-> recovering the true exponent only as the contrast rises. *Inset:* a residual
-> upward bias of about 0.02 persists to CNR₀ ≈ 50 and decays smoothly to zero by
-> CNR₀ ≈ 200 (error bars: bias-estimate uncertainty over 8,000 noise
-> realisations). Because the bias can only raise the exponent, it masks
-> subdiffusion but never creates it — the effect is generic to the low-contrast,
-> short-diffusion-length regime, not specific to one material.
+> **A residual noise bias in the measured transport exponent persists into good
+> contrast.** Each point is the apparent mean-squared-displacement exponent α
+> recovered from a standard frame-by-frame width fit, plotted against the initial
+> contrast-to-noise CNR₀, for exciton transport in a disordered perovskite
+> nanocrystal solid (the C16 / hexadecylamine-ligand sample, the smallest
+> crystals). The test bed is built from a kinetic Monte Carlo of about 50,000
+> exciton walkers hopping on a polydisperse nanocrystal array (Solari et al.):
+> each frame is projected to a 1-D profile over a 1500 nm field (20 frames
+> spanning 20 ns, small-diffusion-length regime L_D / FWHM ≈ 0.14), and a Gaussian
+> is fit to each frame and taken as that frame's ground truth, giving a
+> realistic-width clean bed whose nominal exponent is subdiffusive (α ≈ 0.88,
+> yellow line). This is not a claim that the real profile is Gaussian; it sets the bed's
+> truth and removes the maps' walker-sampling noise so the only noise is the
+> measurement noise studied here. White measurement noise scaled to each CNR₀ is
+> then added, the bounded width is refit, and α is read from the MSD averaged over
+> 64,000 independent noisy realisations — so each marker is an independent Monte
+> Carlo estimate, not a fitted curve (hence points, not a connected line; error
+> bars are the bootstrap standard error of that exponent). Even at CNR₀ ≈ 30 — a
+> contrast comfortable for a real measurement — the apparent exponent reads about
+> 0.09 too high, and the bias clears only near CNR₀ ≈ 200. The inset extends the
+> sweep to low contrast: below CNR₀ ≈ 30 the apparent exponent climbs toward the
+> ballistic ceiling (α = 2), saturating there below CNR₀ ≈ 8. Because the bias
+> can only raise the exponent, it masks subdiffusion but never creates it — the
+> effect is generic to the low-contrast, short-diffusion-length regime, not
+> specific to one material.

@@ -21,8 +21,9 @@ dependencies = [
 # fft-cnr supplies per-frame CNR estimates from single 1-D profiles.
 # Used for real experimental data; the Monte Carlo validation knows true CNR.
 cnr = ["fft-cnr>=0.1"]
-plot = ["matplotlib>=3.7"]
-dev = ["pytest>=7.4", "matplotlib>=3.7", "fft-cnr>=0.1"]
+# curved-text draws the curved data-series label on the poster figure.
+plot = ["matplotlib>=3.7", "curved-text>=0.4"]
+dev = ["pytest>=7.4", "matplotlib>=3.7", "fft-cnr>=0.1", "curved-text>=0.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
