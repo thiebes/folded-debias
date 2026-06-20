@@ -147,6 +147,30 @@ working; re-run when calibration or validation logic changes.
   Output: `output/per_frame_in_diffusion_experiment.txt` (overwritten
   per run; one shape per invocation).
 
+### Real-data validation (Enrique's stroboSCAT measurements)
+
+- **`wse2_realdata_panel.py [n_scans]`** *(reads the pshare; data uncommitted)* —
+  The correction on **real** bulk-WSe2 stroboSCAT diffusion data (Enrique Arévalo
+  Rodríguez), the poster's real-data panel. Reduces the raw long-delay scans
+  following Enrique's own pipeline (`P:\Lab\Enrique\python_enrique\MultiChannel\`):
+  pump-on/off differential `ON/OFF−1`, **sign fixed per delay by a spot ROI**,
+  width from a **line-cut band through the spot** (avoids the interference
+  fringes / edge scatterers), and **time-since-pump = −delay** (the long
+  `[−10, 0.65]` scans cover the full 0–10 ns window). The data reads as *white*
+  noise (fft-cnr noise model: gain ≈ 0, constant floor — the bright probe
+  pedestal), so a white-matched D-free `var_bias(CNR)` calibration at the data
+  geometry is built and cached (`output/calibration_wse2_white.npz`). **Finding:**
+  merging the 3 long scans at one power keeps per-frame CNR ≥ 2.6 (above the
+  floor); the correction is ~0 at high-CNR frames and reduces the inflated
+  late-frame widths, giving **D −7% (naive 1.10 → corrected 1.02, px²/ns)** — a
+  measurable truncation bias on real data. A single scan (`n_scans=1`) reaches
+  CNR ~0.8–0.9 (below the floor) where the correction over-subtracts
+  catastrophically without a floor cut — a vivid illustration of the design rule.
+  Widths are in px² (the pixel→µm scale is an open `X(um)` question with Enrique).
+  Wall time ≈ 10 min on first run (calibration build, serial); instant after
+  (cached). Outputs: `output/wse2_realdata_panel[_<n>scan].png`,
+  `output/calibration_wse2_white.npz`.
+
 ### Realistic-transport validation (Marc Meléndez's models)
 
 These run the correction on Marc's reaction-diffusion diffusion maps — genuinely
