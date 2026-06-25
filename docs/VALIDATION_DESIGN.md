@@ -88,6 +88,23 @@ low CNR; the folded-normal correction calibrates that additive noise bias agains
 per-frame CNR and subtracts it (see `docs/DERIVATION.md`). It removes the noise
 bias only; it is not a shape correction and not an emission inversion.
 
+The calibration's noise model must match the detector's. Real measurement noise
+has two physically distinct parts, following the photon-transfer relation
+`var = gain * signal + read^2`: a signal-dependent shot (Poisson) term with slope
+`gain`, and a constant floor (read/electronic noise plus dark counts and
+background). The truncation bias is driven by the *constant floor* -- the part
+that survives in the low-signal wings, where the bounded fit takes its leverage --
+so pure photon-limited (shot-only) noise barely biases, while a few counts of
+floor put the measurement back in the bias regime. Both terms are measurable from
+the data with no repeated frames: fft-cnr's photon-transfer fit
+(`estimate_noise_model=True`) returns `gain` and `read`. The calibration must be
+built with the matching model -- `scripts/build_calibration.py --noise poisson
+--gain G --read-noise R --background B` reproduces it (the older white-noise
+calibration over-corrects shot-dominated data and can drive D negative). Estimate
+`gain` and `read` once from a bright, high-dynamic-range frame (the photon-transfer
+fit is skipped below ~3 sigma of signal range); take `background` from the profile
+edges and the per-frame CNR from fft-cnr.
+
 The moment estimator is the alternative for the multi-population recorded
 profile. It admits negative values, so it does not truncate and is approximately
 unbiased, returning the recorded profile's second moment directly. Its cost is

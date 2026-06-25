@@ -63,6 +63,10 @@ class CalibrationGrid:
     model_name: str
     pixel_x: np.ndarray | None = None    # the calibration's spatial axis
     amplitude: float = 1.0
+    noise_model: str = "gaussian"        # "gaussian" (additive) or "poisson"
+    background: float = 0.0              # Poisson baseline count floor
+    read_noise: float = 0.0             # Gaussian read-noise std (counts)
+    gain: float = 1.0                   # photon-transfer slope (shot var/signal)
 
     def save(self, path: str | os.PathLike) -> None:
         """Save the calibration to a single ``.npz`` archive."""
@@ -77,6 +81,10 @@ class CalibrationGrid:
             n_runs=np.array([self.n_runs]),
             model_name=np.array([self.model_name]),
             amplitude=np.array([self.amplitude]),
+            noise_model=np.array([self.noise_model]),
+            background=np.array([self.background]),
+            read_noise=np.array([self.read_noise]),
+            gain=np.array([self.gain]),
         )
 
     @classmethod
@@ -93,6 +101,13 @@ class CalibrationGrid:
             model_name=str(z["model_name"][0]),
             pixel_x=px if px.size > 0 else None,
             amplitude=float(z["amplitude"][0]),
+            noise_model=(str(z["noise_model"][0])
+                         if "noise_model" in z.files else "gaussian"),
+            background=(float(z["background"][0])
+                        if "background" in z.files else 0.0),
+            read_noise=(float(z["read_noise"][0])
+                        if "read_noise" in z.files else 0.0),
+            gain=(float(z["gain"][0]) if "gain" in z.files else 1.0),
         )
 
 
@@ -125,18 +140,56 @@ def _cell_worker(args):
     estimate is computed over ALL finite fits -- broken cells should report
     high rel_variance so the downstream slope fit can downweight frames
     that land there.
+
+    Two noise models. ``gaussian`` adds zero-mean white noise of standard
+    deviation ``amplitude / cnr`` to a clean profile of peak ``amplitude`` --
+    the idealised additive-noise regime (signal-independent), kept for the
+    simulation studies.
+
+    ``poisson`` is the realistic detector model following the photon-transfer
+    relation ``var = gain * signal + read_noise^2``: per pixel,
+    ``gain * Poisson((clean_counts + background) / gain) + Normal(0, read_noise)``
+    -- shot noise that rides on the signal (slope ``gain``) plus a constant
+    Gaussian read/electronic floor. The two are independent, not a fraction:
+    ``gain = 1, read_noise = 0`` is pure photon counting (TCSPC/APD); ``gain > 1``
+    is an excess-noise/conversion factor; a large ``read_noise`` is
+    read-noise-dominated (camera-like). ``gain`` and ``read_noise`` are detector
+    constants (estimate them once from fft-cnr's photon-transfer fit on a bright,
+    high-dynamic-range frame). The baseline standard deviation is
+    ``sqrt(gain * background + read_noise^2)``, so a requested per-frame ``cnr``
+    fixes the peak counts at ``cnr * baseline_noise`` (CNR = peak / baseline
+    noise). The baseline is estimated from the outer pixels and subtracted
+    before the fit, exactly as the application does, so the bias the lookup
+    records matches the data's.
     """
     (i, j, cnr, variance, pixel_x, amplitude, n_runs, seed,
-     model_name, model_kwargs, filter_threshold) = args
+     model_name, model_kwargs, filter_threshold, noise_model, background,
+     read_noise, gain) = args
     model = MODELS[model_name](**(model_kwargs or {}))
-    clean = _single_frame_profile(model, pixel_x, variance, amplitude)
     rng = np.random.default_rng(seed)
-    noise_sigma = float(amplitude) / float(cnr)
     fits = np.empty(n_runs)
-    for r in range(n_runs):
-        noise = rng.normal(0.0, noise_sigma, size=clean.shape)
-        ff = model.fit_variance(pixel_x, clean + noise)
-        fits[r] = ff.variance
+    if noise_model == "poisson":
+        b = float(background)
+        rn = float(read_noise)
+        g = float(gain)
+        base_noise = np.sqrt(g * b + rn * rn)   # shot(gain*signal) + read floor
+        peak = float(cnr) * base_noise          # CNR = peak / baseline noise
+        clean = _single_frame_profile(model, pixel_x, variance, peak)
+        edge = max(3, pixel_x.size // 8)
+        for k in range(n_runs):
+            noisy = g * rng.poisson((clean + b) / g).astype(float)  # var = g*signal
+            if rn > 0:
+                noisy += rng.normal(0.0, rn, size=clean.shape)
+            base = np.median(np.concatenate([noisy[:edge], noisy[-edge:]]))
+            ff = model.fit_variance(pixel_x, noisy - base)
+            fits[k] = ff.variance
+    else:
+        clean = _single_frame_profile(model, pixel_x, variance, amplitude)
+        noise_sigma = float(amplitude) / float(cnr)
+        for r in range(n_runs):
+            noise = rng.normal(0.0, noise_sigma, size=clean.shape)
+            ff = model.fit_variance(pixel_x, clean + noise)
+            fits[r] = ff.variance
     good = np.isfinite(fits)
     if good.sum() > 1:
         # rel_variance uses ALL finite fits (broken fits should drive this up).
@@ -162,6 +215,10 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
                          n_workers: int | None = None,
                          model_kwargs: dict | None = None,
                          filter_threshold: float | None = None,
+                         noise_model: str = "gaussian",
+                         background: float = 0.0,
+                         read_noise: float = 0.0,
+                         gain: float = 1.0,
                          verbose: bool = False) -> CalibrationGrid:
     """Build the joint (CNR, sigma^2) calibration of the fit bias.
 
@@ -259,7 +316,8 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
                 i, j, float(cnr), float(variance), pixel_x,
                 float(amplitude), int(n_runs), child_seeds[i * n_var + j],
                 model.name, model_kwargs or {},
-                float(filter_threshold),
+                float(filter_threshold), str(noise_model), float(background),
+                float(read_noise), float(gain),
             ))
 
     total = len(args_list)
@@ -291,6 +349,8 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
         var_bias=var_bias, rel_variance=rel_var,
         n_runs=int(n_runs), model_name=model.name,
         pixel_x=pixel_x, amplitude=float(amplitude),
+        noise_model=str(noise_model), background=float(background),
+        read_noise=float(read_noise), gain=float(gain),
     )
 
 

@@ -90,8 +90,39 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("--seed", type=int, default=2026,
                    help="root random seed")
     p.add_argument("--amplitude", type=float, default=1.0,
-                   help="noise-free peak amplitude (conventional; defaults "
-                        "to 1.0)")
+                   help="noise-free peak amplitude (Gaussian noise: only its "
+                        "ratio to noise matters, so conventional 1.0)")
+    p.add_argument("--noise", choices=["gaussian", "poisson"], default="gaussian",
+                   help="per-pixel noise model. gaussian: additive white noise "
+                        "of std amplitude/CNR. poisson: photon counting (TCSPC), "
+                        "where a constant --background count floor sets the "
+                        "baseline shot noise and the peak counts follow from CNR "
+                        "= peak / sqrt(background). Use poisson for "
+                        "photon-counting data.")
+    p.add_argument("--background", type=float, default=0.0,
+                   help="Poisson baseline (dark/background) count floor. Sets "
+                        "the absolute count scale, which the Poisson bias "
+                        "depends on. Estimate it from the data's profile edges. "
+                        "Required (> 0) when --noise=poisson.")
+    p.add_argument("--read-noise", type=float, default=0.0,
+                   help="Gaussian read/electronic noise standard deviation in "
+                        "counts, added per pixel on top of Poisson shot noise "
+                        "(only used when --noise=poisson). 0 = pure photon "
+                        "counting (TCSPC/APD); a value comparable to or larger "
+                        "than sqrt(gain*background) is read-noise-dominated "
+                        "(camera). Read it from fft-cnr's photon-transfer fit.")
+    p.add_argument("--gain", type=float, default=1.0,
+                   help="photon-transfer slope (shot variance per unit signal) "
+                        "for --noise=poisson; var = gain*signal + read_noise^2. "
+                        "1.0 = pure photon counting; >1 is an excess-noise / "
+                        "conversion factor. Read it from fft-cnr's "
+                        "photon-transfer fit (estimate_noise_model=True).")
+    p.add_argument("--max-var", type=float, default=None,
+                   help="upper bound on the fitted variance (units of the pixel "
+                        "grid). Default keeps the historical span^2. Pass a "
+                        "physical cap (G*sigma0)^2 when the window is far wider "
+                        "than the spot. MUST match the value the application "
+                        "uses, or the var_bias subtraction is mismatched.")
     p.add_argument("--filter-threshold", type=float, default=None,
                    help="per-cell, discard fits whose sigma_hat^2 exceeds "
                         "this when computing the mean bias (broken-fit "
@@ -120,10 +151,24 @@ def main() -> None:
         model_kwargs["gamma"] = float(args.voigt_gamma)
     if args.model == "generalized_gaussian" and args.gengauss_shape is not None:
         model_kwargs["shape"] = float(args.gengauss_shape)
+    if args.max_var is not None:
+        model_kwargs["max_var"] = float(args.max_var)
     model = MODELS[args.model](**model_kwargs)
+
+    if args.noise == "poisson" and args.background <= 0:
+        raise SystemExit("--noise=poisson requires --background > 0 "
+                         "(the baseline count floor; estimate it from the "
+                         "data's profile edges)")
 
     print(f"Building calibration tag={args.tag!r}")
     print(f"  model     : {args.model}  {model_kwargs}")
+    if args.noise == "poisson":
+        base_noise = (args.gain * args.background + args.read_noise ** 2) ** 0.5
+        print(f"  noise     : poisson, gain={args.gain:g}, "
+              f"background={args.background:g}, read_noise={args.read_noise:g} "
+              f"counts  (baseline noise = {base_noise:.3g}, peak = CNR*baseline)")
+    else:
+        print(f"  noise     : gaussian (std = amplitude/CNR)")
     print(f"  pixel grid: {args.n_pixels} pixels over "
           f"[-{args.half_window}, {args.half_window}]  "
           f"(dx = {2 * args.half_window / (args.n_pixels - 1):.5g})")
@@ -162,6 +207,10 @@ def main() -> None:
         n_workers=args.n_workers,
         model_kwargs=model_kwargs,
         filter_threshold=filter_threshold,
+        noise_model=args.noise,
+        background=args.background,
+        read_noise=args.read_noise,
+        gain=args.gain,
         verbose=True,
     )
     dt = time.time() - t0
