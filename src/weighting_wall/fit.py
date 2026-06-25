@@ -39,12 +39,25 @@ class FrameFit:
     ok: bool              # True if the optimiser converged
 
 
-def fit_variance(x: np.ndarray, y: np.ndarray) -> FrameFit:
+def fit_variance(x: np.ndarray, y: np.ndarray,
+                 max_var: float | None = None) -> FrameFit:
     """Fit a single noisy profile with a Gaussian; return its variance.
 
-    The variance is bounded to ``[~1 pixel^2, span^2]``.  A failed fit falls
+    The variance is bounded to ``[~1 pixel^2, var_max]``.  A failed fit falls
     back to the broad initial guess (the DICE convention) so that the heavy
     upper tail of the variance distribution is preserved, not silently pruned.
+
+    ``max_var`` sets the upper bound on the fitted variance. The default
+    (``None``) keeps the historical ``span^2`` -- the full field of view, so the
+    fit may return a width as large as the whole window. That is too loose when
+    the output window is sized far wider than the spot: at low CNR the optimiser
+    walks out to the bound on noise, the fitted-variance distribution becomes
+    heavy-tailed, and any mean-based bias calibration built on it inflates and
+    destabilises. Pass an explicit physical cap -- e.g. ``(G * sigma0) ** 2`` for
+    a maximum credible width growth ``G = sigma_max / sigma0`` -- to bound the
+    wandering near the real width. The bound must be **identical** in the
+    calibration and the application fit, or the ``var_bias`` subtraction is
+    mismatched.
     """
     x = np.asarray(x, float)
     y = np.asarray(y, float)
@@ -52,8 +65,10 @@ def fit_variance(x: np.ndarray, y: np.ndarray) -> FrameFit:
     span = float(x[-1] - x[0])
 
     var_min = (span / n) ** 2          # ~ one pixel squared
-    var_max = span ** 2                 # an essentially flat profile
-    var0 = (span / 4.0) ** 2            # broad initial guess / fallback
+    var_max = span ** 2 if max_var is None else float(max_var)
+    # Broad initial guess / fallback; clamp inside the bounds so an explicit
+    # (tighter) max_var cannot leave p0 outside curve_fit's bounds.
+    var0 = min(max((span / 4.0) ** 2, 4.0 * var_min), 0.9 * var_max)
 
     # Seed the centre from the peak within the central 60% of the window.
     margin = 0.3 * span

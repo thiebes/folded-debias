@@ -42,15 +42,26 @@ from .simulate import Experiment, gaussian, noise_free_series as _gaussian_serie
 # Gaussian -- the baseline model (delegates to the existing implementation)
 # --------------------------------------------------------------------------
 class GaussianModel:
-    """Pure Gaussian profile; the model the original POC was built on."""
+    """Pure Gaussian profile; the model the original POC was built on.
+
+    ``max_var`` is the optional upper bound on the fitted variance, forwarded to
+    :func:`weighting_wall.fit.fit_variance`. The default (``None``) keeps the
+    historical ``span^2`` bound; pass a physical cap ``(G * sigma0) ** 2`` when
+    the output window is far wider than the spot, so the low-CNR fit cannot
+    wander out to the window scale. It must match between calibration and
+    application (see :func:`weighting_wall.fit.fit_variance`).
+    """
 
     name = "gaussian"
+
+    def __init__(self, max_var: float | None = None):
+        self.max_var = max_var
 
     def noise_free_series(self, exp: Experiment) -> np.ndarray:
         return _gaussian_series(exp)
 
     def fit_variance(self, x: np.ndarray, y: np.ndarray) -> FrameFit:
-        return _fit_gaussian_variance(x, y)
+        return _fit_gaussian_variance(x, y, max_var=self.max_var)
 
 
 # --------------------------------------------------------------------------
