@@ -19,14 +19,17 @@ divergence (naive only -- the correction breaks down erratically below the
 per-frame floor there).
 
 Reuses the parallel sweep machinery in `nc_solid_alpha_vs_cnr.py`. Heavy
-(one sample x dense grid x many seeds); run with WEIGHTING_WALL_WORKERS=0 to use
-all cores. Pin the BLAS thread count to 1 as well: the fits are tiny nonlinear
-least-squares that BLAS threading does not help, and one BLAS thread per worker
-times all cores oversubscribes and can exhaust memory (OpenBLAS allocation
-failure) -- most acute for the inset's low-CNR_0 points, whose ill-conditioned
-fits iterate to maxfev::
+(one sample x dense grid x many seeds). Set WEIGHTING_WALL_WORKERS to the number
+of PHYSICAL cores, NOT 0 (all logical): these CPU-bound fits do not gain from
+hyperthreading, and on a hyperthreaded box 8 workers on 4 physical cores
+oversubscribe and roughly halve throughput. Pin the BLAS thread count to 1 as
+well: the fits are tiny nonlinear least-squares that BLAS threading does not help,
+and one BLAS thread per worker times all cores oversubscribes and can exhaust
+memory (OpenBLAS allocation failure) -- most acute for the inset's low-CNR_0
+points, whose ill-conditioned fits iterate to maxfev. Each sweep prints a
+per-CNR_0 progress line (elapsed + ETA)::
 
-    $env:WEIGHTING_WALL_WORKERS = 0       # PowerShell; all cores
+    $env:WEIGHTING_WALL_WORKERS = 4       # PowerShell; physical-core count
     $env:OPENBLAS_NUM_THREADS = 1
     $env:OMP_NUM_THREADS = 1
     .venv/Scripts/python.exe scripts/nc_solid_poster_figure.py
@@ -143,18 +146,35 @@ def _run_sweep(grid, n_seeds, cache_path):
         print(f"Loaded {cache_path.name} (delete to recompute).")
         return (d["cnr"], d["alpha"], d["unc"], d["acorr"], d["unccorr"],
                 float(d["a_true"]))
-    from concurrent.futures import ProcessPoolExecutor
+    import time
+    from concurrent.futures import ProcessPoolExecutor, as_completed
     case = load_case(SAMPLE, denoise=True)
     _, a_true = base.fit_powerlaw(case.t, case.var_true)
     tasks = [(case.x, case.t, case.profiles, c, n_seeds) for c in grid]
     nw = base._n_workers()
-    print(f"Running {len(tasks)} CNR_0 x {n_seeds} independent seeds on "
-          f"{nw} worker(s) -> {cache_path.name}...")
+    n = len(tasks)
+    print(f"Running {n} CNR_0 x {n_seeds} independent seeds on "
+          f"{nw} worker(s) -> {cache_path.name}...", flush=True)
+    t0 = time.time()
+
+    def _tick(k):
+        dt = time.time() - t0
+        eta = dt * (n - k) / max(k, 1)
+        print(f"  [{cache_path.stem}] {k}/{n} CNR_0  elapsed {dt:5.0f}s  "
+              f"ETA {eta:5.0f}s", flush=True)
+
+    out = []
     if nw == 1:
-        out = [_bias_task(t) for t in tasks]
+        for k, t in enumerate(tasks, 1):
+            out.append(_bias_task(t))
+            _tick(k)
     else:
         with ProcessPoolExecutor(max_workers=nw) as ex:
-            out = list(ex.map(_bias_task, tasks))
+            futures = [ex.submit(_bias_task, t) for t in tasks]
+            for k, fut in enumerate(as_completed(futures), 1):
+                out.append(fut.result())
+                _tick(k)
+        out.sort(key=lambda o: o[0])   # as_completed returns out of CNR order
     cnr = np.array([o[0] for o in out])
     alpha = np.array([o[1] for o in out])
     unc = np.array([o[2] for o in out])

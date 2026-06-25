@@ -232,36 +232,41 @@ contrast across noise laws.
 
 ## Poster figure caption (`output/nc_solid_poster_figure.png`)
 
-The figure is the severity panel, restricted to the realistic measurement regime:
-no MSD experiment is run below CNR₀ ≈ 30, and the point is that a residual bias
-survives well into the contrast people actually use; an inset extends the sweep to
-low contrast, where the estimate diverges to the ballistic ceiling. One
+The figure shows the noise bias and its correction over the realistic measurement
+regime: no MSD experiment is run below CNR₀ ≈ 30, the apparent exponent carries a
+residual upward bias well into the contrast people actually use, and the
+folded-normal correction recovers the nominal exponent. An inset extends the sweep
+to low contrast, where the naive estimate diverges to the ballistic ceiling. One
 representative sample is shown (C16, the smallest crystals); the others behave the
 same. Produced by
 [`scripts/nc_solid_poster_figure.py`](../scripts/nc_solid_poster_figure.py).
 
-> **A residual noise bias in the measured transport exponent persists into good
-> contrast.** Each point is the apparent mean-squared-displacement exponent α
-> recovered from a standard frame-by-frame width fit, plotted against the initial
-> contrast-to-noise CNR₀, for exciton transport in a disordered perovskite
-> nanocrystal solid (the C16 / hexadecylamine-ligand sample, the smallest
-> crystals). The test bed is built from a kinetic Monte Carlo of about 50,000
-> exciton walkers hopping on a polydisperse nanocrystal array (Solari et al.):
-> each frame is projected to a 1-D profile over a 1500 nm field (20 frames
-> spanning 20 ns, small-diffusion-length regime L_D / FWHM ≈ 0.14), and a Gaussian
-> is fit to each frame and taken as that frame's ground truth, giving a
-> realistic-width clean bed whose nominal exponent is subdiffusive (α ≈ 0.88,
-> yellow line). This is not a claim that the real profile is Gaussian; it sets the bed's
-> truth and removes the maps' walker-sampling noise so the only noise is the
-> measurement noise studied here. White measurement noise scaled to each CNR₀ is
-> then added, the bounded width is refit, and α is read from the MSD averaged over
-> 64,000 independent noisy realisations — so each marker is an independent Monte
-> Carlo estimate, not a fitted curve (hence points, not a connected line; error
-> bars are the bootstrap standard error of that exponent). Even at CNR₀ ≈ 30 — a
-> contrast comfortable for a real measurement — the apparent exponent reads about
-> 0.09 too high, and the bias clears only near CNR₀ ≈ 200. The inset extends the
-> sweep to low contrast: below CNR₀ ≈ 30 the apparent exponent climbs toward the
-> ballistic ceiling (α = 2), saturating there below CNR₀ ≈ 8. Because the bias
-> can only raise the exponent, it masks subdiffusion but never creates it — the
-> effect is generic to the low-contrast, short-diffusion-length regime, not
-> specific to one material.
+> **A noise bias in the measured transport exponent, and its correction.** Red
+> points are the apparent mean-squared-displacement exponent α from a standard
+> frame-by-frame width fit, plotted against the initial contrast-to-noise CNR₀, for
+> exciton transport in a disordered perovskite nanocrystal solid (the C16 /
+> hexadecylamine-ligand sample, the smallest crystals). The test bed is built from
+> a kinetic Monte Carlo of about 50,000 exciton walkers hopping on a polydisperse
+> nanocrystal array (Solari et al.): each frame is projected to a 1-D profile over a
+> 1500 nm field (20 frames spanning 20 ns, small-diffusion-length regime
+> L_D / FWHM ≈ 0.14), and a Gaussian is fit to each frame and taken as that frame's
+> ground truth, giving a realistic-width clean bed whose nominal exponent is
+> subdiffusive (α ≈ 0.88, yellow line). This is not a claim that the real profile is
+> Gaussian; it sets the bed's truth and removes the maps' walker-sampling noise so
+> the only noise is the measurement noise studied here. White measurement noise
+> scaled to each CNR₀ is then added, the bounded width is refit, and α is read from
+> the MSD averaged over 64,000 independent noisy realisations (each marker is an
+> independent Monte Carlo estimate, not a fitted curve; error bars are the bootstrap
+> standard error of the exponent). The naive estimate (red) reads about 0.09 too
+> high at CNR₀ ≈ 30 and clears only near CNR₀ ≈ 200. The folded-normal correction
+> (blue) subtracts from each frame, before the fit, the calibrated per-frame
+> variance bias — the folded-normal estimation-noise variance looked up by the
+> frame's CNR from a D-free white-noise calibration — and recovers the nominal
+> exponent across the measured regime, leaving only a small residual that grows
+> toward the lowest contrast (about 0.01 at CNR₀ ≈ 30). The inset extends the sweep
+> to low contrast (naive only): below CNR₀ ≈ 30 the apparent exponent climbs toward
+> the ballistic ceiling (α = 2), saturating there below CNR₀ ≈ 8 (below the
+> per-frame floor the correction over-subtracts erratically, so it is shown only in
+> the main panel). Because the bias can only raise the exponent, it masks
+> subdiffusion but never creates it — the effect is generic to the low-contrast,
+> short-diffusion-length regime, not specific to one material.
