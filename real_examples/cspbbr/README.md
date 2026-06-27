@@ -1,0 +1,49 @@
+# CsPbBr3 single-crystal diffusion -- real-data correction example
+
+End-to-end application of the truncation-bias correction to a real measurement:
+CsPbBr3 single-crystal transient-PL-microscopy diffusion (Upasana's data; the
+Antonella/Carlos diffusion paper). The late-time MSD inflates as the per-frame
+CNR collapses; the correction removes that bias before the D fit.
+
+The noise is white (constant-floor), not shot-limited -- a raster-scanned APD
+measurement whose photon-transfer fit comes out floor-dominated -- so the
+calibration uses the gaussian model. See `docs/calibration_runs.md`.
+
+## Pipeline
+
+1. **Reduce** raw acquisition CSVs to per-frame profiles, fitted variance, and
+   CNR (mirrors the lab's reduction; per-frame fit and CNR are this project's):
+
+   ```bash
+   python real_examples/cspbbr/reduce.py \
+     --data "P:/Upasana/CsPbBr_SingleCrystal/Sample_1/13.47 uJ_Fluence_19_May_2026" \
+     --n-files 3 --max-var 6.25 --out output/cspbbr_13p47.npz
+   ```
+
+2. **Calibrate** the `(CNR, sigma^2)` bias lookup for this geometry (heavy; run
+   on the multi-core box -- see `docs/cspbbr_calibration_run.md`):
+
+   ```bash
+   PYTHON=.venv-linux/bin/python bash scripts/run_cspbbr_calibration.sh
+   ```
+
+3. **Apply** the correction and compare naive vs corrected D:
+
+   ```bash
+   python real_examples/cspbbr/apply_correction.py \
+     --reduced output/cspbbr_13p47.npz \
+     --calibration output/calibration_cspbbr_gaussian.npz
+   ```
+
+## Consistency requirements
+
+The bias lookup is conditional on the measurement geometry, so the reduction and
+the calibration must agree on:
+
+- the **pixel grid** (`--n-pixels`, `--half-window` in the calibration must match
+  the reduced profiles' grid; `apply_correction.py` warns if they disagree), and
+- the **fit variance cap** (`reduce.py --max-var` must equal the calibration's
+  `--max-var`).
+
+Raw data is not committed (it is the collaborators'); point `--data` at the
+acquisition folder on the share.
