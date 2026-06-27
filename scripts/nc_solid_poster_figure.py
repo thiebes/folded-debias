@@ -64,8 +64,8 @@ from mc_experiments.disordered_nc_solid.nc_data import load_case  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 inch = 1 / 2.54
-# Spanish-flag palette (see the plot style guide): red marks the
-# salient measured series, yellow (gualda) the reference value.
+# Spanish-flag palette (colorblind-safe): red marks the salient measured series,
+# yellow (gualda) the reference value.
 FLAG_RED = "#C60B1E"
 FLAG_YELLOW = "#FFC400"
 CORR_BLUE = "#0072B2"      # Spanish-flag accent (Okabe-Ito blue): corrected series
