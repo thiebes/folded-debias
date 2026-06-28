@@ -22,7 +22,7 @@ nuisances. Var(D_hat) >= [F^-1]_{DD}.
 
 Run from the repository root::
 
-    python precision_limit/crlb.py
+    python experiments/crlb-precision/crlb.py
 """
 from __future__ import annotations
 
@@ -31,7 +31,7 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from weighting_wall.montecarlo import run_ensemble  # noqa: E402
 from weighting_wall.simulate import Experiment, noise_sigma_for_cnr0  # noqa: E402
