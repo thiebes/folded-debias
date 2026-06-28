@@ -29,6 +29,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from weighting_wall import GaussianModel  # noqa: E402
@@ -41,7 +42,7 @@ from weighting_wall.fit import fit_variance as _fit_gaussian  # noqa: E402
 
 from br_halide_validation import fit_msd_powerlaw  # noqa: E402
 from br_halide_highn_validation import STRIDE, subsample  # noqa: E402
-from mc_experiments.halide_mixing.br_highn_data import SIGMA0_HINT_NM, load_all  # noqa: E402
+from br_highn_data import SIGMA0_HINT_NM, load_all  # noqa: E402
 
 # Tighten the width fit's upper bound from the window span^2 to a physical cap
 # (G * sigma0)^2: the spot grows ~8x in sigma over the window, so G = 12 clears
@@ -185,6 +186,7 @@ def make_figure(panels, path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+    from matplotlib.ticker import MultipleLocator
 
     # Spanish-flag palette (plot_style.md): blue = corrected (recovered
     # reference), red = naive (the salient bias), indigo = carrier truth.
@@ -193,44 +195,42 @@ def make_figure(panels, path):
     corr_blue = "#0077c8"
     floor_grey = "#bdbdbd"
     font = 10
-    S = 1.0e6                  # nm^2 -> micron^2 (tighter y-axis numbers)
+    S = 1.0e6            # nm^2 -> micron^2
+    XMAX = 2.0           # common time axis (ns)
+    YMAX = 0.030         # common variance axis (micron^2); clears panel (a)'s data
+    letters = "abcdefgh"
 
     n = len(panels)
-    fig, axes = plt.subplots(1, n, layout="constrained",
-                             figsize=(6.0 * n * INCH, 6.5 * INCH), squeeze=False)
-    for ax, (case, cnrf, mraw, mcor, use, d_true, d_n, d_c) in zip(axes[0], panels):
+    # Shared y-axis, panels abutting: values only on the left, tick marks on all.
+    fig, axes = plt.subplots(1, n, layout="constrained", sharey=True,
+                             figsize=(5.0 * n * INCH, 6.0 * INCH), squeeze=False)
+    for i, (ax, (case, cnrf, mraw, mcor, use, d_true, d_n, d_c)) in enumerate(
+            zip(axes[0], panels)):
         t = case.t
-        t_floor = t[~use].min() if (~use).any() else t.max()
-        t_hi = min(t.max(), 1.9 * t_floor)     # focus: usable window + bias onset
-        m = t <= t_hi
-        if (~use).any():
-            ax.axvspan(t_floor, t_hi, color=floor_grey, alpha=0.30, lw=0)
+        m = t <= XMAX
+        t_floor = t[~use].min() if (~use).any() else XMAX
+        if t_floor < XMAX:
+            ax.axvspan(t_floor, XMAX, color=floor_grey, alpha=0.30, lw=0)
         ax.plot(t[m], case.var_true[m] / S, "-", color=truth_indigo, lw=1.6,
                 label="truth", zorder=3)
         ax.plot(t[m], mraw[m] / S, "o", color=naive_red, ms=3.5,
                 label="naive fit", zorder=4)
         ax.plot(t[m], mcor[m] / S, "s", color=corr_blue, ms=3.5,
                 label="corrected", zorder=5)
-        ax.set_xlim(0, t_hi)
-        ax.set_ylim(bottom=0)
+        ax.set_xlim(0, XMAX)
+        ax.set_ylim(0, YMAX)
+        ax.set_xticks([0, 1, 2])
+        ax.yaxis.set_major_locator(MultipleLocator(0.005))
+        # Inward ticks, bottom + left sides only (no top/right).
+        ax.tick_params(axis="both", which="both", direction="in",
+                       top=False, right=False, labelsize=font)
+        if i != 0:
+            ax.tick_params(axis="y", labelleft=False)   # keep marks, drop values
         ax.set_xlabel("time (ns)", fontsize=font)
-        ax.tick_params(axis="both", which="both", direction="in", top=True,
-                       right=True, labelsize=font)
-        frac = case.name.split("=")[-1]
-        ax.text(0.05, 0.96, f"Br fraction {frac}", ha="left", va="top",
-                fontsize=font, transform=ax.transAxes)
-        ax.text(0.05, 0.87,
-                rf"$D_{{\mathrm{{corr}}}}/D_{{\mathrm{{true}}}}={d_c / d_true:.2f}$"
-                "\n"
-                rf"$D_{{\mathrm{{naive}}}}/D_{{\mathrm{{true}}}}={d_n / d_true:.2f}$",
-                ha="left", va="top", fontsize=font - 1, transform=ax.transAxes)
-    # Annotate the shaded band on the first panel only.
-    ax0 = axes[0][0]
-    tf0 = panels[0][0].t[~panels[0][4]].min()
-    ax0.text(tf0, ax0.get_ylim()[1] * 0.40, " CNR < 1.3\n (excluded)",
-             ha="left", va="center", fontsize=font - 2, color="#555555")
-    ax0.set_ylabel(r"fitted variance  $\sigma^2$  ($\mu$m$^2$)", fontsize=font)
-    h, l = ax0.get_legend_handles_labels()
+        ax.text(0.06, 0.94, f"({letters[i]})", ha="left", va="top",
+                fontsize=font, fontweight="bold", transform=ax.transAxes)
+    axes[0][0].set_ylabel(r"fitted $\sigma^2$  ($\mu$m$^2$)", fontsize=font)
+    h, l = axes[0][0].get_legend_handles_labels()
     fig.legend(h, l, frameon=False, fontsize=font, loc="outside lower center", ncol=3)
     fig.patch.set_facecolor("w"); fig.patch.set_alpha(1)
     fig.savefig(path, dpi=300)

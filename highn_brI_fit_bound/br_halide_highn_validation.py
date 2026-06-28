@@ -39,6 +39,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from weighting_wall import GaussianModel, calibrate_d_free  # noqa: E402
@@ -49,7 +50,7 @@ from weighting_wall.weights import corrected_variance  # noqa: E402
 # Pure helpers shared with the legacy bed (no module-global dependencies).
 from br_halide_validation import fit_each_row, fit_msd_powerlaw  # noqa: E402
 
-from mc_experiments.halide_mixing.br_highn_data import (  # noqa: E402
+from br_highn_data import (  # noqa: E402
     INTRINSIC_PEAK_CNR, SIGMA0_HINT_NM, load_all)
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"

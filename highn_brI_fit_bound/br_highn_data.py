@@ -38,11 +38,31 @@ Two modelling points the validation depends on (shared with :mod:`br_data`):
 """
 from __future__ import annotations
 
+from dataclasses import dataclass
 from pathlib import Path
 
 import numpy as np
 
-from .br_data import BrCase, DEFAULT_TAU_NS
+# Representative 2D-perovskite exciton lifetime (ns); over the 3 ns window the
+# decay drives the per-frame contrast-to-noise falloff.
+DEFAULT_TAU_NS = 1.0
+
+
+@dataclass
+class BrCase:
+    """One Br-fraction map: geometry, decay-weighted 1-D profiles, carrier truth.
+
+    Mirrors the dataclass of the legacy ``mc_experiments/halide_mixing/br_data``
+    loader (identical field names), so the validation pipeline consumes either
+    interchangeably; defined here to keep this study folder self-contained.
+    """
+    name: str
+    x: np.ndarray          # spatial axis (centred), nm
+    t: np.ndarray          # time axis, ns
+    profiles: np.ndarray   # (n_frames, n_x) 1-D profiles after the decay envelope
+    var_true: np.ndarray   # (n_frames,) carrier 1-D variance, nm^2 (particle, un-clipped)
+    tau_ns: float
+
 
 HIGHN = Path("P:/jthiebes/WIP/BrI_halide_highN")
 NBINS = 600
