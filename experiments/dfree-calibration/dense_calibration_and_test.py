@@ -36,7 +36,7 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from weighting_wall import MODELS, Experiment, SCHEMES  # noqa: E402
 from weighting_wall.fit import fit_D  # noqa: E402
