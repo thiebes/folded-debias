@@ -262,6 +262,53 @@ def figure_schematic_wall_fold() -> Path:
 
 
 # --------------------------------------------------------------------------
+# Panel 3 -- the accuracy half: both standard fits fail at low contrast
+# --------------------------------------------------------------------------
+def figure_bias_curves(dense_path: Path) -> Path | None:
+    """Panel 3 (accuracy half): <D_est>/D_true vs CNR_0 for the two standard fits.
+
+    Both routes a practitioner would reach for fail at low contrast: unweighted
+    OLS is catastrophically inflated (the wall's right-skew tilts every MSD slope
+    upward) and inverse-variance weighting -- which assumes a symmetric error --
+    still leaves a residual it cannot remove. The folded-normal correction is
+    held back for Panel 5, so this panel states only the problem the master
+    variable creates; it pairs with the CRLB precision floor (figure_crlb),
+    stacked on the shared CNR axis to show one variable sets both halves.
+
+    Sourced from the high-statistics dense decile report (the same file Panel 5
+    parses) so every bias panel is mutually consistent. A quick few-hundred-run
+    sweep is too tail-unstable at low CNR for a poster curve: there the D
+    distribution has a heavy right tail and the mean is dominated by a handful of
+    realisations, so the decile-averaged dense run is the trustworthy source.
+    """
+    if not dense_path.exists():
+        print(f"  ({dense_path.name} not found -- skipping Panel 3 curve)")
+        return None
+    g = _parse_dense_deciles(dense_path).get("gaussian")
+    if not g:
+        print("  (no gaussian deciles parsed -- skipping Panel 3 curve)")
+        return None
+
+    fig, ax = plt.subplots(figsize=(4.2, 3.4))
+    ax.axhline(1.0, color="#666666", ls="--", lw=1.0)
+    # Red carries the catastrophic route (OLS), gold the standard-but-still-
+    # failing one (inverse-variance) -- both biased relative to the unbiased line.
+    ax.loglog(g["cnr"], g["ols"], "o-", ms=4, lw=2.0, color=ROLE4,
+              label="unweighted (OLS)")
+    ax.loglog(g["cnr"], g["inv_var"], "o-", ms=4, lw=2.0, color=ROLE2,
+              label="inverse-variance")
+    ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
+    ax.set_ylabel(r"$\langle D_\mathrm{est}\rangle\,/\,D_\mathrm{true}$")
+    ax.legend(fontsize=8, loc="upper right", frameon=False)
+    _style(ax)
+    fig.tight_layout()
+    path = OUTPUT / "poster_panel3_bias.png"
+    fig.savefig(path, dpi=300)
+    plt.close(fig)
+    return path
+
+
+# --------------------------------------------------------------------------
 # Panel 4 -- precision floor
 # --------------------------------------------------------------------------
 def figure_crlb() -> Path:
@@ -298,29 +345,35 @@ _DECILE_RE = re.compile(
 def _parse_dense_deciles(path: Path) -> dict[str, dict[str, np.ndarray]]:
     """Parse the per-shape decile report (mean(D_hat)/D_true per scheme).
 
-    Returns ``{shape: {"cnr": array, "folded": array}}`` using the geometric
-    midpoint of each CNR_0 decile as the x value.
+    Returns ``{shape: {"cnr", "ols", "inv_var", "folded"}}`` using the geometric
+    midpoint of each CNR_0 decile as the x value. The decile columns are OLS,
+    inverse-variance, folded-normal, MAS -- groups 4-7 of ``_DECILE_RE`` -- so
+    Panel 3 (OLS + inverse-variance) and Panel 5 (folded) read one parser.
     """
     text = path.read_text()
     shapes: dict[str, dict[str, np.ndarray]] = {}
-    current = None
-    cnr, folded = [], []
+    current: str | None = None
+    cols: dict[str, list[float]] = {}
+
+    def _flush() -> None:
+        if current is not None and cols.get("cnr"):
+            shapes[current] = {k: np.array(v) for k, v in cols.items()}
+
     for line in text.splitlines():
         header = re.match(r"=== (\w+)\s", line)
         if header:
-            if current is not None and cnr:
-                shapes[current] = {"cnr": np.array(cnr),
-                                   "folded": np.array(folded)}
+            _flush()
             current = header.group(1)
-            cnr, folded = [], []
+            cols = {"cnr": [], "ols": [], "inv_var": [], "folded": []}
             continue
         m = _DECILE_RE.search(line)
         if m and current is not None:
             lo, hi = float(m.group(1)), float(m.group(2))
-            cnr.append(np.sqrt(lo * hi))            # geometric midpoint
-            folded.append(float(m.group(6)))         # folded column
-    if current is not None and cnr:
-        shapes[current] = {"cnr": np.array(cnr), "folded": np.array(folded)}
+            cols["cnr"].append(np.sqrt(lo * hi))     # geometric midpoint
+            cols["ols"].append(float(m.group(4)))
+            cols["inv_var"].append(float(m.group(5)))
+            cols["folded"].append(float(m.group(6)))
+    _flush()
     return shapes
 
 
@@ -527,6 +580,9 @@ def main() -> None:
     print("Producing poster figures...")
     print(f"  Panel 1 schematic (measurement):   {figure_schematic_measurement().name}")
     print(f"  Panel 2A schematic (wall + fold):  {figure_schematic_wall_fold().name}")
+    p3 = figure_bias_curves(OUTPUT / "dense_calibration_and_test.txt")
+    if p3:
+        print(f"  Panel 3 (bias curves):             {p3.name}")
     print(f"  Panel 4 (precision floor):         {figure_crlb().name}")
     p4c = figure_fftcnr(FFTCNR_NPZ)
     if p4c:
