@@ -3,7 +3,7 @@
 # white-noise calibration.
 #
 # Single-fluence calibration. For ALL fluences at once (reduce + calibrate +
-# apply + a D-vs-fluence summary), use real_examples/cspbbr/run_all.py, which
+# apply + a D-vs-fluence summary), use experiments/cspbbr-strobescat/run_all.py, which
 # derives each fluence's geometry from a fresh reduction and shares one
 # calibration across fluences on the same pixel grid.
 #
@@ -15,7 +15,7 @@
 # the truncation bias. See docs/VALIDATION_DESIGN.md and docs/calibration_runs.md.
 #
 # Run on the 16-core WSL box:
-#   PYTHON=.venv-linux/bin/python bash scripts/run_cspbbr_calibration.sh
+#   PYTHON=.venv-linux/bin/python bash experiments/cspbbr-strobescat/run_cspbbr_calibration.sh
 # Override workers with WORKERS=N.
 #
 # Tunables to revisit against the corrected-D result:

@@ -1,4 +1,9 @@
-# CsPbBr3 single-crystal diffusion -- real-data correction example
+# cspbbr-strobescat -- CsPbBr3 single-crystal diffusion, real-data correction example
+
+**Status:** work-in-progress; adjacent-project (Upasana's data, the
+Antonella/Carlos diffusion paper), not the poster's real-data panel -- that is
+`experiments/wse2-strobescat/`. Kept here as an end-to-end real-data application
+of the correction. Data on the pshare; see `DATASETS.md`.
 
 End-to-end application of the truncation-bias correction to a real measurement:
 CsPbBr3 single-crystal transient-PL-microscopy diffusion (Upasana's data; the
@@ -18,7 +23,7 @@ fluence-independent), applies the correction, and writes a D-vs-fluence summary
 (`cspbbr_D_vs_fluence.csv` and `.png`). The heavy calibration honours `--workers`.
 
 ```bash
-python real_examples/cspbbr/run_all.py \
+python experiments/cspbbr-strobescat/run_all.py \
   --sample-root "P:/Upasana/CsPbBr_SingleCrystal/Sample_1" \
   --out-dir output/cspbbr --workers 0 --n-runs 8000
 ```
@@ -33,7 +38,7 @@ calibrations are built). The run machine must be able to read the raw data at
    CNR (mirrors the lab's reduction; per-frame fit and CNR are this project's):
 
    ```bash
-   python real_examples/cspbbr/reduce.py \
+   python experiments/cspbbr-strobescat/reduce.py \
      --data "P:/Upasana/CsPbBr_SingleCrystal/Sample_1/13.47 uJ_Fluence_19_May_2026" \
      --n-files 3 --max-var 6.25 --out output/cspbbr_13p47.npz
    ```
@@ -48,7 +53,7 @@ calibrations are built). The run machine must be able to read the raw data at
 3. **Apply** the correction and compare naive vs corrected D:
 
    ```bash
-   python real_examples/cspbbr/apply_correction.py \
+   python experiments/cspbbr-strobescat/apply_correction.py \
      --reduced output/cspbbr_13p47.npz \
      --calibration output/calibration_cspbbr_gaussian.npz
    ```
