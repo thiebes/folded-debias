@@ -9,7 +9,25 @@ The noise is white (constant-floor), not shot-limited -- a raster-scanned APD
 measurement whose photon-transfer fit comes out floor-dominated -- so the
 calibration uses the gaussian model. See `docs/calibration_runs.md`.
 
-## Pipeline
+## All fluences at once (recommended)
+
+`run_all.py` does the whole thing across every fluence subfolder: reduces each,
+derives its geometry from the fresh reduction, builds one calibration per unique
+pixel grid (shared across fluences on that grid, since the gaussian lookup is
+fluence-independent), applies the correction, and writes a D-vs-fluence summary
+(`cspbbr_D_vs_fluence.csv` and `.png`). The heavy calibration honours `--workers`.
+
+```bash
+python real_examples/cspbbr/run_all.py \
+  --sample-root "P:/Upasana/CsPbBr_SingleCrystal/Sample_1" \
+  --out-dir output/cspbbr --workers 0 --n-runs 8000
+```
+
+`--stages` resumes a partial run (e.g. `--stages apply,summary` after the
+calibrations are built). The run machine must be able to read the raw data at
+`--sample-root`.
+
+## Single fluence (manual)
 
 1. **Reduce** raw acquisition CSVs to per-frame profiles, fitted variance, and
    CNR (mirrors the lab's reduction; per-frame fit and CNR are this project's):

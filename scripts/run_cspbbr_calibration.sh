@@ -2,9 +2,14 @@
 # Preset: CsPbBr3 single-crystal diffusion (Upasana's measurements), Gaussian
 # white-noise calibration.
 #
-# Geometry is from the reduced 13.47 μJ fluence (merged 46-pixel spatial
-# profiles): n_pixels 46, half-window 3.103 um, sigma0 ~ 0.41 um, fitted sigma
-# reaching ~1.9 um at late times. White noise (not Poisson) because the data's
+# Single-fluence calibration. For ALL fluences at once (reduce + calibrate +
+# apply + a D-vs-fluence summary), use real_examples/cspbbr/run_all.py, which
+# derives each fluence's geometry from a fresh reduction and shares one
+# calibration across fluences on the same pixel grid.
+#
+# Geometry is from a fresh reduction of the 13.47 μJ fluence (merged 46-pixel
+# spatial profiles): n_pixels 46, half-window 3.238 um, sigma0 ~ 0.41 um, fitted
+# sigma reaching ~1.9 um at late times. White noise (not Poisson) because the data's
 # photon-transfer fit is floor-dominated, not shot-limited -- it is a raster-
 # scanned APD measurement whose constant noise floor (scanning + dark) drives
 # the truncation bias. See docs/VALIDATION_DESIGN.md and docs/calibration_runs.md.
@@ -26,7 +31,7 @@ cd "$(dirname "$0")/.."
 
 exec bash scripts/run_calibration.sh \
   --tag cspbbr_gaussian \
-  --n-pixels 46 --half-window 3.103 \
+  --n-pixels 46 --half-window 3.238 \
   --sigma-min 0.15 --sigma-max 1.5 --n-sigma 100 \
   --cnr-min 0.5 --cnr-max 60 --n-cnr 120 \
   --n-runs 8000 \

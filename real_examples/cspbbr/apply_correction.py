@@ -40,6 +40,8 @@ def main():
     p.add_argument("--reduced", required=True, help="reduce.py .npz output")
     p.add_argument("--calibration", required=True,
                    help="calibration .npz (scripts/build_calibration.py)")
+    p.add_argument("--json", default=None,
+                   help="also write per-scheme D results to this JSON path")
     p.add_argument("--no-plot", action="store_true")
     args = p.parse_args()
 
@@ -73,6 +75,15 @@ def main():
         se_cm2s = dfit.D_se * UM2_PER_NS_TO_CM2_PER_S
         results[scheme] = (d_cm2s, se_cm2s, msd)
         print(f"  {scheme:18s} D = {d_cm2s:.4f} +/- {se_cm2s:.4f} cm^2/s")
+
+    if args.json:
+        import json
+        payload = {s: {"D_cm2s": results[s][0], "D_se_cm2s": results[s][1]}
+                   for s in SCHEMES}
+        payload["cnr_min"] = float(np.nanmin(cnr))
+        payload["cnr_max"] = float(np.nanmax(cnr))
+        with open(args.json, "w") as fh:
+            json.dump(payload, fh, indent=2)
 
     if not args.no_plot:
         import matplotlib.pyplot as plt
