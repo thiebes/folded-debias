@@ -47,8 +47,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 from scipy.optimize import curve_fit  # noqa: E402
 
@@ -58,7 +58,7 @@ from weighting_wall.models import MomentModel  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
-from mc_experiments.halide_mixing.br_data import load_all  # noqa: E402
+from br_data import load_all  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
