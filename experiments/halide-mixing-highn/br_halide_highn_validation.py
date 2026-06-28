@@ -1,7 +1,7 @@
 """Validate the folded-normal correction on the high-statistics Br-I maps.
 
 The companion to :mod:`br_halide_validation`, run on the clean 400k-walker
-re-simulation (``mc_experiments/halide_mixing/br_highn_data.py``) instead of
+re-simulation (``experiments/halide-mixing-highn/br_highn_data.py``) instead of
 Marc's original 20k-walker maps. Two things change versus the legacy bed, and
 both matter:
 
@@ -23,7 +23,7 @@ are scored against that truth.
 
 Run from the repository root (needs the pshare for the maps)::
 
-    WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe scripts/br_halide_highn_validation.py
+    WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_validation.py
 
 Outputs ``output/br_halide_highn_validation.{png,txt}`` and caches the matched
 D-free calibration to ``output/calibration_br_highn.npz``.
@@ -37,9 +37,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "halide-mixing-brI-legacy"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from weighting_wall import GaussianModel, calibrate_d_free  # noqa: E402

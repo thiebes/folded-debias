@@ -52,7 +52,7 @@ DEFAULT_TAU_NS = 1.0
 class BrCase:
     """One Br-fraction map: geometry, decay-weighted 1-D profiles, carrier truth.
 
-    Mirrors the dataclass of the legacy ``mc_experiments/halide_mixing/br_data``
+    Mirrors the dataclass of the legacy ``experiments/halide-mixing-brI-legacy/br_data``
     loader (identical field names), so the validation pipeline consumes either
     interchangeably; defined here to keep this study folder self-contained.
     """

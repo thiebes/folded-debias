@@ -86,7 +86,7 @@ implementation:
 - `src/weighting_wall/models.py` -- `GaussianModel(max_var=...)` forwards it.
 
 The scripts also reuse two pure helpers (`fit_msd_powerlaw`, `fit_each_row`) from
-`scripts/br_halide_validation.py`.
+`experiments/halide-mixing-brI-legacy/br_halide_validation.py`.
 
 ## Running
 
@@ -95,7 +95,7 @@ does not oversubscribe, and use a modest worker count if the machine is busy:
 
 ```bash
 OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WEIGHTING_WALL_WORKERS=4 \
-  .venv/Scripts/python.exe highn_brI_fit_bound/br_halide_highn_perframe.py
+  .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py
 ```
 
 Outputs (figure, report, cached calibrations) are written to the repo's `output/`

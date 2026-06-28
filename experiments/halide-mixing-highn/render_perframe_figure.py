@@ -8,15 +8,15 @@ CNR0 panels (with a lighter seed count than the full
 Monte Carlo pool (the calibrations are cached in ``../output``), so it is cheap and
 safe to re-run; it writes the figure straight into this folder.
 
-    .venv/Scripts/python.exe highn_brI_fit_bound/render_perframe_figure.py
+    .venv/Scripts/python.exe experiments/halide-mixing-highn/render_perframe_figure.py
 """
 import os
 import sys
 
 HERE = os.path.dirname(__file__)
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", "src"))
-sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))
+sys.path.insert(0, os.path.join(HERE, "..", "halide-mixing-brI-legacy"))
 
 from pathlib import Path
 

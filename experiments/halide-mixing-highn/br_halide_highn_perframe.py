@@ -14,7 +14,7 @@ calibration is the separate real-data path). It is cached per fraction.
 
 Run from the repository root (needs the pshare)::
 
-    WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe scripts/br_halide_highn_perframe.py
+    WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py
 
 Outputs ``output/br_halide_highn_perframe.{png,txt}`` and caches each D-aware
 calibration to ``output/cal_highn_daware_x<frac>.npz``.
@@ -27,9 +27,9 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "scripts"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "halide-mixing-brI-legacy"))
 sys.path.insert(0, os.path.dirname(__file__))
 
 from weighting_wall import GaussianModel  # noqa: E402
