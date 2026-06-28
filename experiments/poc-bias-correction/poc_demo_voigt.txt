@@ -1,0 +1,27 @@
+weighting-wall POC demo
+  profile model: voigt
+  experiment: D=0.02, tau=1.0, n_frames=12, L_D/FWHM_0=0.085
+  CNR_0 sweep: [ 5.  8. 13. 21. 34. 55. 90.]
+  400 Monte Carlo runs per CNR_0
+
+Calibrating truncation model ...
+Evaluating schemes ...
+
+  <D_est> / D_true   (1.000 = unbiased)
+  CNR_0     OLS     inv-var   folded-normal
+       5    5.976    1.943        0.832
+       8    7.563    1.687        0.680
+      13    4.465    1.310        0.949
+      21    1.747    1.177        1.070
+      34    1.193    1.017        0.883
+      55    1.072    1.029        0.992
+      90    1.010    0.991        0.993
+
+  mean |bias-1|  ols=2.29  inv-var=0.310  folded-normal=0.106
+  Reading: OLS is catastrophically biased at low CNR, and
+  inverse-variance weighting leaves a residual it cannot remove.
+  The folded-normal scheme subtracts the additive variance bias
+  (see docs/DERIVATION.md) and cuts the mean residual bias well
+  below inverse-variance; it can overcorrect in the deepest noise.
+
+Figure written to output\poc_demo_voigt.png
