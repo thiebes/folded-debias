@@ -32,5 +32,8 @@ Thumbs.db
 .idea/
 
 # Collaborator data (Marc's pshare datasets) -- never committed; read locally
-# or from the P: pshare.
+# or from the P: pshare. Each experiment
+# set keeps its large/collaborator data in a local data/ dir, never committed;
+# see the set's DATASETS.md for the pshare source.
 mc_experiments/**/data/
+experiments/**/data/

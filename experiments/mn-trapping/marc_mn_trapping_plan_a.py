@@ -30,8 +30,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 from weighting_wall import CalibrationGrid  # noqa: E402
 from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
@@ -39,7 +39,7 @@ from weighting_wall.models import VoigtModel  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
-from mc_experiments.marc_mn_trapping.diffusion_map import (  # noqa: E402
+from diffusion_map import (  # noqa: E402
     Parameters, diffusion, times as time_axis, x_axis,
 )
 
