@@ -43,7 +43,7 @@ import time
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from weighting_wall import (Experiment, GaussianModel, MomentModel,  # noqa: E402
                             UnboundedGaussianModel, calibrate_d_free, evaluate,
