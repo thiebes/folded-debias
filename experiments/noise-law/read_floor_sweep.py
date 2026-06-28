@@ -44,7 +44,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from weighting_wall.noise import ShotNoise, WhiteNoise  # noqa: E402
 from weighting_wall.simulate import Experiment  # noqa: E402
