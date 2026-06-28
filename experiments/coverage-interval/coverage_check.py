@@ -50,8 +50,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from weighting_wall import Experiment, GaussianModel, calibrate_d_free  # noqa: E402
 from weighting_wall.montecarlo import run_ensemble  # noqa: E402
