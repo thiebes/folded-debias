@@ -55,9 +55,17 @@ model fix and a calibration-reliability finding:
 - `forward_fit_validation.py`, `profile_likelihood_demo.py` — stage-2
   forward-fit and profile-likelihood work (recovering the carrier transport by
   fitting the forward model); see each file's docstring.
-- `Lifetime_fit_global.py`, `Lifetime_fit_sim_traps.py` — lifetime-fitting
-  scripts; see each file's docstring.
-- `output/` — generated figures and calibrations (gitignored).
+- `Lifetime_fit_global.py`, `Lifetime_fit_sim_traps.py` — trapped-population
+  lifetime fits for the **adjacent Antonella/Carlos diffusion paper**, kept here
+  because they share the Saha engine. They are not weighting-wall poster scope and
+  are authored for Antonella's environment (a hardcoded macOS data path, no
+  `__main__` guard), so they are not import-smoke-tested here; see each file's
+  docstring.
+- `nonfickian_gaps.png`, `profile_likelihood_De_Df.png`,
+  `saha_second_moment_bias.png`, `poster_saha_nonfickian.png` — committed figure
+  snapshots for this bed (the diagnostics referenced above).
+- Regenerated figures and calibrations are written to the repo-root `output/`
+  (gitignored); the committed snapshots in this folder are the current record.
 
 ## Pointers
 
