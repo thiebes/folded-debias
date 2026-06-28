@@ -17,6 +17,10 @@ output/
 *.pdf
 !docs/**/*.png
 !docs/**/*.svg
+# Each experiment set keeps its committed figure(s) in its own folder (see
+# docs/EXPERIMENT_CONVENTIONS.md). Track those, but not regenerated run outputs.
+!experiments/**/*.png
+!experiments/**/*.svg
 
 # Source PDFs / extracted text (local reference only)
 sources/
