@@ -1,0 +1,46 @@
+==============================================================================
+Multi-exponential decay: is the folded-normal correction invalidated?
+==============================================================================
+Fickian D = 0.02 sigma0^2/tau; Gaussian fit; standard geometry.
+Claim: the correction keys on per-frame CNR, not the decay law.
+
+(1) Per-frame corrected residual collapses onto one curve vs per-frame CNR.
+    Residual (sigma0^2) binned by per-frame CNR; spread across decay laws = 
+    the second-order width dependence, not a decay-law dependence.
+  per-frame CNR bin |     single exp (tau=1) | bi-exp 0.5/0.5, tau=0.3,3 | bi-exp 0.7/0.3, tau=0.5,5
+            0.7-1.0 |                 -0.180 |                 -0.019 |                 -0.075
+            1.0-1.5 |                  0.011 |                 -0.001 |                 -0.000
+            1.5-2.5 |                  0.002 |                 -0.004 |                  0.003
+            2.5-5.0 |                 -0.000 |                 -0.002 |                  0.000
+           5.0-12.0 |                 -0.000 |                  0.000 |                 -0.000
+          12.0-35.0 |                 -0.000 |                  0.000 |                  0.000
+  max across-law spread at matched per-frame CNR: 0.162 sigma0^2
+
+(2) Corrected <D>/D_true vs CNR_0 stays ~1 for every decay law -- the corrected D is decay-robust.
+  CNR_0 |         single exp (tau=1) |  bi-exp 0.5/0.5, tau=0.3,3 |  bi-exp 0.7/0.3, tau=0.5,5
+      8 |                      1.017 |                      1.033 |                      0.959
+     11 |                      0.893 |                      1.048 |                      1.066
+     16 |                      1.113 |                      0.965 |                      0.963
+     23 |                      0.914 |                      1.033 |                      1.014
+     32 |                      0.986 |                      1.010 |                      1.024
+     45 |                      0.993 |                      1.001 |                      1.021
+     64 |                      0.987 |                      1.011 |                      1.006
+     90 |                      0.983 |                      0.990 |                      0.994
+
+(3) Naive (uncorrected, all-frames) <D>/D_true vs CNR_0 -- the bias onset shifts with the decay law,
+    so any CNR_0-indexed threshold is decay-specific.
+  CNR_0 |         single exp (tau=1) |  bi-exp 0.5/0.5, tau=0.3,3 |  bi-exp 0.7/0.3, tau=0.5,5
+      8 |                     19.198 |                      1.335 |                      1.345
+     11 |                      6.972 |                      1.203 |                      1.218
+     16 |                      3.381 |                      1.035 |                      1.119
+     23 |                      1.542 |                      1.058 |                      1.075
+     32 |                      1.204 |                      1.013 |                      1.036
+     45 |                      1.135 |                      0.988 |                      1.015
+     64 |                      1.056 |                      1.001 |                      1.018
+     90 |                      1.015 |                      0.990 |                      1.008
+
+(4) Same CNR_0 = 20 (the single-exp design floor) leaves the deepest frame at very
+    different per-frame CNR by decay law -- the decay-agnostic rule is per-frame CNR >~ 1:
+            single exp (tau=1): deepest per-frame CNR = 1.00
+     bi-exp 0.5/0.5, tau=0.3,3: deepest per-frame CNR = 3.69
+     bi-exp 0.7/0.3, tau=0.5,5: deepest per-frame CNR = 3.34

@@ -42,8 +42,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from weighting_wall import (Experiment, MultiExpExperiment, GaussianModel,  # noqa: E402
                             calibrate_d_free, evaluate, per_frame_diagnostic)
