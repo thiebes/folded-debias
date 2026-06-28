@@ -47,8 +47,8 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 import matplotlib  # noqa: E402
 
@@ -60,7 +60,7 @@ from curved_text import curved_text  # noqa: E402
 
 import nc_solid_alpha_vs_cnr as base  # noqa: E402  (reuse compute_row / run_tasks)
 from weighting_wall.noise import WhiteNoise  # noqa: E402
-from mc_experiments.disordered_nc_solid.nc_data import load_case  # noqa: E402
+from nc_data import load_case  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 inch = 1 / 2.54

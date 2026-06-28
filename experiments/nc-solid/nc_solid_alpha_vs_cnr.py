@@ -39,8 +39,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 import matplotlib
 
@@ -54,7 +54,7 @@ from weighting_wall.noise import ShotNoise, WhiteNoise  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
-from mc_experiments.disordered_nc_solid.nc_data import load_all, load_case  # noqa: E402
+from nc_data import load_all, load_case  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)

@@ -1,6 +1,6 @@
 """Generate a clean, high-walker-count NC-solid map from the re-implemented model.
 
-Runs the Solari hopping KMC (`mc_experiments.disordered_nc_solid.nc_solid_sim`) at
+Runs the Solari hopping KMC (`nc_solid_sim` (this folder)) at
 a high walker count to produce a smooth, low-sampling-noise, subdiffusive density
 map -- the clean ground truth that replaces de-noising Marc's finite-walker
 output. The map carries no shape assumption and its sampling noise is far below
@@ -27,10 +27,10 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
-from mc_experiments.disordered_nc_solid import nc_solid_sim as sim  # noqa: E402
+import nc_solid_sim as sim  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)

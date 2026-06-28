@@ -2,7 +2,7 @@
 
 This is the poster's headline regime on real model transport: CH3NH3PbBr3
 nanocrystal-solid diffusion maps from Solari et al. (Fig. 5), L_D/FWHM ~ 0.14.
-The maps track position only, so `mc_experiments.disordered_nc_solid.nc_data`
+The maps track position only, so `nc_data` (this folder)
 imposes the population decay `N0 exp(-t/tau)` (paper lifetime tau ~ 7 ns) and
 projects each 2-D frame to a 1-D profile.
 
@@ -34,8 +34,8 @@ from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+sys.path.insert(0, os.path.dirname(__file__))
 
 import matplotlib
 
@@ -48,7 +48,7 @@ from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
-from mc_experiments.disordered_nc_solid.nc_data import load_all  # noqa: E402
+from nc_data import load_all  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
