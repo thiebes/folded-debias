@@ -35,6 +35,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+# The CRLB panel's compute lives with its experiment (crlb-precision).
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "experiments", "crlb-precision")
+)
 
 import matplotlib
 
@@ -45,7 +49,7 @@ from matplotlib.colors import to_rgb  # noqa: E402
 from curved_text import CurvedText  # noqa: E402
 
 from weighting_wall.simulate import Experiment, gaussian  # noqa: E402
-from precision_limit.crlb import crlb_D  # noqa: E402
+from crlb import crlb_D  # noqa: E402  (experiments/crlb-precision/crlb.py)
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)

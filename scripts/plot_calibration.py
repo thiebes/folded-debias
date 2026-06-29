@@ -29,9 +29,10 @@ def _marc_trajectories():
     Marc's module is not importable.
     """
     try:
-        from mc_experiments.marc_mn_trapping.diffusion_map import (
-            Parameters, diffusion, x_axis,
+        sys.path.insert(
+            0, os.path.join(os.path.dirname(__file__), "..", "experiments", "mn-trapping")
         )
+        from diffusion_map import Parameters, diffusion, x_axis  # experiments/mn-trapping/
         from weighting_wall.fit import fit_variance as fit_gaussian
     except ImportError:
         return []
