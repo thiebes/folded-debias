@@ -57,7 +57,7 @@ VOIGT_GAMMA = 0.01    # um, fixed Lorentzian HWHM in the Voigt fit
 CNR_GRID = np.array([5.0, 10.0, 20.0, 50.0, 100.0, 200.0])
 N_SEEDS = 20
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
 CAL_GAUSSIAN_PATH = OUTPUT / "calibration_marc_gaussian_filtered.npz"
 CAL_VOIGT_PATH = OUTPUT / "calibration_marc_voigt_filtered.npz"

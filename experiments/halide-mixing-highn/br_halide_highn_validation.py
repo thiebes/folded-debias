@@ -53,7 +53,7 @@ from br_halide_validation import fit_each_row, fit_msd_powerlaw  # noqa: E402
 from br_highn_data import (  # noqa: E402
     INTRINSIC_PEAK_CNR, SIGMA0_HINT_NM, load_all)
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
 CAL_PATH = OUTPUT / "calibration_br_highn.npz"
 

@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 import nc_solid_sim as sim  # noqa: E402
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
 
 # best-achievable strong-disorder kt per sample (from the calibration scan;

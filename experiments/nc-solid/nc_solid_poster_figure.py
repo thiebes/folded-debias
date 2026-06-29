@@ -62,7 +62,7 @@ import nc_solid_alpha_vs_cnr as base  # noqa: E402  (reuse compute_row / run_tas
 from weighting_wall.noise import WhiteNoise  # noqa: E402
 from nc_data import load_case  # noqa: E402
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"
 inch = 1 / 2.54
 # Spanish-flag palette (colorblind-safe): red marks the salient measured series,
 # yellow (gualda) the reference value.

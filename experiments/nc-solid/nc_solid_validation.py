@@ -50,7 +50,7 @@ from weighting_wall.weights import corrected_variance  # noqa: E402
 
 from nc_data import load_all  # noqa: E402
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
 CAL_PATH = OUTPUT / "calibration_nc_solid_gaussian.npz"
 

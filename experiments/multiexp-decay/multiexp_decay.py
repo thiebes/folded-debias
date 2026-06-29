@@ -49,7 +49,7 @@ from weighting_wall import (Experiment, MultiExpExperiment, GaussianModel,  # no
                             calibrate_d_free, evaluate, per_frame_diagnostic)
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
 CAL_PATH = OUTPUT / "calibration_subdiffusive.npz"   # shared standard-geometry cache
 
