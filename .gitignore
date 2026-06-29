@@ -21,6 +21,8 @@ output/
 # docs/EXPERIMENT_CONVENTIONS.md). Track those, but not regenerated run outputs.
 !experiments/**/*.png
 !experiments/**/*.svg
+!illustrations/**/*.png
+!illustrations/**/*.svg
 
 # Source PDFs / extracted text (local reference only)
 sources/

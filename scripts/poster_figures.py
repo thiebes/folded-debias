@@ -51,6 +51,17 @@ from curved_text import CurvedText  # noqa: E402
 from weighting_wall.simulate import Experiment, gaussian  # noqa: E402
 from crlb import crlb_D  # noqa: E402  (experiments/crlb-precision/crlb.py)
 
+# The two pure schematics live with their figures in illustrations/ (single
+# source of truth); import their build functions under the names main() expects.
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "illustrations", "measurement-schematic")
+)
+sys.path.insert(
+    0, os.path.join(os.path.dirname(__file__), "..", "illustrations", "wall-fold-schematic")
+)
+from build_measurement_schematic import build as figure_schematic_measurement  # noqa: E402
+from build_wall_fold_schematic import build as figure_schematic_wall_fold  # noqa: E402
+
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
 
@@ -109,160 +120,6 @@ def _lerp(c0: str, c1: str, f: float) -> tuple[float, float, float]:
     a, b = np.array(to_rgb(c0)), np.array(to_rgb(c1))
     return tuple((1.0 - f) * a + f * b)
 
-
-
-# --------------------------------------------------------------------------
-# Panel 1 schematic -- spreading, dimming population
-# --------------------------------------------------------------------------
-def figure_schematic_measurement() -> Path:
-    """Profiles broaden and dim across time; CNR falls frame by frame."""
-    x = np.linspace(-6, 6, 400)
-    times = np.linspace(0.0, 1.0, 5)
-    sigmas = 1.0 + 2.2 * times          # broadening (diffusion)
-    amps = np.exp(-1.3 * times)         # dimming (decay)
-
-    fig, ax = plt.subplots(figsize=(4.6, 3.2))
-    for f, sig, amp in zip(times, sigmas, amps):
-        color = _lerp(ROLE2, ROLE4, f)
-        ax.plot(x, gaussian(x, amp, 0.0, sig), color=color, lw=2.0)
-    ax.annotate("", xy=(3.6, 0.92), xytext=(0.6, 0.92),
-                arrowprops=dict(arrowstyle="->", color="#444"))
-    ax.text(2.1, 0.96, "time", color="#444", fontsize=9, ha="center")
-    ax.text(0.0, 1.02, "early frame:\nnarrow, bright (high CNR)",
-            color=ROLE2, fontsize=8, ha="center", va="bottom")
-    ax.text(4.6, 0.30, "late frame:\nwide, dim (low CNR)",
-            color=ROLE4, fontsize=8, ha="center")
-    ax.set_xlabel("position")
-    ax.set_ylabel("intensity")
-    ax.set_xlim(x[0], x[-1])             # curves run to the frame edges
-    ax.set_ylim(0, 1.15)
-    # A cartoon: axis labels only, no ticks or numbers.
-    ax.set_xticks([])
-    ax.set_yticks([])
-    fig.tight_layout()
-    path = OUTPUT / "poster_panel1_measurement.png"
-    fig.savefig(path, dpi=300)
-    plt.close(fig)
-    return path
-
-
-# --------------------------------------------------------------------------
-# Panel 2A schematic -- the wall at zero, the fold, the tilted slope
-# --------------------------------------------------------------------------
-def figure_schematic_wall_fold() -> Path:
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.0, 3.4))
-
-    # --- Left: the fold at the wall ---------------------------------------
-    v = np.linspace(-3.0, 4.0, 700)
-    m_true, sd = 0.5, 1.1
-    g_un = np.exp(-0.5 * ((v - m_true) / sd) ** 2)     # estimate with no wall
-    g = g_un / g_un.max()
-    pos = v >= 0
-    # The forbidden negative tail, mirrored back across the wall (v -> -v).
-    g_ref = np.exp(-0.5 * ((-v - m_true) / sd) ** 2) / g_un.max()
-    folded = g + g_ref                                  # fitted-variance pdf
-
-    # Reflection view: the forbidden tail (dotted, < 0) folds across the wall as
-    # its own reflected curve. A light fill under both the realizable estimate and
-    # the reflected tail overlaps near the wall, so the colour doubles there -- the
-    # pile-up that skews the distribution. The distribution of fits is their sum
-    # (dashed, in the fill colour).
-    m_folded = (np.trapezoid(v[pos] * folded[pos], v[pos])
-                / np.trapezoid(folded[pos], v[pos]))
-
-    axL.fill_between(v[pos], 0, g[pos], color=ROLE4, alpha=0.15, lw=0)
-    axL.fill_between(v[pos], 0, g_ref[pos], color=ROLE4, alpha=0.15, lw=0)
-    # One hue (the three are one story); alpha ranks them: faint = the
-    # hypothetical unbounded estimate, medium = the reflected mechanism, full =
-    # the resulting distribution of fits.
-    axL.plot(v[pos], g[pos], color=ROLE4, lw=1.8, alpha=0.40)              # realizable
-    axL.plot(v[~pos], g[~pos], color=ROLE4, lw=1.4, alpha=0.40,
-             ls=(0, (1, 1.6)))                                            # forbidden
-    axL.plot(v[pos], g_ref[pos], color=ROLE4, lw=1.6, alpha=0.70)          # reflected
-    axL.plot(v[pos], folded[pos], color=ROLE4, lw=1.8, ls=(0, (4, 2)))     # sum (fits)
-    axL.axvline(0.0, color="k", lw=1.6)
-    axL.axvline(m_true, color=ROLE1, ls=":", lw=1.1)
-    axL.axvline(m_folded, color="#7a2f00", ls=":", lw=1.1)
-
-    # The bias is the gap between the two; the names run vertically along their
-    # own dotted lines. Bias sits to the right of the arrow, level with it.
-    axL.text(-0.12, 1.25, "wall at 0", fontsize=8, rotation=90, va="center",
-             ha="center", color="#333")
-    axL.annotate("", xy=(m_folded, 1.66), xytext=(m_true, 1.66),
-                 arrowprops=dict(arrowstyle="<->", color="k", lw=1.0,
-                                 mutation_scale=8))
-    axL.text(m_folded + 0.09, 1.66, "bias", fontsize=8, ha="left", va="center")
-    axL.text(m_true - 0.13, 2.40, "true $\\sigma^2$", fontsize=7, color=ROLE1,
-             rotation=90, rotation_mode="anchor", va="center", ha="right")
-    axL.text(m_folded - 0.13, 2.40, "mean $\\langle\\hat\\sigma^2\\rangle$",
-             fontsize=7, color="#7a2f00", rotation=90, rotation_mode="anchor",
-             va="center", ha="right")
-
-    axL.set_xlabel("fitted variance,  $\\hat\\sigma^2$")
-    axL.set_ylabel("probability density")
-    axL.set_xlim(-3.0, 4.0)
-    axL.set_ylim(0, 2.45)
-    axL.set_xticks([])
-    axL.set_yticks([])
-
-    # --- Right: the tilted MSD slope --------------------------------------
-    t = np.linspace(0, 3.0, 7)
-    slope_true = 0.04
-    true_line = slope_true * t
-    # Per-frame inflation grows as CNR falls (later frames more biased).
-    inflation = 0.012 * (t / t.max()) ** 2 + 0.004
-    biased = true_line + inflation
-    fit = np.polyfit(t, biased, 1)
-    fit_line = np.polyval(fit, t)
-
-    axR.plot(t, true_line, color=ROLE1, lw=2.0)
-    axR.plot(t, fit_line, color=ROLE4, lw=2.0)
-    axR.plot(t, biased, "o", color=ROLE4, ms=5)
-    for ti, tr, bi in zip(t, true_line, biased):
-        axR.plot([ti, ti], [tr, bi], color="#bbb", lw=0.8, zorder=0)
-
-    # The slope-gap annotation is the payload; the two line labels are added after
-    # layout (below), rotated to the line slope and pushed to opposite sides.
-    axR.annotate("", xy=(2.93, fit_line[-1]), xytext=(2.93, true_line[-1]),
-                 arrowprops=dict(arrowstyle="<->", color="k", lw=0.9,
-                                 mutation_scale=8))
-    axR.text(2.84, (true_line[-1] + fit_line[-1]) / 2, "$D$ over-\nestimated",
-             fontsize=7.5, ha="right", va="center")
-
-    axR.set_xlabel("time")
-    axR.set_ylabel("mean-squared displacement")
-    axR.set_xlim(-0.08, 3.25)
-    axR.set_ylim(-0.004, 0.155)
-    axR.set_xticks([])
-    axR.set_yticks([])
-
-    fig.tight_layout()
-
-    # Right panel: label both lines with CurvedText at the same fractional
-    # position on each line, offset to opposite sides so they hug their lines.
-    CurvedText(t, fit_line, "inflated fit", axR, pos=0.4, anchor="center",
-               offset=5.0, color=ROLE4, fontsize=7)
-    CurvedText(t, true_line, "true slope $\\propto D$", axR, pos=0.4,
-               anchor="center", offset=-5.0, color=ROLE1, fontsize=7)
-
-    # Curve names run parallel to each curve and close to it (the rotation needs
-    # the settled display transform, so this comes after the layout).
-    fm = (v >= -2.4) & (v <= -0.3)
-    CurvedText(v[fm], g[fm], "forbidden:  variance < 0", axL, offset=5.0,
-                pos=0.5, anchor="center", color=ROLE4, alpha=0.7, fontsize=7)
-    sm = (v >= 0.3) & (v <= 2.3)
-    CurvedText(v[sm], folded[sm], "distribution of fits", axL, offset=5.0,
-                pos=0.6, anchor="center", color=ROLE4, fontsize=7)
-    um = (v >= 1.0) & (v <= 3.2)
-    CurvedText(v[um], g[um], "unbounded estimate", axL, offset=-6.0,
-                pos=0.4, anchor="center", color=ROLE4, fontsize=7)
-    rm = (v >= 0.4) & (v <= 2.4)
-    CurvedText(v[rm], g_ref[rm], "reflected tail", axL, offset=5.5,
-                pos=0.65, anchor="center", color=ROLE4, fontsize=7)
-    path = OUTPUT / "poster_panel2_wall_fold.png"
-    fig.savefig(path, dpi=300)
-    plt.close(fig)
-    return path
 
 
 # --------------------------------------------------------------------------

@@ -14,6 +14,7 @@ Status tags: **scope** = poster / paper / control / adjacent / parked;
 ```text
 src/weighting_wall/   core library -- imported by everything; never moved
 experiments/          one folder per experiment set (below)
+illustrations/        one folder per hand-built matplotlib schematic (below)
 scripts/              shared tooling + poster assembly (not per-bed; below)
 docs/                 shared docs (STATUS, DERIVATION, VALIDATION_DESIGN, poster/, ...)
 docs/REPO_MAP.md      this index
@@ -58,6 +59,20 @@ tests/                package tests
 | [wse2-strobescat](../experiments/wse2-strobescat/) | `wse2_realdata_panel.py` (canonical) + `realdata_*` (exploratory) | poster P6 real / validated | D -7% on real WSe2 stroboSCAT (naive 1.10 -> 1.02) | pshare (Enrique) |
 | [cspbbr-strobescat](../experiments/cspbbr-strobescat/) | `reduce.py`, `apply_correction.py`, `run_all.py` | adjacent / WIP | end-to-end real-data correction (Antonella/Carlos paper) | pshare (Upasana) |
 | [zhang-qd-control](../experiments/zhang-qd-control/) | `zhang_qd_panel.py` (+ committed figure CSVs) | control / validated | Zhang QD Dfast robust to the correction (high CNR) | committed CSVs; `.opju` gitignored |
+
+## Illustrations (hand-built matplotlib schematics)
+
+Pure schematics (no data input) live under `illustrations/`, one folder per figure,
+each with its self-contained build script, figure, and caption -- same convention as
+`experiments/`. See [`illustrations/README.md`](../illustrations/README.md).
+
+| Figure | Folder | Poster panel |
+| ------- | ------- | ------- |
+| Measurement schematic (spreading, dimming population; CNR falls per frame) | [measurement-schematic](../illustrations/measurement-schematic/) | Panel 1 |
+| Wall-and-fold schematic (wall at zero, reflected tail, tilted MSD slope) | [wall-fold-schematic](../illustrations/wall-fold-schematic/) | Panel 2A (hero) |
+
+`scripts/poster_figures.py` imports these build functions (single source of truth)
+and `scripts/build_poster.py` pulls the panels from these folders.
 
 ## Shared (not per-bed; stay in place)
 
@@ -131,8 +146,11 @@ under active edit; moving its assets mid-edit risks collisions):
    | `panel6_zhang-qd-scope-control_*` | zhang-qd-control |
    | `panel1_measurement_*`, `panel2_wall-fold_*` (hand schematics), `panel4_fftcnr_*` (sibling `fft-cnr-paper` repo) | stay in `docs/poster/` (poster assets, not a single experiment) |
 
-2. **`scripts/poster_figures.py` split.** It currently renders panels from several
-   experiments at once (Panel 1, 2A, 4 CRLB, 5, floor). The convention is that a
-   figure's render code lives with its experiment; splitting this per-set is a
-   pending cleanup. Until then, the committed figure snapshot in each set folder is
-   the record, and `poster_figures.py` remains the shared renderer.
+2. **`scripts/poster_figures.py` split (partially done).** The two pure schematics
+   (Panel 1, Panel 2A) are extracted to `illustrations/` and `poster_figures.py` now
+   imports their builders. The remaining shared renders are the data panels (Panel 4
+   CRLB, Panel 5 corrected bias, the floor inset), whose render code should move to
+   their experiments (`crlb-precision`, `dfree-calibration`, `correction-floor`);
+   that split is the pending cleanup. Until then, the committed figure snapshot in
+   each set folder is the record, and `poster_figures.py` remains the shared renderer
+   for the data panels.
