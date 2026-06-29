@@ -26,12 +26,13 @@ Windows. Outputs go to `output/` with matching base names.
 
 ## Poster assembly
 
-- **`poster_figures.py`** -- regenerates the data-driven poster figures and the
-  rough panel schematics in one place (Panel 1 schematic, Panel 2A wall-and-fold
-  schematic, Panel 4 CRLB, Panel 5 corrected bias + floor inset). Requires the
-  sibling `curved-text` package. (Pending convention cleanup: this renders panels
-  from several experiments; splitting each panel's render into its experiment
-  folder is a follow-up -- see REPO_MAP.)
+- **`poster_style.py`** -- shared poster primitives (the colour palette, axis
+  style, and the dense-calibration / per-profile-floor report parsers) that the
+  per-experiment render scripts and the poster assembly import. No figures here.
+- **`poster_figures.py`** -- the orchestrator: imports each panel's builder from
+  its home (schematics in `illustrations/`, data panels in their experiments) and
+  runs them. The only panels it defines are the two fft-cnr recovery figures
+  (sourced from the sibling `fft-cnr-paper` repo, no experiment owns them).
 - **`poster_fftcnr_dense.py`** -- the dense fft-cnr recovery-ratio panel (Panel 4
   of the CNR-centric spine).
 - **`build_poster.py`** -- assembles the poster draft (`docs/poster/`). Pulls each

@@ -21,6 +21,10 @@ MAS-vs-folded recommendation).
   calibration then a random log-distributed test, all four schemes (`ols`,
   `inverse_variance`, `folded_normal`, `mas`) on all three shapes. Wall time
   ~3 h.
+- `render_bias_panels.py` -- renders the poster bias panels from this set's
+  `dense_calibration_and_test.txt`: Panel 3 (`poster_panel3_bias.png`, the two
+  standard fits fail) and Panel 5 (`poster_panel5_corrected_bias.png`, corrected,
+  three shapes). Uses `scripts/poster_style.py`.
 
 ## Data
 

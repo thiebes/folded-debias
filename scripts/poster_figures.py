@@ -1,24 +1,11 @@
-"""Produce the data-driven poster figures and rough panel schematics.
+"""Assemble the poster's figures by importing each panel's builder from its home.
 
-Five figures in one place so the poster carries a single, consistent style
-(cubehelix poster palette, ticks inside the frame):
-
-  * Panel 1 schematic -- the measurement: a population that broadens (diffusion)
-    and dims (decay) frame by frame, so the contrast-to-noise falls with time.
-  * Panel 2A schematic -- the mechanism: a fitted variance cannot go negative,
-    so the sampling distribution reflects at the wall at zero into a right-skewed
-    tail; the inflated per-frame mean tilts the MSD slope upward.
-  * Panel 4 -- the precision floor: sqrt(CRLB)/D vs CNR_0, computed live from the
-    Fisher information.
-  * Panel 5 -- the correction works: corrected mean(D_hat)/D_true vs CNR_0 for the
-    folded-normal scheme across the three profile shapes, parsed from the decile
-    report in ``output/dense_calibration_and_test.txt``.
-  * Panel 5 inset (Fig F) -- where it works: per-profile residual vs CNR for the
-    three shapes, parsed from ``output/per_profile_floor_*.txt``.
-
-The schematics are rough starting points meant to be redrawn by hand. The figures
-that already have a rendered .png (boundary diagnostic, OLS/inverse-variance bias
-curves) are not produced here.
+The panel render code lives with its figure -- schematics in `illustrations/`, data
+panels with their experiment under `experiments/` -- and this module is the
+orchestrator that calls them. The only panels defined here are the two fft-cnr
+recovery figures, which are sourced from the sibling `fft-cnr-paper` repo and so
+have no weighting-wall experiment to live in. Shared poster primitives (palette,
+axis style) come from `scripts/poster_style.py`.
 
 Run from the repository root::
 
@@ -27,40 +14,34 @@ Run from the repository root::
 from __future__ import annotations
 
 import os
-import re
 import sys
 from pathlib import Path
 
 import numpy as np
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-# The CRLB panel's compute lives with its experiment (crlb-precision).
-sys.path.insert(
-    0, os.path.join(os.path.dirname(__file__), "..", "experiments", "crlb-precision")
-)
+_HERE = os.path.dirname(__file__)
+_ROOT = os.path.join(_HERE, "..")
+sys.path.insert(0, _HERE)                                  # poster_style
+for _rel in ("illustrations/measurement-schematic",
+             "illustrations/wall-fold-schematic",
+             "experiments/crlb-precision",
+             "experiments/dfree-calibration",
+             "experiments/correction-floor"):
+    sys.path.insert(0, os.path.join(_ROOT, *_rel.split("/")))
 
-import matplotlib
+import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
-from matplotlib.colors import to_rgb  # noqa: E402
 
-from curved_text import CurvedText  # noqa: E402
+from poster_style import ROLE1, ROLE2, ROLE3, style as _style  # noqa: E402
 
-from weighting_wall.simulate import Experiment, gaussian  # noqa: E402
-from crlb import crlb_D  # noqa: E402  (experiments/crlb-precision/crlb.py)
-
-# The two pure schematics live with their figures in illustrations/ (single
-# source of truth); import their build functions under the names main() expects.
-sys.path.insert(
-    0, os.path.join(os.path.dirname(__file__), "..", "illustrations", "measurement-schematic")
-)
-sys.path.insert(
-    0, os.path.join(os.path.dirname(__file__), "..", "illustrations", "wall-fold-schematic")
-)
+# Panel builders, each imported from its home (single source of truth).
 from build_measurement_schematic import build as figure_schematic_measurement  # noqa: E402
 from build_wall_fold_schematic import build as figure_schematic_wall_fold  # noqa: E402
+from render_crlb_panel import build as figure_crlb  # noqa: E402
+from render_bias_panels import build_bias_curves, build_corrected_bias  # noqa: E402
+from render_floor_panel import build as figure_floor  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
@@ -74,258 +55,13 @@ _FFTCNR_CASE11 = (Path(__file__).resolve().parents[2] / "fft-cnr-paper"
                   / "validation" / "results" / "case11_gengauss_cnr_sweep.npz")
 FFTCNR_NPZ = _FFTCNR_DENSE if _FFTCNR_DENSE.exists() else _FFTCNR_CASE11
 
-# --- Poster palette (Okabe-Ito colourblind-safe set, Madrid-localised names) -
-# The Okabe-Ito categorical palette: five hues chosen to stay distinguishable
-# under all common colour-vision deficiencies, every one legible on white (no
-# pale member to wash out). Roles carry fixed meaning: blue = the true value,
-# red = the biased/inflated value (so true-vs-biased reads as blue-vs-red at a
-# glance); blue / gold / green are the three profile shapes; purple is reserved
-# for fills and region bands at low alpha (the set has no pale member, so the
-# softness comes from alpha, not the hue). Poster-only -- the DICE constants are
-# retained as a fallback for the other scripts that still reference them.
-ROLE1 = "#0072B2"   # mediterranean blue  -- the true value / Gaussian shape
-ROLE2 = "#E69F00"   # flag gold           -- fitted-variance curve / Voigt shape
-ROLE3 = "#009E73"   # olive green         -- generalized-Gaussian shape
-ROLE4 = "#D55E00"   # spanish red         -- the biased/inflated value
-ROLE5 = "#CC79A7"   # castilian purple    -- fills, region bands (use low alpha)
-
-# DICE palette (Montana State; retained as a fallback for non-poster scripts).
-DICE_BLUE = "#003f7f"
-DICE_GOLD = "#f7941e"
-DICE_GREEN = "#0cce6b"
-
-FWHM0 = 2.3548                       # FWHM / sigma for a Gaussian
-SHAPE_LABEL = {
-    "gaussian": "Gaussian",
-    "voigt": "Voigt",
-    "generalized_gaussian": "generalized-Gaussian",
-    "genGauss": "generalized-Gaussian",
+# Case-11 shape name -> (poster label, role colour); shared by the fft-cnr figures.
+_FFTCNR_STYLE = {
+    "Gaussian (p=2)": ("Gaussian", ROLE1),
+    "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", ROLE3),
+    "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
+    "Voigt": ("Voigt", ROLE2),
 }
-# One role colour per profile shape: roles 1 / 2 / 3 (the strong-contrast lines).
-SHAPE_COLOR = {
-    "gaussian": ROLE1,
-    "voigt": ROLE2,
-    "generalized_gaussian": ROLE3,
-    "genGauss": ROLE3,
-}
-
-
-def _style(ax) -> None:
-    """Apply the shared axis style: ticks inside the frame, on all four sides."""
-    ax.tick_params(direction="in", which="both", top=True, right=True)
-
-
-def _lerp(c0: str, c1: str, f: float) -> tuple[float, float, float]:
-    """Linear blend between two hex colours; f in [0, 1]."""
-    a, b = np.array(to_rgb(c0)), np.array(to_rgb(c1))
-    return tuple((1.0 - f) * a + f * b)
-
-
-
-# --------------------------------------------------------------------------
-# Panel 3 -- the accuracy half: both standard fits fail at low contrast
-# --------------------------------------------------------------------------
-def figure_bias_curves(dense_path: Path) -> Path | None:
-    """Panel 3 (accuracy half): <D_est>/D_true vs CNR_0 for the two standard fits.
-
-    Both routes a practitioner would reach for fail at low contrast: unweighted
-    OLS is catastrophically inflated (the wall's right-skew tilts every MSD slope
-    upward) and inverse-variance weighting -- which assumes a symmetric error --
-    still leaves a residual it cannot remove. The folded-normal correction is
-    held back for Panel 5, so this panel states only the problem the master
-    variable creates; it pairs with the CRLB precision floor (figure_crlb),
-    stacked on the shared CNR axis to show one variable sets both halves.
-
-    Sourced from the high-statistics dense decile report (the same file Panel 5
-    parses) so every bias panel is mutually consistent. A quick few-hundred-run
-    sweep is too tail-unstable at low CNR for a poster curve: there the D
-    distribution has a heavy right tail and the mean is dominated by a handful of
-    realisations, so the decile-averaged dense run is the trustworthy source.
-    """
-    if not dense_path.exists():
-        print(f"  ({dense_path.name} not found -- skipping Panel 3 curve)")
-        return None
-    g = _parse_dense_deciles(dense_path).get("gaussian")
-    if not g:
-        print("  (no gaussian deciles parsed -- skipping Panel 3 curve)")
-        return None
-
-    fig, ax = plt.subplots(figsize=(4.2, 3.4))
-    ax.axhline(1.0, color="#666666", ls="--", lw=1.0)
-    # Red carries the catastrophic route (OLS), gold the standard-but-still-
-    # failing one (inverse-variance) -- both biased relative to the unbiased line.
-    ax.loglog(g["cnr"], g["ols"], "o-", ms=4, lw=2.0, color=ROLE4,
-              label="unweighted (OLS)")
-    ax.loglog(g["cnr"], g["inv_var"], "o-", ms=4, lw=2.0, color=ROLE2,
-              label="inverse-variance")
-    ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
-    ax.set_ylabel(r"$\langle D_\mathrm{est}\rangle\,/\,D_\mathrm{true}$")
-    ax.legend(fontsize=8, loc="upper right", frameon=False)
-    _style(ax)
-    fig.tight_layout()
-    path = OUTPUT / "poster_panel3_bias.png"
-    fig.savefig(path, dpi=300)
-    plt.close(fig)
-    return path
-
-
-# --------------------------------------------------------------------------
-# Panel 4 -- precision floor
-# --------------------------------------------------------------------------
-def figure_crlb() -> Path:
-    """sqrt(CRLB)/D vs CNR_0 at the poster's working D (L_D/FWHM_0 ~ 0.085)."""
-    exp = Experiment()                 # defaults: D = 0.02 sigma_0^2/tau
-    cnr0 = np.logspace(np.log10(2.0), np.log10(100.0), 60)
-    rel = np.array([np.sqrt(crlb_D(exp, c)) / exp.D for c in cnr0])
-
-    fig, ax = plt.subplots(figsize=(4.2, 3.4))
-    ax.loglog(cnr0, rel, color=ROLE2, lw=2.2)
-    ax.axhline(1.0, color="#999999", ls="--", lw=1.0)
-    ax.fill_between(cnr0, 1.0, rel, where=(rel >= 1.0),
-                    color=ROLE4, alpha=0.25)
-    ax.annotate("a single measurement\ncannot pin D (SD > D)",
-                xy=(3.0, 3.0), fontsize=8, color=ROLE3)
-    ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
-    ax.set_ylabel(r"$\sqrt{\mathrm{CRLB}}\,/\,D$  (best possible SD, units of $D$)")
-    _style(ax)
-    fig.tight_layout()
-    path = OUTPUT / "poster_panel4_crlb.png"
-    fig.savefig(path, dpi=300)
-    plt.close(fig)
-    return path
-
-
-# --------------------------------------------------------------------------
-# Panel 5 -- corrected bias curves (folded-normal), three shapes
-# --------------------------------------------------------------------------
-_DECILE_RE = re.compile(
-    r"\[\s*([\d.]+),\s*([\d.]+)\]\s+(\d+)\s+"
-    r"([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)")
-
-
-def _parse_dense_deciles(path: Path) -> dict[str, dict[str, np.ndarray]]:
-    """Parse the per-shape decile report (mean(D_hat)/D_true per scheme).
-
-    Returns ``{shape: {"cnr", "ols", "inv_var", "folded"}}`` using the geometric
-    midpoint of each CNR_0 decile as the x value. The decile columns are OLS,
-    inverse-variance, folded-normal, MAS -- groups 4-7 of ``_DECILE_RE`` -- so
-    Panel 3 (OLS + inverse-variance) and Panel 5 (folded) read one parser.
-    """
-    text = path.read_text()
-    shapes: dict[str, dict[str, np.ndarray]] = {}
-    current: str | None = None
-    cols: dict[str, list[float]] = {}
-
-    def _flush() -> None:
-        if current is not None and cols.get("cnr"):
-            shapes[current] = {k: np.array(v) for k, v in cols.items()}
-
-    for line in text.splitlines():
-        header = re.match(r"=== (\w+)\s", line)
-        if header:
-            _flush()
-            current = header.group(1)
-            cols = {"cnr": [], "ols": [], "inv_var": [], "folded": []}
-            continue
-        m = _DECILE_RE.search(line)
-        if m and current is not None:
-            lo, hi = float(m.group(1)), float(m.group(2))
-            cols["cnr"].append(np.sqrt(lo * hi))     # geometric midpoint
-            cols["ols"].append(float(m.group(4)))
-            cols["inv_var"].append(float(m.group(5)))
-            cols["folded"].append(float(m.group(6)))
-    _flush()
-    return shapes
-
-
-def figure_corrected_bias(dense_path: Path) -> Path | None:
-    if not dense_path.exists():
-        print(f"  ({dense_path.name} not found -- skipping Panel 5 curve)")
-        return None
-    shapes = _parse_dense_deciles(dense_path)
-    if not shapes:
-        print(f"  (no decile data parsed from {dense_path.name} -- skipping)")
-        return None
-
-    fig, ax = plt.subplots(figsize=(4.6, 3.4))
-    ax.axhspan(0.95, 1.05, color=ROLE5, alpha=0.20,
-               label=r"$\pm 0.05$ band")
-    ax.axhline(1.0, color="#666666", lw=1.0)
-    for shape, d in shapes.items():
-        ax.semilogx(d["cnr"], d["folded"], "o-", ms=4, lw=1.8,
-                    color=SHAPE_COLOR.get(shape, ROLE2),
-                    label=SHAPE_LABEL.get(shape, shape))
-    ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
-    ax.set_ylabel(r"corrected  $\langle \hat D\rangle / D_\mathrm{true}$")
-    ax.set_ylim(0.7, 1.3)
-    ax.legend(fontsize=8, loc="upper right", frameon=False)
-    _style(ax)
-    fig.tight_layout()
-    path = OUTPUT / "poster_panel5_corrected_bias.png"
-    fig.savefig(path, dpi=300)
-    plt.close(fig)
-    return path
-
-
-# --------------------------------------------------------------------------
-# Panel 5 inset (Fig F) -- per-profile floor, three shapes
-# --------------------------------------------------------------------------
-def _parse_floor(path: Path) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """Parse (CNR, residual, SE) from a per-profile-floor output file.
-
-    A data row is ``CNR n raw_mean corrected_mean residual SE |z| [flag]``;
-    we take columns CNR (0), residual (4), SE (5).
-    """
-    cnr, resid, se = [], [], []
-    for line in path.read_text().splitlines():
-        tok = line.split()
-        if len(tok) >= 7 and tok[1] == "50000":
-            try:
-                cnr.append(float(tok[0]))
-                resid.append(float(tok[4]))
-                se.append(float(tok[5]))
-            except ValueError:
-                continue
-    return np.array(cnr), np.array(resid), np.array(se)
-
-
-def figure_floor() -> Path | None:
-    files = {
-        "gaussian": OUTPUT / "per_profile_floor_gaussian.txt",
-        "voigt": OUTPUT / "per_profile_floor_voigt.txt",
-        "genGauss": OUTPUT / "per_profile_floor_genGauss.txt",
-    }
-    present = {k: v for k, v in files.items() if v.exists()}
-    if not present:
-        print("  (no per_profile_floor_*.txt found -- skipping Fig F)")
-        return None
-
-    fig, ax = plt.subplots(figsize=(4.6, 3.4))
-    # Regime dividers (per-profile CNR, from STATUS / DERIVATION sec. 9), kept
-    # neutral so the DICE-coloured shape curves read cleanly.
-    for xline in (0.7, 1.0):
-        ax.axvline(xline, color="#bbbbbb", ls="--", lw=1.0)
-    ax.text(0.42, 1.25, "failing", color="#777", fontsize=8, ha="center")
-    ax.text(0.83, 1.25, "useful", color="#777", fontsize=8, ha="center")
-    ax.text(6.0, 1.25, "reliable", color="#777", fontsize=8, ha="center")
-
-    for shape, path in present.items():
-        cnr, resid, se = _parse_floor(path)
-        order = np.argsort(cnr)
-        ax.semilogx(cnr[order], np.abs(resid[order]), "o-", ms=3, lw=1.6,
-                    color=SHAPE_COLOR.get(shape, ROLE2),
-                    label=SHAPE_LABEL.get(shape, shape))
-    ax.set_xlabel(r"per-profile contrast-to-noise  CNR")
-    ax.set_ylabel(r"$|$residual$|$  (in $\sigma_0^2$)")
-    ax.set_xlim(0.2, 100)
-    ax.set_ylim(0, 1.4)
-    ax.legend(fontsize=8, loc="upper right", frameon=False)
-    _style(ax)
-    fig.tight_layout()
-    path = OUTPUT / "poster_panel5_floor.png"
-    fig.savefig(path, dpi=300)
-    plt.close(fig)
-    return path
 
 
 def figure_fftcnr(npz_path: Path) -> Path | None:
@@ -344,13 +80,6 @@ def figure_fftcnr(npz_path: Path) -> Path | None:
     d = np.load(npz_path, allow_pickle=True)
     true_cnr = d["true_cnr"]
     shapes = list(d["shapes"])
-    # Map the case-11 shapes to poster labels/colours.
-    style = {
-        "Gaussian (p=2)": ("Gaussian", ROLE1),
-        "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", ROLE3),
-        "Voigt": ("Voigt", ROLE2),
-        "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
-    }
 
     # Plot the recovery ratio (estimated / true) rather than estimated vs true:
     # on the diagonal plot every shape collapses onto the 1:1 line and the
@@ -365,7 +94,7 @@ def figure_fftcnr(npz_path: Path) -> Path | None:
         med = np.nanmedian(ratio, axis=1)
         q1 = np.nanpercentile(ratio, 25, axis=1)
         q3 = np.nanpercentile(ratio, 75, axis=1)
-        label, color = style.get(shape, (shape, "#333333"))
+        label, color = _FFTCNR_STYLE.get(shape, (shape, "#333333"))
         ax.fill_between(true_cnr, q1, q3, color=color, alpha=0.15)
         ax.semilogx(true_cnr, med, "o-", ms=4, lw=1.7, color=color, label=label)
     ax.set_xlim(lo, hi)
@@ -378,15 +107,6 @@ def figure_fftcnr(npz_path: Path) -> Path | None:
     fig.savefig(path, dpi=300)
     plt.close(fig)
     return path
-
-
-# Case-11 shape name -> (poster label, role colour); shared by the fft-cnr figures.
-_FFTCNR_STYLE = {
-    "Gaussian (p=2)": ("Gaussian", ROLE1),
-    "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", ROLE3),
-    "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
-    "Voigt": ("Voigt", ROLE2),
-}
 
 
 def figure_fftcnr_white_vs_shot(white_npz: Path, shot_npz: Path) -> Path | None:
@@ -441,14 +161,14 @@ def main() -> None:
     print("Producing poster figures...")
     print(f"  Panel 1 schematic (measurement):   {figure_schematic_measurement().name}")
     print(f"  Panel 2A schematic (wall + fold):  {figure_schematic_wall_fold().name}")
-    p3 = figure_bias_curves(OUTPUT / "dense_calibration_and_test.txt")
+    p3 = build_bias_curves()
     if p3:
         print(f"  Panel 3 (bias curves):             {p3.name}")
     print(f"  Panel 4 (precision floor):         {figure_crlb().name}")
     p4c = figure_fftcnr(FFTCNR_NPZ)
     if p4c:
         print(f"  Panel 4 (fft-cnr CNR recovery):    {p4c.name}")
-    p5 = figure_corrected_bias(OUTPUT / "dense_calibration_and_test.txt")
+    p5 = build_corrected_bias()
     if p5:
         print(f"  Panel 5 (corrected bias):          {p5.name}")
     pf = figure_floor()

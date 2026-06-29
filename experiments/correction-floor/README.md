@@ -18,6 +18,9 @@ Validated. Poster-scope (source for the Panel 5 floor inset).
   model-saturation breakdown point.
 - `per_frame_in_diffusion_experiment.py [profile_model]` -- the per-frame
   folded-normal / MAS corrections inside a 12-frame diffusion experiment.
+- `render_floor_panel.py` -- renders the poster floor panel
+  (`poster_panel5_floor.png`) from this set's `per_profile_floor_*.txt`; uses
+  `scripts/poster_style.py`.
 
 ## Data
 

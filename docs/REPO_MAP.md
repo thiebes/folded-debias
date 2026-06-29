@@ -146,11 +146,14 @@ under active edit; moving its assets mid-edit risks collisions):
    | `panel6_zhang-qd-scope-control_*` | zhang-qd-control |
    | `panel1_measurement_*`, `panel2_wall-fold_*` (hand schematics), `panel4_fftcnr_*` (sibling `fft-cnr-paper` repo) | stay in `docs/poster/` (poster assets, not a single experiment) |
 
-2. **`scripts/poster_figures.py` split (partially done).** The two pure schematics
-   (Panel 1, Panel 2A) are extracted to `illustrations/` and `poster_figures.py` now
-   imports their builders. The remaining shared renders are the data panels (Panel 4
-   CRLB, Panel 5 corrected bias, the floor inset), whose render code should move to
-   their experiments (`crlb-precision`, `dfree-calibration`, `correction-floor`);
-   that split is the pending cleanup. Until then, the committed figure snapshot in
-   each set folder is the record, and `poster_figures.py` remains the shared renderer
-   for the data panels.
+2. **`scripts/poster_figures.py` split (done).** Every panel's render code now
+   lives with its figure: the schematics in `illustrations/`, the data panels in
+   their experiments (`render_crlb_panel.py` in `crlb-precision`,
+   `render_bias_panels.py` in `dfree-calibration`, `render_floor_panel.py` in
+   `correction-floor`). `poster_figures.py` is now an orchestrator that imports each
+   builder; the only panels it still defines are the two fft-cnr recovery figures,
+   which are sourced from the sibling `fft-cnr-paper` repo and have no
+   weighting-wall experiment to live in. Shared poster primitives (palette, axis
+   style, the report parsers) are in `scripts/poster_style.py`. `build_poster.py`
+   pulls each panel from its home (only the sibling-sourced fft-cnr panel still comes
+   from `output/`).
