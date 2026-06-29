@@ -19,7 +19,5 @@ Location (read-only):
 
 Point `lifetime_identifiability.py --data` at that TPLM folder.
 
-The full identifiability write-up is kept with Joseph's shared materials at
-`P:\jthiebes\free_exciton_diffusion\n_inf_identifiability\`:
-`n_inf_identifiability.pdf` (A4, the formal version), its LaTeX source, a
-markdown copy, and the four figures.
+The write-up built from this data lives in this folder
+(`n_inf_identifiability.pdf`, with its LaTeX source and a markdown copy).

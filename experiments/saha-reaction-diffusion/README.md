@@ -73,8 +73,13 @@ model fix and a calibration-reliability finding:
   figures from the cached best fit without re-running the optimiser. Figures
   `n_inf_lifetime_global_fit.png`, `n_inf_lifetime_profile_ci.png`,
   `n_inf_lifetime_rho_tradeoff.png`, `n_inf_lifetime_saha_collapse.png`, each with
-  a caption beside it; the full write-up (`n_inf_identifiability.pdf`, with its
-  LaTeX source) is on the pshare (see `DATASETS.md`).
+  a caption beside it.
+- `n_inf_identifiability.{tex,md,pdf}` — the write-up for the team (A4 PDF plus
+  its LaTeX source and a markdown copy). The note covers both questions: what the
+  lifetime fit determines, and why the truncation bias does not affect the De/Df
+  fits. It includes the four `n_inf_lifetime_*.png` figures above. Recompile in
+  this folder with `pdflatex n_inf_identifiability.tex` (run twice for the
+  references); the committed PDF is the record.
 - `nonfickian_gaps.png`, `profile_likelihood_De_Df.png`,
   `saha_second_moment_bias.png`, `poster_saha_nonfickian.png` — committed figure
   snapshots for this bed (the diagnostics referenced above).

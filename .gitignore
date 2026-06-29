@@ -14,7 +14,6 @@ venv/
 output/
 *.png
 *.svg
-*.pdf
 !docs/**/*.png
 !docs/**/*.svg
 # Each experiment set keeps its committed figure(s) in its own folder (see
@@ -23,6 +22,14 @@ output/
 !experiments/**/*.svg
 !illustrations/**/*.png
 !illustrations/**/*.svg
+
+# LaTeX build artifacts (write-ups are compiled inside their set folder)
+experiments/**/*.aux
+experiments/**/*.log
+experiments/**/*.out
+experiments/**/*.fls
+experiments/**/*.fdb_latexmk
+experiments/**/*.synctex.gz
 
 # Source PDFs / extracted text (local reference only)
 sources/
