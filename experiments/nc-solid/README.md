@@ -46,7 +46,7 @@ WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe experiments/nc-solid/nc_solid_
 ```
 
 Rebuild the calibration via `run_nc_solid_calibration.sh` following
-`docs/nc_solid_calibration_rerun.md` (many-core machine). Other scripts run the
+`nc_solid_calibration_rerun.md` (many-core machine). Other scripts run the
 same way from the repo root.
 
 ## Key result + figure
@@ -66,7 +66,7 @@ only raises alpha -- it masks subdiffusion, never manufactures it. Figure:
 
 ## See also
 
-`docs/nc_solid_bias_note.md` (technical note + caption),
-`docs/nc_solid_calibration_rerun.md`, `docs/alpha_fit_weighting_survey.md`,
+`nc_solid_bias_note.md` (technical note + caption),
+`nc_solid_calibration_rerun.md`, `../../docs/alpha_fit_weighting_survey.md`,
 `docs/VALIDATION_DESIGN.md`, `docs/poster/POSTER_PLAN.md` Panel 6,
 `docs/STATUS.md` (2026-06-15 de-noising update).

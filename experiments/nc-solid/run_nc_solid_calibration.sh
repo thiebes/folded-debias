@@ -8,7 +8,7 @@
 # rebuild raises it to 8000 runs/cell (~2.8x less grid noise) and closes two
 # coverage gaps (CNR 100 -> 250; sigma-max 0.28 -> 0.35). ~96M small fits.
 #
-# Run in WSL on the 16-core machine. See docs/nc_solid_calibration_rerun.md.
+# Run in WSL on the 16-core machine. See nc_solid_calibration_rerun.md (this folder).
 #   PYTHON=.venv-linux/bin/python bash scripts/run_nc_solid_calibration.sh
 # Override the worker count with WORKERS=N (default: all logical cores).
 set -euo pipefail

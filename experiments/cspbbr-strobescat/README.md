@@ -12,7 +12,7 @@ CNR collapses; the correction removes that bias before the D fit.
 
 The noise is white (constant-floor), not shot-limited -- a raster-scanned APD
 measurement whose photon-transfer fit comes out floor-dominated -- so the
-calibration uses the gaussian model. See `docs/calibration_runs.md`.
+calibration uses the gaussian model. See `../../docs/calibration_runs.md`.
 
 ## All fluences at once (recommended)
 
@@ -44,7 +44,7 @@ calibrations are built). The run machine must be able to read the raw data at
    ```
 
 2. **Calibrate** the `(CNR, sigma^2)` bias lookup for this geometry (heavy; run
-   on the multi-core box -- see `docs/cspbbr_calibration_run.md`):
+   on the multi-core box -- see `cspbbr_calibration_run.md`):
 
    ```bash
    PYTHON=.venv-linux/bin/python bash scripts/run_cspbbr_calibration.sh

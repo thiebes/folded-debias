@@ -84,11 +84,15 @@ and `scripts/build_poster.py` pulls the panels from these folders.
   - `poster_figures.py`, `poster_fftcnr_dense.py`, `build_poster.py` -- poster
     assembly (renders/builds the poster). See "Poster assembly" below.
   - `legacy/` -- deprecated/superseded exploratory scripts (run with `PYTHONPATH=src`).
-- `docs/` -- shared docs: `STATUS.md` (source of truth), `PLAN.md`,
-  `DERIVATION.md`, `VALIDATION_DESIGN.md`, `VALIDATION_AUDIT.md`,
+- `docs/` -- shared docs (see [`docs/README.md`](README.md) for the grouped
+  index): `STATUS.md` (source of truth), `PLAN.md`, `DERIVATION.md`,
+  `VALIDATION_DESIGN.md`, `VALIDATION_AUDIT.md`, `PAPER_BRIEF.md`,
   `prior_art_map.md`, `citations_audit.md`, `email_collaborators.md`,
-  `nc_solid_bias_note.md`, `alpha_fit_weighting_survey.md`,
-  `nc_solid_calibration_rerun.md`, `calibration_runs.md`, and `docs/poster/`.
+  `marc_briefing.md`, `alpha_fit_weighting_survey.md`, `calibration_runs.md`,
+  and `docs/poster/`. Dataset-specific notes moved to their experiment folders
+  (`nc_solid_bias_note.md`, `nc_solid_calibration_rerun.md` ->
+  `experiments/nc-solid/`; `cspbbr_calibration_run.md` ->
+  `experiments/cspbbr-strobescat/`).
 
 ## Archive
 
