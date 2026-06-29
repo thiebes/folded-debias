@@ -65,7 +65,7 @@ from weighting_wall.montecarlo import run_ensemble  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 from weighting_wall.weights import corrected_variance  # noqa: E402
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
 
 # Spain CVD (Okabe-Ito) semantic pairing: blue = corrected (tracks truth),
