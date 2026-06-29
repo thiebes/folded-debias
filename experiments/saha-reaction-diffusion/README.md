@@ -62,16 +62,19 @@ model fix and a calibration-reliability finding:
   `__main__` guard), so they are not import-smoke-tested here; see each file's
   docstring.
 - `lifetime_identifiability.py` — identifiability analysis of the global lifetime
-  fit (same adjacent paper): the global fit, then a deterministic profile
-  likelihood of each rate, then a demonstration of the Saha rho-nu degeneracy.
-  Result: nu, the trapping rate lam, and the trap decay gamma are determined; rho
-  is not — at n ≥ A the Saha free-charge fraction makes the bimolecular rate scale
-  as `rho*A`, degenerate with nu, so the fit determines only `nu + rho*A`. Unlike
-  the two scripts above it is parameterized (`--data`, `--sample`) and runnable;
-  point `--data` at the TPLM folder in `DATASETS.md`. Figures
+  fit (same adjacent paper): the global fit (`fit`), a deterministic profile
+  likelihood of each rate (`profile`), the Saha rho-nu trade (`tradeoff`), and the
+  Saha exact-proportionality figure (`saha`). Result: nu, the trapping rate lam,
+  and the trap decay gamma are determined; rho is not. The degeneracy is exact:
+  the Saha identity `(1-x) = x^2 n/A` makes the exciton rate `nu(1-x)` exactly
+  proportional to the bimolecular rate `rho*x^2*n` at every density, so the fit
+  determines only `nu + rho*A`. Parameterized (`--data`, `--sample`) and runnable;
+  point `--data` at the TPLM folder in `DATASETS.md`. `--no-fit` regenerates the
+  figures from the cached best fit without re-running the optimiser. Figures
   `n_inf_lifetime_global_fit.png`, `n_inf_lifetime_profile_ci.png`,
-  `n_inf_lifetime_rho_tradeoff.png`, each with a caption beside it; the full
-  write-up is on the pshare (see `DATASETS.md`).
+  `n_inf_lifetime_rho_tradeoff.png`, `n_inf_lifetime_saha_collapse.png`, each with
+  a caption beside it; the full write-up (`n_inf_identifiability.pdf`, with its
+  LaTeX source) is on the pshare (see `DATASETS.md`).
 - `nonfickian_gaps.png`, `profile_likelihood_De_Df.png`,
   `saha_second_moment_bias.png`, `poster_saha_nonfickian.png` — committed figure
   snapshots for this bed (the diagnostics referenced above).
