@@ -123,28 +123,13 @@ layout, `poster_draft.pptx`, QR codes) and `scripts/` (`build_poster.py`,
 `poster_figures.py`). Two convention follow-ups are **deferred** (the poster is
 under active edit; moving its assets mid-edit risks collisions):
 
-1. **`docs/poster/figure_candidates/` relocation.** Each candidate traces to an
-   experiment set and should move into that set's folder (per
-   `EXPERIMENT_CONVENTIONS.md`). The mapping is below; the physical move is
-   deferred pending confirmation.
-
-   | Candidate (prefix) | Experiment set |
-   | ------- | ------- |
-   | `panel2_fitted-variance-pdf_*` | boundary-diagnostic |
-   | `panel3_ALT_mas-comparison_*`, `panel5_corrected-bias_*` | dfree-calibration |
-   | `panel3_ALT_poc-demo-2panel_*`, `panel3_bias-curves_*` | poc-bias-correction |
-   | `panel3_crlb-precision-floor_*` | crlb-precision |
-   | `panel5_ALT_unbounded-fit-aside_*` | estimator-comparison |
-   | `panel5_per-profile-floor_*` | correction-floor |
-   | `panel6_*nc-solid*`, `panel6_nc-solid-severity_*` | nc-solid |
-   | `panel6_coverage-ci-check_*` | coverage-interval |
-   | `panel6_*De-Df*`, `panel6_saha-second-moment-bias_*` | saha-reaction-diffusion |
-   | `panel6_marc-mn-diffmap-validation_*` | mn-trapping |
-   | `panel6_multiexp-decay-robustness_*` | multiexp-decay |
-   | `panel6_subdiffusive-alpha-recovery_*` | subdiffusive-alpha |
-   | `panel6_wse2-realdata_*` | wse2-strobescat |
-   | `panel6_zhang-qd-scope-control_*` | zhang-qd-control |
-   | `panel1_measurement_*`, `panel2_wall-fold_*` (hand schematics), `panel4_fftcnr_*` (sibling `fft-cnr-paper` repo) | stay in `docs/poster/` (poster assets, not a single experiment) |
+1. **`docs/poster/figure_candidates/` relocation (done).** Each candidate now lives
+   in a `figure_candidates/` subfolder of the experiment that produced it (the two
+   schematic drafts in their `illustrations/` folder); see
+   `docs/poster/figure_candidates/INDEX.md` for the full candidate -> location map.
+   Only the `panel4_fftcnr_*` candidates remain in `docs/poster/figure_candidates/`,
+   because they are sourced from the sibling `fft-cnr` / `fft-cnr-paper` repos and
+   have no weighting-wall experiment to live in.
 
 2. **`scripts/poster_figures.py` split (done).** Every panel's render code now
    lives with its figure: the schematics in `illustrations/`, the data panels in
