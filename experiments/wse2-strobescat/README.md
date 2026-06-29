@@ -2,63 +2,104 @@
 
 ## Purpose
 
-The poster's real-data panel: run the correction on real bulk-WSe2 stroboSCAT
-diffusion data (Enrique Arévalo Rodríguez), reduced via Enrique's own pipeline,
-and show a measurable truncation bias removed on a real measurement.
+Real-data truncation-bias diagnostics on Enrique Arévalo Rodríguez's stroboSCAT
+diffusion scans (bulk WSe2 and MoS2/MoSe2 alloys). Reduce the scans through
+Enrique's own pipeline, apply the project's folded-normal correction, and
+establish honestly what the correction does on real measurements.
 
 ## Status
 
-Validated (in-hand version). Poster-scope (Panel 6 real-data).
+Validated / work-in-progress. Poster-scope (the real-data panel and the
+"benefit + limitation" figures).
+
+## Key findings
+
+- **De-parity is mandatory.** Every measurement is a merge of two interleaved
+  delay sweeps (a coarse and a fine sweep) with *different* sigma^2(0); a single
+  global baseline injects a spurious slope. Each sweep must be re-zeroed to its
+  own t0 before fitting D. A global offset is slope-invariant; only this
+  per-sweep re-zeroing legitimately changes D.
+- **The two sweeps often disagree** (the coarse sweep diffuses; the fine sweep is
+  flat or anti-diffuses), so some "diffusion" in the naive global-baseline fits
+  was a batch-offset artifact. WSe2 `Power_var/250224/0.020` and
+  `mixed_tmdc/50_50/250702` go degenerate (negative D) under correct baselining;
+  other WSe2 power dates are clean (both sweeps agree).
+- **On real data the correction is small where the data is trustworthy.**
+  Reproducing Enrique's exact fit (t <= 2 ns, forced origin, inverse-variance),
+  the corrected/naive D ratio is ~1.00 for high-CNR measurements and ~0.95-0.99
+  where the fit reaches CNR ~1.4-2.5 -- the effect grows monotonically as the fit
+  reaches lower CNR, exactly as the theory predicts. The large bias lives at low
+  CNR, which is also where real frames become individually unreliable.
+- **The bias-magnitude claim belongs to simulation; real data is validation.**
+  The correction debiases the *mean* (and hence D, a mean-trend slope), not every
+  individual near-floor frame. The simulated recovery demo carries the
+  "recovers the true width" claim (truth known); the real data shows the method
+  returns stable, self-consistent D and a CNR-dependence matching theory.
 
 ## Contents
 
-**Canonical**
-
-- `wse2_realdata_panel.py [n_scans]` -- reduces the raw long-delay scans
-  (differential `ON/OFF-1`, sign fixed per delay by a spot ROI, width from a
-  line-cut band, time-since-pump = -delay), builds a white-matched D-free
-  calibration at the data geometry, and produces the panel.
-
-**Exploratory diagnostics** (the reduction triage that led to the canonical panel)
-
-- `realdata_diagnostics.py` -- the shared measurement registry + loaders
-  (`MEASUREMENTS`, `load_measurement`); imported by the others.
-- `realdata_triage.py`, `realdata_frame_ladder.py`, `realdata_sweep_views.py`,
-  `realdata_early_cut_plots.py`, `realdata_enrique_pipeline.py` -- exploratory
-  views over the candidate scans (kept for provenance; not poster figures).
+- `realdata_diagnostics.py` -- the shared registry (`MEASUREMENTS`), loaders
+  (`load_measurement`, sweep detection), per-frame CNR, calibration build/cache,
+  the folded-normal correction, de-parity, the sustained-tail truncation, and the
+  per-measurement diagnostic outputs. Imported by the others.
+- `realdata_enrique_pipeline.py` -- reproduces Enrique's exact D fit (t <= 2 ns,
+  forced origin, inverse-variance) and overlays the correction; per-measurement
+  `msd_enrique_pipeline.png`.
+- `realdata_sweep_views.py` -- per-sweep and de-paritied-merged MSD views.
+- `realdata_triage.py` -- de-parity triage over all analysis-bearing
+  measurements; ranks clean diffusers (both sweeps agree); `triage_deparity.csv`.
+- `realdata_frame_ladder.py` -- the CNR ladder of individual profile frames
+  (benefit + limitation).
+- `realdata_early_cut_plots.py` -- early-time (manual cutoff) MSD plots.
+- `render_recovery_demo.py` -- the simulated recovery figures (benefit frame +
+  distribution), where the truth is known.
+- `wse2_realdata_panel.py [n_scans]` -- the original locked WSe2 panel (raw-scan
+  reduction: differential, sign-by-ROI, line-cut band, time = -delay).
 
 ## Data
 
-Read-only from the pshare; see `DATASETS.md`. Nothing is committed except the
-panel figure snapshots.
+Read-only from the pshare; see `DATASETS.md`. Raw collaborator scans stay on the
+pshare (never committed). All *generated* outputs are tracked here under
+`diagnostics/` (per-measurement folders, `_frame_ladder/`, `_calib/` calibration
+caches, `index.md`, `METHOD.md`, `triage*.csv`).
 
 ## Run
 
 ```bash
-.venv/Scripts/python.exe experiments/wse2-strobescat/wse2_realdata_panel.py
-.venv/Scripts/python.exe experiments/wse2-strobescat/wse2_realdata_panel.py 1   # single-scan illustration
+# per-measurement diagnostics (builds + caches calibrations under diagnostics/_calib)
+.venv/Scripts/python.exe experiments/wse2-strobescat/realdata_diagnostics.py <name>
+# Enrique-pipeline reproduction + correction, all registered measurements
+.venv/Scripts/python.exe experiments/wse2-strobescat/realdata_enrique_pipeline.py
+# the CNR frame ladder and the simulated recovery demo
+.venv/Scripts/python.exe experiments/wse2-strobescat/realdata_frame_ladder.py
+.venv/Scripts/python.exe experiments/wse2-strobescat/render_recovery_demo.py
 ```
 
-First run builds and caches the white calibration (`output/calibration_wse2_white.npz`,
-~10 min); instant after. Outputs to repo-root `output/`; committed snapshots are here.
+`WEIGHTING_WALL_WORKERS=1` (serial) is the safe default for the calibration
+builds; `=0` (all cores) is faster but the Windows process pool can break under
+CPU contention.
 
-## Key result + figure
+## Key result + figures
 
-Merging the 3 long scans keeps per-frame CNR >= 2.6 (above the floor); the
-correction is ~0 at high-CNR frames and removes the inflated late-frame widths,
-giving D -7% (naive 1.10 -> corrected 1.02 px^2/ns) -- a measurable truncation
-bias on real data. A single un-averaged scan reaches CNR ~0.8-0.9 (below the
-floor), where the correction over-subtracts catastrophically -- the concrete face
-of the design rule. Figures: `wse2_realdata_panel.png` (locked), plus the 1- and
-2-scan variants. Widths are in px^2 (pixel->um scale is an open question with
-Enrique, Email 9).
+- Benefit (simulation): `diagnostics/_frame_ladder/0_simulated_benefit.png` and
+  `0b_simulated_distribution.png` -- the true width recovered from frames that
+  look unusable; the ensemble distribution recentered on truth.
+- Limitation: `diagnostics/_frame_ladder/5_cnr00.5_*` -- below-floor
+  over-subtraction.
+- Real-data correction: `diagnostics/<measurement>/msd_enrique_pipeline.png`;
+  summary in `diagnostics/index.md`. Widths in px^2 (px->um scale is an open
+  question with Enrique, Email 9).
 
 ## Depends on
 
-`weighting_wall` (`calibration`, `truncation`, `weights`, `cnr`, `fit`). The
-exploratory scripts share `realdata_diagnostics.py` (local sibling).
+`weighting_wall` (`calibration`, `truncation`, `weights`, `cnr`, `fit`,
+`noise`). `fft-cnr` for per-frame CNR. The diagnostic scripts share
+`realdata_diagnostics.py` (local sibling).
 
 ## See also
 
-`docs/STATUS.md` (2026-06-19 WSe2 panel update), `docs/poster/POSTER_PLAN.md`
-Panel 6, `docs/email_collaborators.md` (Enrique correspondence).
+`docs/STATUS.md`, `docs/poster/POSTER_PLAN.md` Panel 6,
+`docs/email_collaborators.md` (Enrique).
+fft-cnr note: the per-frame CNR must be measured on the spot window, not the full
+line-cut (off-spot structure corrupts the spectral CNR at low signal) --
+`thiebes/fft-cnr` issue #7.

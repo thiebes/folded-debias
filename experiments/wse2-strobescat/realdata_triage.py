@@ -35,8 +35,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 import fft_cnr  # noqa: E402
 from weighting_wall.fit import fit_D, fit_variance  # noqa: E402
 
-ROOT = r"P:\Lab\Enrique\lab"
-OUT = r"P:\jthiebes\WIP\realdata_bias_diagnostics\triage_deparity.csv"
+ROOT = r"P:\Lab\Enrique\lab"   # raw collaborator data stays on the pshare
+OUT = os.path.join(os.path.dirname(__file__), "diagnostics", "triage_deparity.csv")
 FLOOR = 1.3
 A_WHITE = 0.4
 MIN_SWEEP = 4          # min kept frames to fit a sweep's D

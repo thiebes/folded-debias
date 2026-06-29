@@ -22,7 +22,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from realdata_diagnostics import MEASUREMENTS, load_measurement  # noqa: E402
 
-WIP = r"P:\jthiebes\WIP\realdata_bias_diagnostics"
+WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
 OUTDIR = os.path.join(WIP, "_frame_ladder")
 RED = "#c60b1e"
 BLUE = "#0077c8"
