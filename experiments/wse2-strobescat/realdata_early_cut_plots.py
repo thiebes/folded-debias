@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from weighting_wall.fit import fit_D  # noqa: E402
 from realdata_diagnostics import MEASUREMENTS, _find_canonical  # noqa: E402
 
-WIP = r"P:\jthiebes\WIP\realdata_bias_diagnostics"
+WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
 
 # measurement label -> manual cutoff time (ns): keep CNR-floor frames at t <= cut
 CUTOFFS = {

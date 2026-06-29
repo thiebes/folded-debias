@@ -63,8 +63,8 @@ from weighting_wall import GaussianModel, calibrate_d_free  # noqa: E402
 from weighting_wall.fit import fit_D, fit_variance  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 
-# --- output root on the pshare (C: is space-constrained; never stage on C:) ---
-WIP = r"P:\jthiebes\WIP\realdata_bias_diagnostics"
+# outputs live with the experiment (this folder's diagnostics/ subtree), tracked
+WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
 CALIB_DIR = os.path.join(WIP, "_calib")
 
 # --- measurement registry: name -> (label, folder) ---------------------------

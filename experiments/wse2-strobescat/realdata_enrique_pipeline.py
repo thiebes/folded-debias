@@ -43,7 +43,7 @@ from realdata_diagnostics import (MEASUREMENTS, FIT_HALF_SIGMA,  # noqa: E402
                                   build_or_load_calibration, decide_noise_law)
 from weighting_wall.fit import fit_variance  # noqa: E402
 
-WIP = r"P:\jthiebes\WIP\realdata_bias_diagnostics"
+WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
 RED = "#c60b1e"
 BLUE = "#0077c8"
 GRAY = "0.6"

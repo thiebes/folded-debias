@@ -35,7 +35,7 @@ from weighting_wall.fit import fit_D  # noqa: E402
 from realdata_diagnostics import (MEASUREMENTS, _find_canonical,  # noqa: E402
                                   truncate_degraded_tail)
 
-WIP = r"P:\jthiebes\WIP\realdata_bias_diagnostics"
+WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
 BLUE = "#0072B2"      # sweep 0 (coarse) / merged
 VERM = "#D55E00"      # sweep 1 (fine)
 GOLD = "#f7941e"
