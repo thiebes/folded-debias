@@ -15,17 +15,22 @@ from pathlib import Path
 import numpy as np
 from matplotlib.colors import to_rgb
 
-# --- Poster palette (Okabe-Ito colourblind-safe set, Madrid-localised names) -
-# Five hues that stay distinguishable under common colour-vision deficiencies,
-# each legible on white. Roles carry fixed meaning: blue = the true value,
-# red = the biased/inflated value (true-vs-biased reads as blue-vs-red); blue /
-# gold / green are the three profile shapes; purple is reserved for fills and
-# region bands at low alpha.
-ROLE1 = "#0072B2"   # mediterranean blue  -- the true value / Gaussian shape
-ROLE2 = "#E69F00"   # flag gold           -- fitted-variance curve / Voigt shape
-ROLE3 = "#009E73"   # olive green         -- generalized-Gaussian shape
-ROLE4 = "#D55E00"   # spanish red         -- the biased/inflated value
-ROLE5 = "#CC79A7"   # castilian purple    -- fills, region bands (use low alpha)
+# --- Poster palette (Spanish flag set, from the plot style guide) --
+# Five flag-themed hues that stay mutually distinguishable under red-green and
+# blue-yellow colour-vision deficiency. Roles carry fixed meaning: blue = the
+# true value, red = the biased/inflated value (true-vs-biased reads as
+# blue-vs-red); blue / yellow / green are the three profile shapes; indigo is
+# reserved for fills and region bands at low alpha. The set does not survive
+# grayscale (red / green / blue collapse to nearly one lightness), so never let
+# a red / green / blue distinction carry meaning that must read without colour.
+ROLE1 = "#0077c8"   # blue                 -- the true value / Gaussian shape
+ROLE2 = "#ffc400"   # flag yellow (gualda) -- fitted-variance curve / Voigt shape
+ROLE3 = "#4a7729"   # fern green           -- generalized-Gaussian shape
+ROLE4 = "#c60b1e"   # flag red             -- the biased/inflated value
+ROLE5 = "#540d6e"   # indigo               -- fills, region bands (use low alpha)
+# Flag yellow is bright and low-contrast on white; for thin lines or text in
+# yellow read against the page, use this deep companion instead (plot_style.md).
+YELLOW_DEEP = "#9E7900"  # deep gold        -- flag yellow as a thin line / text
 
 # DICE palette (Montana State; retained as a fallback for non-poster scripts).
 DICE_BLUE = "#003f7f"
@@ -39,10 +44,11 @@ SHAPE_LABEL = {
     "generalized_gaussian": "generalized-Gaussian",
     "genGauss": "generalized-Gaussian",
 }
-# One role colour per profile shape: roles 1 / 2 / 3 (the strong-contrast lines).
+# One role colour per profile shape (the strong-contrast lines). Voigt takes the
+# deep gold rather than bright flag yellow so the thin line reads on white.
 SHAPE_COLOR = {
     "gaussian": ROLE1,
-    "voigt": ROLE2,
+    "voigt": YELLOW_DEEP,
     "generalized_gaussian": ROLE3,
     "genGauss": ROLE3,
 }

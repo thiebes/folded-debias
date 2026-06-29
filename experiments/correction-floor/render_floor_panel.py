@@ -24,8 +24,8 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from poster_style import (ROLE2, SHAPE_COLOR, SHAPE_LABEL, parse_floor,  # noqa: E402
-                          style)
+from poster_style import (SHAPE_COLOR, SHAPE_LABEL, YELLOW_DEEP,  # noqa: E402
+                          parse_floor, style)
 
 OUT = HERE / "poster_panel5_floor.png"
 
@@ -54,7 +54,7 @@ def build() -> Path | None:
         cnr, resid, se = parse_floor(path)
         order = np.argsort(cnr)
         ax.semilogx(cnr[order], np.abs(resid[order]), "o-", ms=3, lw=1.6,
-                    color=SHAPE_COLOR.get(shape, ROLE2),
+                    color=SHAPE_COLOR.get(shape, YELLOW_DEEP),
                     label=SHAPE_LABEL.get(shape, shape))
     ax.set_xlabel(r"per-profile contrast-to-noise  CNR")
     ax.set_ylabel(r"$|$residual$|$  (in $\sigma_0^2$)")

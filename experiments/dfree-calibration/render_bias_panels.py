@@ -22,8 +22,8 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from poster_style import (ROLE2, ROLE4, ROLE5, SHAPE_COLOR, SHAPE_LABEL,  # noqa: E402
-                          parse_dense_deciles, style)
+from poster_style import (ROLE4, ROLE5, SHAPE_COLOR, SHAPE_LABEL,  # noqa: E402
+                          YELLOW_DEEP, parse_dense_deciles, style)
 
 DENSE = HERE / "dense_calibration_and_test.txt"
 OUT_BIAS = HERE / "poster_panel3_bias.png"
@@ -46,7 +46,7 @@ def build_bias_curves() -> Path | None:
     # failing one (inverse-variance) -- both biased relative to the unbiased line.
     ax.loglog(g["cnr"], g["ols"], "o-", ms=4, lw=2.0, color=ROLE4,
               label="unweighted (OLS)")
-    ax.loglog(g["cnr"], g["inv_var"], "o-", ms=4, lw=2.0, color=ROLE2,
+    ax.loglog(g["cnr"], g["inv_var"], "o-", ms=4, lw=2.0, color=YELLOW_DEEP,
               label="inverse-variance")
     ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
     ax.set_ylabel(r"$\langle D_\mathrm{est}\rangle\,/\,D_\mathrm{true}$")
@@ -73,7 +73,7 @@ def build_corrected_bias() -> Path | None:
     ax.axhline(1.0, color="#666666", lw=1.0)
     for shape, d in shapes.items():
         ax.semilogx(d["cnr"], d["folded"], "o-", ms=4, lw=1.8,
-                    color=SHAPE_COLOR.get(shape, ROLE2),
+                    color=SHAPE_COLOR.get(shape, YELLOW_DEEP),
                     label=SHAPE_LABEL.get(shape, shape))
     ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
     ax.set_ylabel(r"corrected  $\langle \hat D\rangle / D_\mathrm{true}$")

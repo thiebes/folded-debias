@@ -1,11 +1,15 @@
 """Wall-and-fold schematic (poster Panel 2A): the wall at zero, the reflected
 tail, and the tilted MSD slope it produces.
 
-A pure matplotlib illustration -- no data input. Left panel: a fitted-variance
-distribution bounded at zero, with the forbidden negative tail folded back across
-the wall so the distribution piles up and skews right (mean above the true value).
-Right panel: that per-frame bias grows as CNR falls across late frames, tilting the
-MSD slope and overestimating D. Writes the figure into this folder.
+A pure matplotlib illustration -- no data input. The left panel shows a
+fitted-variance distribution bounded at zero, with the forbidden negative tail
+folded back across the wall so the distribution piles up and skews right (mean
+above the true value). The right panel shows that per-frame bias growing as CNR
+falls across late frames, tilting the MSD slope and overestimating D.
+
+Each panel is written as its own image so the poster can place them
+independently, and every output is saved with a transparent background. A
+combined two-panel image is also written for callers that want both at once.
 
 Requires the sibling `curved-text` package (the curved on-curve labels):
     .venv/Scripts/python.exe -m pip install -e ../curved-text
@@ -26,18 +30,28 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from curved_text import CurvedText  # noqa: E402
 
-# Poster palette (Okabe-Ito, colourblind-safe): blue = the true value,
-# red = the biased/inflated value.
-ROLE1 = "#0072B2"   # mediterranean blue -- the true value
-ROLE4 = "#D55E00"   # spanish red        -- the biased / inflated value
+# Spanish flag palette (from the plot style guide). Three semantic
+# colours: blue = the true value, red = the biased/inflated value, indigo = the
+# fitted-variance distribution family (distribution of fits, unbounded estimate,
+# reflected tail, forbidden tail), drawn at descending alpha so the one hue
+# tells one story.
+ROLE1 = "#0077c8"   # blue     -- the true value
+ROLE4 = "#c60b1e"   # flag red -- the biased / inflated value
+INDIGO = "#540d6e"  # indigo   -- the fitted-variance distribution family
 
-OUT = Path(__file__).resolve().parent / "wall_fold_schematic.png"
+HERE = Path(__file__).resolve().parent
+OUT_LEFT = HERE / "wall_fold_schematic_left.png"
+OUT_RIGHT = HERE / "wall_fold_schematic_right.png"
+OUT_COMBINED = HERE / "wall_fold_schematic.png"
 
 
-def build() -> Path:
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.0, 3.4))
+def _plot_left(axL):
+    """Draw the fold-at-the-wall panel; return the curves the labels ride on.
 
-    # --- Left: the fold at the wall ---------------------------------------
+    Plotting must precede ``tight_layout``, but the CurvedText labels need the
+    settled display transform, so labelling is split into ``_label_left`` and
+    called after layout.
+    """
     v = np.linspace(-3.0, 4.0, 700)
     m_true, sd = 0.5, 1.1
     g_un = np.exp(-0.5 * ((v - m_true) / sd) ** 2)     # estimate with no wall
@@ -55,19 +69,19 @@ def build() -> Path:
     m_folded = (np.trapezoid(v[pos] * folded[pos], v[pos])
                 / np.trapezoid(folded[pos], v[pos]))
 
-    axL.fill_between(v[pos], 0, g[pos], color=ROLE4, alpha=0.15, lw=0)
-    axL.fill_between(v[pos], 0, g_ref[pos], color=ROLE4, alpha=0.15, lw=0)
-    # One hue (the three are one story); alpha ranks them: faint = the
-    # hypothetical unbounded estimate, medium = the reflected mechanism, full =
-    # the resulting distribution of fits.
-    axL.plot(v[pos], g[pos], color=ROLE4, lw=1.8, alpha=0.40)              # realizable
-    axL.plot(v[~pos], g[~pos], color=ROLE4, lw=1.4, alpha=0.40,
+    axL.fill_between(v[pos], 0, g[pos], color=INDIGO, alpha=0.15, lw=0)
+    axL.fill_between(v[pos], 0, g_ref[pos], color=INDIGO, alpha=0.15, lw=0)
+    # One hue (the distribution family is one story); alpha ranks them: faint =
+    # the hypothetical unbounded estimate, medium = the reflected mechanism,
+    # full = the resulting distribution of fits.
+    axL.plot(v[pos], g[pos], color=INDIGO, lw=1.8, alpha=0.40)             # realizable
+    axL.plot(v[~pos], g[~pos], color=INDIGO, lw=1.4, alpha=0.40,
              ls=(0, (1, 1.6)))                                            # forbidden
-    axL.plot(v[pos], g_ref[pos], color=ROLE4, lw=1.6, alpha=0.70)          # reflected
-    axL.plot(v[pos], folded[pos], color=ROLE4, lw=1.8, ls=(0, (4, 2)))     # sum (fits)
+    axL.plot(v[pos], g_ref[pos], color=INDIGO, lw=1.6, alpha=0.70)         # reflected
+    axL.plot(v[pos], folded[pos], color=INDIGO, lw=1.8, ls=(0, (4, 2)))    # sum (fits)
     axL.axvline(0.0, color="k", lw=1.6)
     axL.axvline(m_true, color=ROLE1, ls=":", lw=1.1)
-    axL.axvline(m_folded, color="#7a2f00", ls=":", lw=1.1)
+    axL.axvline(m_folded, color=ROLE4, ls=":", lw=1.1)
 
     # The bias is the gap between the two; the names run vertically along their
     # own dotted lines. Bias sits to the right of the arrow, level with it.
@@ -80,7 +94,7 @@ def build() -> Path:
     axL.text(m_true - 0.13, 2.40, "true $\\sigma^2$", fontsize=7, color=ROLE1,
              rotation=90, rotation_mode="anchor", va="center", ha="right")
     axL.text(m_folded - 0.13, 2.40, "mean $\\langle\\hat\\sigma^2\\rangle$",
-             fontsize=7, color="#7a2f00", rotation=90, rotation_mode="anchor",
+             fontsize=7, color=ROLE4, rotation=90, rotation_mode="anchor",
              va="center", ha="right")
 
     axL.set_xlabel("fitted variance,  $\\hat\\sigma^2$")
@@ -90,7 +104,29 @@ def build() -> Path:
     axL.set_xticks([])
     axL.set_yticks([])
 
-    # --- Right: the tilted MSD slope --------------------------------------
+    return {"v": v, "g": g, "g_ref": g_ref, "folded": folded}
+
+
+def _label_left(axL, data):
+    """Curve names run parallel to each curve and close to it. The rotation
+    needs the settled display transform, so this is called after layout."""
+    v, g, g_ref, folded = data["v"], data["g"], data["g_ref"], data["folded"]
+    fm = (v >= -2.4) & (v <= -0.3)
+    CurvedText(v[fm], g[fm], "forbidden:  variance < 0", axL, offset=5.0,
+               pos=0.5, anchor="center", color=INDIGO, alpha=0.7, fontsize=7)
+    sm = (v >= 0.3) & (v <= 2.3)
+    CurvedText(v[sm], folded[sm], "distribution of fits", axL, offset=5.0,
+               pos=0.6, anchor="center", color=INDIGO, fontsize=7)
+    um = (v >= 1.0) & (v <= 3.2)
+    CurvedText(v[um], g[um], "unbounded estimate", axL, offset=-6.0,
+               pos=0.4, anchor="center", color=INDIGO, fontsize=7)
+    rm = (v >= 0.4) & (v <= 2.4)
+    CurvedText(v[rm], g_ref[rm], "reflected tail", axL, offset=5.5,
+               pos=0.65, anchor="center", color=INDIGO, fontsize=7)
+
+
+def _plot_right(axR):
+    """Draw the tilted-MSD-slope panel; return the curves the labels ride on."""
     t = np.linspace(0, 3.0, 7)
     slope_true = 0.04
     true_line = slope_true * t
@@ -107,7 +143,7 @@ def build() -> Path:
         axR.plot([ti, ti], [tr, bi], color="#bbb", lw=0.8, zorder=0)
 
     # The slope-gap annotation is the payload; the two line labels are added after
-    # layout (below), rotated to the line slope and pushed to opposite sides.
+    # layout (in _label_right), rotated to the line slope and pushed to opposite sides.
     axR.annotate("", xy=(2.93, fit_line[-1]), xytext=(2.93, true_line[-1]),
                  arrowprops=dict(arrowstyle="<->", color="k", lw=0.9,
                                  mutation_scale=8))
@@ -121,33 +157,59 @@ def build() -> Path:
     axR.set_xticks([])
     axR.set_yticks([])
 
-    fig.tight_layout()
+    return {"t": t, "true_line": true_line, "fit_line": fit_line}
 
-    # Right panel: label both lines with CurvedText at the same fractional
-    # position on each line, offset to opposite sides so they hug their lines.
+
+def _label_right(axR, data):
+    """Label both lines with CurvedText at the same fractional position on each
+    line, offset to opposite sides so they hug their lines. Called after layout."""
+    t, true_line, fit_line = data["t"], data["true_line"], data["fit_line"]
     CurvedText(t, fit_line, "inflated fit", axR, pos=0.4, anchor="center",
                offset=5.0, color=ROLE4, fontsize=7)
     CurvedText(t, true_line, "true slope $\\propto D$", axR, pos=0.4,
                anchor="center", offset=-5.0, color=ROLE1, fontsize=7)
 
-    # Curve names run parallel to each curve and close to it (the rotation needs
-    # the settled display transform, so this comes after the layout).
-    fm = (v >= -2.4) & (v <= -0.3)
-    CurvedText(v[fm], g[fm], "forbidden:  variance < 0", axL, offset=5.0,
-               pos=0.5, anchor="center", color=ROLE4, alpha=0.7, fontsize=7)
-    sm = (v >= 0.3) & (v <= 2.3)
-    CurvedText(v[sm], folded[sm], "distribution of fits", axL, offset=5.0,
-               pos=0.6, anchor="center", color=ROLE4, fontsize=7)
-    um = (v >= 1.0) & (v <= 3.2)
-    CurvedText(v[um], g[um], "unbounded estimate", axL, offset=-6.0,
-               pos=0.4, anchor="center", color=ROLE4, fontsize=7)
-    rm = (v >= 0.4) & (v <= 2.4)
-    CurvedText(v[rm], g_ref[rm], "reflected tail", axL, offset=5.5,
-               pos=0.65, anchor="center", color=ROLE4, fontsize=7)
-    fig.savefig(OUT, dpi=300)
+
+def build_left() -> Path:
+    """Standalone left panel (the fold at the wall), transparent background."""
+    fig, axL = plt.subplots(figsize=(4.0, 3.4))
+    data = _plot_left(axL)
+    fig.tight_layout()
+    _label_left(axL, data)
+    fig.savefig(OUT_LEFT, dpi=300, transparent=True)
     plt.close(fig)
-    return OUT
+    return OUT_LEFT
+
+
+def build_right() -> Path:
+    """Standalone right panel (the tilted MSD slope), transparent background."""
+    fig, axR = plt.subplots(figsize=(4.0, 3.4))
+    data = _plot_right(axR)
+    fig.tight_layout()
+    _label_right(axR, data)
+    fig.savefig(OUT_RIGHT, dpi=300, transparent=True)
+    plt.close(fig)
+    return OUT_RIGHT
+
+
+def build_combined() -> Path:
+    """Both panels side by side in one image, transparent background."""
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.0, 3.4))
+    data_l = _plot_left(axL)
+    data_r = _plot_right(axR)
+    fig.tight_layout()
+    _label_left(axL, data_l)
+    _label_right(axR, data_r)
+    fig.savefig(OUT_COMBINED, dpi=300, transparent=True)
+    plt.close(fig)
+    return OUT_COMBINED
+
+
+def build() -> list[Path]:
+    """Write both standalone panels and the combined image. Returns the paths."""
+    return [build_left(), build_right(), build_combined()]
 
 
 if __name__ == "__main__":
-    print(build())
+    for path in build():
+        print(path)

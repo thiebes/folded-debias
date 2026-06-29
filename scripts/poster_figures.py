@@ -34,7 +34,7 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from poster_style import ROLE1, ROLE2, ROLE3, style as _style  # noqa: E402
+from poster_style import ROLE1, ROLE3, YELLOW_DEEP, style as _style  # noqa: E402
 
 # Panel builders, each imported from its home (single source of truth).
 from build_measurement_schematic import build as figure_schematic_measurement  # noqa: E402
@@ -60,7 +60,7 @@ _FFTCNR_STYLE = {
     "Gaussian (p=2)": ("Gaussian", ROLE1),
     "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", ROLE3),
     "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
-    "Voigt": ("Voigt", ROLE2),
+    "Voigt": ("Voigt", YELLOW_DEEP),
 }
 
 
@@ -160,7 +160,9 @@ def figure_fftcnr_white_vs_shot(white_npz: Path, shot_npz: Path) -> Path | None:
 def main() -> None:
     print("Producing poster figures...")
     print(f"  Panel 1 schematic (measurement):   {figure_schematic_measurement().name}")
-    print(f"  Panel 2A schematic (wall + fold):  {figure_schematic_wall_fold().name}")
+    wall_fold_paths = figure_schematic_wall_fold()
+    print(f"  Panel 2A schematic (wall + fold):  "
+          f"{', '.join(p.name for p in wall_fold_paths)}")
     p3 = build_bias_curves()
     if p3:
         print(f"  Panel 3 (bias curves):             {p3.name}")
