@@ -4,7 +4,7 @@ femtosecond exciton transport.
 Source data are the published figure worksheets exported from the manuscript
 Origin project (Zhang et al., "Ultrafast exciton transport at early times in
 quantum dot solids", Nat. Mater. 21, 533-539, 2022), placed read-only in
-``real_examples/``:
+this folder:
 
 * ``Figure 1d <delay>.csv`` -- the raw 64x64 differential ON/OFF transient-
   absorption images of the OA (oleic-acid-capped PbS) film at five pump-probe
@@ -56,14 +56,14 @@ import time
 import numpy as np
 from scipy.ndimage import gaussian_filter
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import fft_cnr  # noqa: E402
 from weighting_wall import GaussianModel, calibrate_d_free  # noqa: E402
 from weighting_wall.fit import fit_D, fit_variance  # noqa: E402
 from weighting_wall.truncation import TruncationModel  # noqa: E402
 
-RE = os.path.join(os.path.dirname(__file__), "..", "real_examples")
+RE = os.path.dirname(__file__)
 CALIB_CACHE = os.path.join("output", "calibration_zhang_qd.npz")
 
 DELAYS = [0, 60, 120, 260, 400]          # fs; the Fig 1d image delays

@@ -37,3 +37,6 @@ Thumbs.db
 # see the set's DATASETS.md for the pshare source.
 mc_experiments/**/data/
 experiments/**/data/
+
+# Origin project binaries (raw published-figure data; extracted CSVs are committed)
+*.opju
