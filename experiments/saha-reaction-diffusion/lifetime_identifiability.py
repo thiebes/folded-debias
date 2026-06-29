@@ -153,7 +153,7 @@ def plot_fit(data, pbest, out, prefix):
         te, ple, n0 = times[i], pls[i], Nexc[i]
         mv = te <= 20.0
         ax.plot(te[mv], ple[mv]/(np.max(ple[mv])+1e-30), "o", ms=4, mfc="none",
-                color=c, label=f"Nexc = {n0:.1e}")
+                color=c, label=fr"$N_{{\mathrm{{exc}}}}$ = {n0:.1e}")
         ts, ys = run_lifetime(A, qratio, nu, rho, n0, lam, gamma, qtrap)
         ax.plot(ts*1e9, ys, "-", color=c, lw=1)
     ax.set_xscale("log"); ax.set_yscale("log"); ax.set_ylim(3e-3, 1.1)
@@ -167,17 +167,17 @@ def plot_fit(data, pbest, out, prefix):
 def profile(data, pbest, out, prefix, npts=19):
     SSR_min, N = ssr(pbest, data); s2 = SSR_min/(N-6)
     print(f"SSR_min={SSR_min:.4e} N={N} s^2={s2:.3e}")
-    specs = [(0, "nu  (s^-1)", np.linspace(7, 10, npts)),
-             (2, "lam  (s^-1)", np.linspace(7, 9, npts)),
-             (3, "gamma  (s^-1)", np.linspace(5, 11, npts+6)),
-             (1, "rho  (cm^3 s^-1)", np.linspace(-18, -9, npts))]
+    specs = [(0, r"$\log_{10}\,\nu\ \mathrm{(s^{-1})}$", np.linspace(7, 10, npts)),
+             (2, r"$\log_{10}\,\lambda\ \mathrm{(s^{-1})}$", np.linspace(7, 9, npts)),
+             (3, r"$\log_{10}\,\gamma\ \mathrm{(s^{-1})}$", np.linspace(5, 11, npts+6)),
+             (1, r"$\log_{10}\,\rho\ \mathrm{(cm^3\,s^{-1})}$", np.linspace(-18, -9, npts))]
     fig, axes = plt.subplots(2, 2, figsize=(11, 8), constrained_layout=True)
     for ax, (idx, lab, grid) in zip(axes.ravel(), specs):
         prof = np.array([_refit_fixing(idx, v, pbest, data)[0] for v in grid]) - SSR_min
         ax.plot(grid, prof, "o-", color=CB[0])
-        ax.axhline(s2, color="0.4", ls=":", label="s^2 (~1 sigma)")
+        ax.axhline(s2, color="0.4", ls=":", label=r"$s^2\ (\sim 1\sigma)$")
         ax.axvline(pbest[idx], color=CB[2], ls="--", lw=1)
-        ax.set_xlabel("log10 " + lab); ax.set_ylabel("SSR - SSR_min")
+        ax.set_xlabel(lab); ax.set_ylabel(r"$\mathrm{SSR}-\mathrm{SSR_{min}}$")
         ax.set_ylim(-0.05*max(8*s2, 1), max(8*s2, 1.3*np.nanpercentile(prof, 35)+1e-9))
         ax.tick_params(direction="in"); ax.legend(fontsize=8)
         rng = float(np.nanmax(prof))
@@ -202,16 +202,17 @@ def tradeoff(data, pbest, out, prefix, npts=25):
           f"{100*(lam_v[flat].max()/lam_v[flat].min()-1):.2f}%, "
           f"gamma spread {100*(gam_v[flat].max()/gam_v[flat].min()-1):.2f}%")
     fig, ax = plt.subplots(1, 2, figsize=(11, 4.3), constrained_layout=True)
+    rho_lab = r"$\log_{10}\,\rho\ \mathrm{(cm^3\,s^{-1})}$"
     ax[0].plot(grid, ssr_v, "o-", color=CB[0]); ax[0].axvline(cross, color="0.4", ls=":")
-    ax[0].set_xlabel("log10 rho  (cm^3 s^-1)"); ax[0].set_ylabel("profiled SSR")
+    ax[0].set_xlabel(rho_lab); ax[0].set_ylabel(r"profiled $\mathrm{SSR}$")
     ax[0].tick_params(direction="in")
-    ax[1].plot(grid, nu_v, "o", color=CB[0], label="refit nu")
+    ax[1].plot(grid, nu_v, "o", color=CB[0], label=r"refit $\nu$")
     ax[1].plot(grid, np.clip(nu_eff-rho*A, 0, None), "--", color="0.2",
-               label="nu_eff - rho*A")
-    ax[1].plot(grid, lam_v, "s", ms=3, color=CB[1], label="lam (refit)")
-    ax[1].plot(grid, gam_v, "^", ms=3, color=CB[2], label="gamma (refit)")
+               label=r"$\nu_{\mathrm{eff}}-\rho A$")
+    ax[1].plot(grid, lam_v, "s", ms=3, color=CB[1], label=r"$\lambda$ (refit)")
+    ax[1].plot(grid, gam_v, "^", ms=3, color=CB[2], label=r"$\gamma$ (refit)")
     ax[1].axvline(cross, color="0.4", ls=":")
-    ax[1].set_xlabel("log10 rho  (cm^3 s^-1)"); ax[1].set_ylabel("rate (s^-1)")
+    ax[1].set_xlabel(rho_lab); ax[1].set_ylabel(r"rate $\mathrm{(s^{-1})}$")
     ax[1].tick_params(direction="in"); ax[1].legend(fontsize=8)
     p = os.path.join(out, f"{prefix}_rho_tradeoff.png"); fig.savefig(p, dpi=120)
     print("saved", p)
@@ -223,18 +224,20 @@ def saha(data, pbest, out, prefix):
     n = np.logspace(15, 21, 400); x = 2/(np.sqrt(4*n/A+1)+1)
     exc = nu*(1-x); bim = rho*x*x*n
     fig, ax = plt.subplots(1, 2, figsize=(11, 4.4), constrained_layout=True)
-    ax[0].loglog(n, exc, color=CB[0], lw=2, label="exciton  nu(1-x)")
+    ax[0].loglog(n, exc, color=CB[0], lw=2, label=r"exciton  $\nu(1-x)$")
     ax[0].loglog(n, bim, color=CB[1], lw=2,
-                 label="bimolecular  rho x^2 n  (rho=1e-10)")
-    ax[0].axvline(A, color="0.4", ls=":", label="n = A")
+                 label=r"bimolecular  $\rho x^2 n$  ($\rho=10^{-10}$)")
+    ax[0].axvline(A, color="0.4", ls=":", label=r"$n = A$")
     ax[1].semilogx(n, exc/bim, color="0.2", lw=2)
-    ax[1].axhline(nu/(rho*A), color=CB[2], ls="--", label="nu / (rho A)")
+    ax[1].axhline(nu/(rho*A), color=CB[2], ls="--", label=r"$\nu/(\rho A)$")
     ax[1].axvline(A, color="0.4", ls=":"); ax[1].set_ylim(0, 2*nu/(rho*A))
     for a in ax:
         for nx in Nexc:
             a.axvline(nx, color="0.8", lw=0.8)
-        a.tick_params(direction="in", which="both"); a.set_xlabel("density n  (cm^-3)")
-    ax[0].set_ylabel("per-carrier rate  (s^-1)"); ax[0].legend(fontsize=8, loc="lower right")
+        a.tick_params(direction="in", which="both")
+        a.set_xlabel(r"density $n\ \mathrm{(cm^{-3})}$")
+    ax[0].set_ylabel(r"per-carrier rate $\mathrm{(s^{-1})}$")
+    ax[0].legend(fontsize=8, loc="lower right")
     ax[1].set_ylabel("exciton rate / bimolecular rate"); ax[1].legend(fontsize=8)
     p = os.path.join(out, f"{prefix}_saha_collapse.png"); fig.savefig(p, dpi=120)
     print("saved", p)
