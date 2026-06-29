@@ -63,7 +63,7 @@ def fit_each_row(x, profiles):
             out[i] = r.variance
     return out
 
-OUTPUT = Path(__file__).resolve().parents[1] / "output"
+OUTPUT = Path(__file__).resolve().parents[2] / "output"  # repo-root output/ (cached calibrations)
 OUTPUT.mkdir(exist_ok=True)
 
 CORR_BLUE = "#0072B2"
@@ -212,7 +212,7 @@ def make_figure(panels, path):
         if t_floor < XMAX:
             ax.axvspan(t_floor, XMAX, color=floor_grey, alpha=0.30, lw=0)
         ax.plot(t[m], case.var_true[m] / S, "-", color=truth_indigo, lw=1.6,
-                label="truth", zorder=3)
+                label="reference", zorder=3)
         ax.plot(t[m], mraw[m] / S, "o", color=naive_red, ms=3.5,
                 label="naive fit", zorder=4)
         ax.plot(t[m], mcor[m] / S, "s", color=corr_blue, ms=3.5,
