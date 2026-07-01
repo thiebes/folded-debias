@@ -86,9 +86,16 @@ CPU contention.
   look unusable; the ensemble distribution recentered on truth.
 - Limitation: `diagnostics/_frame_ladder/5_cnr00.5_*` -- below-floor
   over-subtraction.
-- Real-data correction: `diagnostics/<measurement>/msd_enrique_pipeline.png`;
-  summary in `diagnostics/index.md`. Widths in px^2 (px->um scale is an open
-  question with Enrique, Email 9).
+- **Canonical real-data panel: `realdata_panel_26_32.png`** (caption
+  `realdata_panel_26_32_caption.md`) -- the correction on the clean MoS2/MoSe2
+  alloy `26_32/250716` via Enrique's exact fit: naive D 0.0338 -> corrected
+  0.0334 (ratio 0.989), a small but real correction on a trustworthy real
+  measurement. This is the selected real-data panel; it **supersedes** the WSe2
+  `0.020` candidates in `figure_candidates/` (a batch-offset artifact that goes
+  negative under correct de-parity -- do not use).
+- Per-measurement views: `diagnostics/<measurement>/msd_enrique_pipeline.png`;
+  summary in `diagnostics/index.md`. Widths in px^2 / his um^2 (px->um scale is
+  an open question with Enrique, Email 9); the unit-free ratio is the headline.
 
 ## Depends on
 
