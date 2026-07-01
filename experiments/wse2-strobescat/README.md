@@ -86,16 +86,19 @@ CPU contention.
   look unusable; the ensemble distribution recentered on truth.
 - Limitation: `diagnostics/_frame_ladder/5_cnr00.5_*` -- below-floor
   over-subtraction.
-- **Canonical real-data panel: `realdata_panel_26_32.png`** (caption
-  `realdata_panel_26_32_caption.md`) -- the correction on the clean MoS2/MoSe2
-  alloy `26_32/250716` via Enrique's exact fit: naive D 0.0338 -> corrected
-  0.0334 (ratio 0.989), a small but real correction on a trustworthy real
-  measurement. This is the selected real-data panel; it **supersedes** the WSe2
-  `0.020` candidates in `figure_candidates/` (a batch-offset artifact that goes
-  negative under correct de-parity -- do not use).
-- Per-measurement views: `diagnostics/<measurement>/msd_enrique_pipeline.png`;
-  summary in `diagnostics/index.md`. Widths in px^2 / his um^2 (px->um scale is
-  an open question with Enrique, Email 9); the unit-free ratio is the headline.
+- **Canonical real-data panel (poster station 8):
+  `figure_candidates/station8_realdata-MoSSe-26_32.png`** (caption beside it) --
+  the correction on the clean **MoSSe alloy** `26_32/250716`
+  (sample `250716_MoSSe_mystery`, **not WSe2**), de-parity merged, full range, in
+  physical um^2: naive D 0.0057 -> corrected 0.0054 um^2/ns (ratio 0.95) -- a
+  measurable ~5% upward bias concentrated in the low-CNR late frames (2-7 ns)
+  normally discarded. Rendered by `render_realdata_panel.py`. **Supersedes** the
+  WSe2 `0.020` candidates (a batch-offset artifact -- goes negative under correct
+  de-parity; do not use).
+- Per-measurement views: `diagnostics/<measurement>/msd_enrique_pipeline.png`,
+  `msd_deparity.png`; summary in `diagnostics/index.md`. Reported in px^2 or the
+  sample um^2 (the px->um scale is well-defined for 26_32 but an open question in
+  general, Enrique Email 9); the unit-free ratio is the headline.
 
 ## Depends on
 
