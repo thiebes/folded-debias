@@ -27,7 +27,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 from weighting_wall.simulate import Experiment  # noqa: E402
 from crlb import crlb_D  # noqa: E402  (this folder)
-from poster_style import ROLE3, ROLE4, YELLOW_DEEP, style  # noqa: E402
+from poster_style import ROLE3, ROLE4, save_poster, style  # noqa: E402
 
 OUT = HERE / "poster_panel4_crlb.png"
 
@@ -38,7 +38,7 @@ def build() -> Path:
     rel = np.array([np.sqrt(crlb_D(exp, c)) / exp.D for c in cnr0])
 
     fig, ax = plt.subplots(figsize=(4.2, 3.4))
-    ax.loglog(cnr0, rel, color=YELLOW_DEEP, lw=2.2)
+    ax.loglog(cnr0, rel, color=ROLE4, lw=2.2)
     ax.axhline(1.0, color="#999999", ls="--", lw=1.0)
     ax.fill_between(cnr0, 1.0, rel, where=(rel >= 1.0), color=ROLE4, alpha=0.25)
     ax.annotate("a single measurement\ncannot pin D (SD > D)",
@@ -47,7 +47,7 @@ def build() -> Path:
     ax.set_ylabel(r"$\sqrt{\mathrm{CRLB}}\,/\,D$  (best possible SD, units of $D$)")
     style(ax)
     fig.tight_layout()
-    fig.savefig(OUT, dpi=300)
+    save_poster(fig, OUT)
     plt.close(fig)
     return OUT
 

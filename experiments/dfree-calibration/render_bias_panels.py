@@ -23,7 +23,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 from poster_style import (ROLE4, ROLE5, SHAPE_COLOR, SHAPE_LABEL,  # noqa: E402
-                          YELLOW_DEEP, parse_dense_deciles, style)
+                          parse_dense_deciles, save_poster, style)
 
 DENSE = HERE / "dense_calibration_and_test.txt"
 OUT_BIAS = HERE / "poster_panel3_bias.png"
@@ -42,18 +42,18 @@ def build_bias_curves() -> Path | None:
 
     fig, ax = plt.subplots(figsize=(4.2, 3.4))
     ax.axhline(1.0, color="#666666", ls="--", lw=1.0)
-    # Red carries the catastrophic route (OLS), gold the standard-but-still-
+    # Red carries the catastrophic route (OLS), indigo the standard-but-still-
     # failing one (inverse-variance) -- both biased relative to the unbiased line.
     ax.loglog(g["cnr"], g["ols"], "o-", ms=4, lw=2.0, color=ROLE4,
               label="unweighted (OLS)")
-    ax.loglog(g["cnr"], g["inv_var"], "o-", ms=4, lw=2.0, color=YELLOW_DEEP,
-              label="inverse-variance")
+    ax.loglog(g["cnr"], g["inv_var"], "o-", ms=4, lw=2.0, color=ROLE5,
+              label="inverse-variance weighted")
     ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
     ax.set_ylabel(r"$\langle D_\mathrm{est}\rangle\,/\,D_\mathrm{true}$")
     ax.legend(fontsize=8, loc="upper right", frameon=False)
     style(ax)
     fig.tight_layout()
-    fig.savefig(OUT_BIAS, dpi=300)
+    save_poster(fig, OUT_BIAS)
     plt.close(fig)
     return OUT_BIAS
 
@@ -69,11 +69,11 @@ def build_corrected_bias() -> Path | None:
         return None
 
     fig, ax = plt.subplots(figsize=(4.6, 3.4))
-    ax.axhspan(0.95, 1.05, color=ROLE5, alpha=0.20, label=r"$\pm 0.05$ band")
+    ax.axhspan(0.95, 1.05, color="#999999", alpha=0.20, label=r"$\pm 0.05$ band")
     ax.axhline(1.0, color="#666666", lw=1.0)
     for shape, d in shapes.items():
         ax.semilogx(d["cnr"], d["folded"], "o-", ms=4, lw=1.8,
-                    color=SHAPE_COLOR.get(shape, YELLOW_DEEP),
+                    color=SHAPE_COLOR.get(shape, ROLE5),
                     label=SHAPE_LABEL.get(shape, shape))
     ax.set_xlabel(r"initial contrast-to-noise  CNR$_0$")
     ax.set_ylabel(r"corrected  $\langle \hat D\rangle / D_\mathrm{true}$")
@@ -81,7 +81,7 @@ def build_corrected_bias() -> Path | None:
     ax.legend(fontsize=8, loc="upper right", frameon=False)
     style(ax)
     fig.tight_layout()
-    fig.savefig(OUT_CORRECTED, dpi=300)
+    save_poster(fig, OUT_CORRECTED)
     plt.close(fig)
     return OUT_CORRECTED
 
