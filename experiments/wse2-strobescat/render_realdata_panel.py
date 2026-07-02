@@ -31,10 +31,13 @@ from realdata_diagnostics import (MEASUREMENTS, FIT_HALF_SIGMA, FLOOR,  # noqa: 
     load_measurement, per_frame_cnr, build_or_load_calibration, decide_noise_law)
 from weighting_wall.fit import fit_variance, fit_D  # noqa: E402
 
+# Spanish-flag palette (plot_style.md): flag red = the salient/biased series,
+# flag blue = the reference/corrected series.
 RED = "#c60b1e"        # naive / his sigma^2 (open)
 BLUE = "#0077c8"       # corrected (filled)
 GRAY = "0.6"
 INCH = 1 / 2.54
+T_FIT = 2.0            # early diffusive window (ns) shown and fit
 OUT = os.path.join(os.path.dirname(__file__), "figure_candidates",
                    "station8_realdata-MoSSe-26_32.png")
 
@@ -66,48 +69,76 @@ def build():
     msd_n = var_naive - base_n; msd_c = var_corr - base_c
     # pixel->um scale (um^2/px^2): his sigma^2 vs my px fit, high-CNR frames
     scale = float(np.median((sig_um ** 2 / var_naive)[cnr > 5]))
-    keep = cnr >= FLOOR
-    w = (1.0 / np.maximum(se_naive, 1e-9) ** 2) * keep
+    # fit + display over the early diffusive window (t <= 2 ns), CNR floor.
+    fit_mask = (cnr >= FLOOR) & (t <= T_FIT)
+    w = (1.0 / np.maximum(se_naive, 1e-9) ** 2) * fit_mask
     d_n = fit_D(t, msd_n, w); d_c = fit_D(t, msd_c, w)
-    return dict(t=t, cnr=cnr, keep=keep, scale=scale,
-                msd_n=msd_n * scale, msd_c=msd_c * scale,
-                se=se_naive * scale, D_n=d_n.D * scale, D_c=d_c.D * scale, nl=nl)
+    # time-binning (inverse-variance weighted) to cut the per-frame scatter and
+    # the even/odd parity wobble; the systematic bias survives averaging, the
+    # noise does not -- so the correction shows on every binned point.
+    tb, nb, cb, sdn, sdc, sem = _time_bins(t[fit_mask], msd_n[fit_mask],
+                                           msd_c[fit_mask], se_naive[fit_mask],
+                                           n_bins=6)
+    return dict(t=t, cnr=cnr, fit_mask=fit_mask, scale=scale,
+                D_n=d_n.D * scale, D_c=d_c.D * scale, nl=nl,
+                tb=tb, nb=nb * scale, cb=cb * scale,
+                sdn=sdn * scale, sdc=sdc * scale, sem=sem * scale)
+
+
+def _time_bins(t, mn, mc, se, n_bins=7):
+    """Inverse-variance weighted means in ~equal-count time bins.
+    Returns bin mean time, binned naive/corrected MSD, the within-bin spread
+    (std of the frames -- the scatter carried as the error bar), and the SE of
+    the mean (the uncertainty on the mean)."""
+    order = np.argsort(t)
+    t, mn, mc, se = t[order], mn[order], mc[order], se[order]
+    edges = np.linspace(0, t.size, n_bins + 1).astype(int)
+    tb, nb, cb, sd_n, sd_c, se_m = [], [], [], [], [], []
+    for a, b in zip(edges[:-1], edges[1:]):
+        if b <= a:
+            continue
+        wi = 1.0 / np.maximum(se[a:b], 1e-9) ** 2
+        tb.append(float(np.average(t[a:b], weights=wi)))
+        nb.append(float(np.average(mn[a:b], weights=wi)))
+        cb.append(float(np.average(mc[a:b], weights=wi)))
+        sd_n.append(float(np.std(mn[a:b])))
+        sd_c.append(float(np.std(mc[a:b])))
+        se_m.append(float(1.0 / np.sqrt(wi.sum())))
+    return (np.array(tb), np.array(nb), np.array(cb), np.array(sd_n),
+            np.array(sd_c), np.array(se_m))
 
 
 def plot(r):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    t, k, se = r["t"], r["keep"], r["se"]
+    tb, nb, cb, sdn, sdc = r["tb"], r["nb"], r["cb"], r["sdn"], r["sdc"]
     fs = 9
     fig, ax = plt.subplots(layout="constrained", figsize=(16 * INCH, 11 * INCH))
     ax.tick_params(axis="both", which="both", direction="in", top=True,
                    right=True, labelsize=fs, length=4, width=1)
-    fig.patch.set_facecolor("w"); fig.patch.set_alpha(1)
-    ratio = r["D_c"] / r["D_n"]
-    # naive: all frames (red open); corrected: floor-valid frames (blue filled)
-    ax.errorbar(t[k], r["msd_n"][k], yerr=se[k], fmt="o", mfc="none", mec=RED,
-                ecolor=RED, ms=4, capsize=2, lw=0.8,
-                label=f"naive $\\sigma^2$:  D = {r['D_n']:.4f} $\\mu$m$^2$/ns")
-    ax.errorbar(t[k], r["msd_c"][k], yerr=se[k], fmt="o", color=BLUE,
-                ecolor=BLUE, ms=3.5, capsize=2, lw=0.8,
-                label=f"corrected:  D = {r['D_c']:.4f} $\\mu$m$^2$/ns  "
-                      f"(ratio {ratio:.2f})")
-    if (~k).any():
-        ax.errorbar(t[~k], r["msd_n"][~k], yerr=se[~k], fmt="o", mfc="none",
-                    mec=GRAY, ecolor=GRAY, ms=4, capsize=2, lw=0.8,
-                    label=f"CNR < {FLOOR} (below floor; excluded from fit)")
+    fig.patch.set_alpha(0.0)            # transparent margin (poster overlay)
+    ax.set_facecolor("white")           # opaque white plot area
+    ax.patch.set_alpha(1.0)
+    # time-binned means at their true bin time (no x-dodge); error bars carry the
+    # within-bin scatter (no raw cloud). naive = red open ring, corrected = blue
+    # filled dot -- both at the same time, only sigma^2 differs. D values are in
+    # the caption, not the legend.
+    ax.errorbar(tb, nb, yerr=sdn, fmt="o", mfc="none", mec=RED, ecolor=RED,
+                ms=8, capsize=3, lw=1.1, mew=1.4, label=r"naive $\sigma^2$")
+    ax.errorbar(tb, cb, yerr=sdc, fmt="o", color=BLUE, ecolor=BLUE, ms=5,
+                capsize=3, lw=1.1, label="corrected")
     ax.axhline(0, color="0.8", lw=0.8, zorder=0)
-    # y-range from the floor-valid points so the rise stays readable
-    lo = float(np.nanmin((r["msd_c"][k] - se[k])))
-    hiv = float(np.nanmax((r["msd_n"][k] + se[k])))
-    pad = 0.12 * (hiv - lo + 1e-9)
+    lo = float(np.nanmin(cb - sdc)); hiv = float(np.nanmax(nb + sdn))
+    pad = 0.15 * (hiv - lo + 1e-9)
     ax.set_ylim(lo - pad, hiv + pad)
+    ax.set_xlim(-0.3, T_FIT + 0.2)
     ax.set_xlabel("time after pump (ns)", fontsize=fs)
     ax.set_ylabel(r"MSD  $\sigma^2(t)-\sigma^2(0)$  ($\mu$m$^2$)", fontsize=fs)
     ax.legend(frameon=False, fontsize=fs, loc="upper left")
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    fig.savefig(OUT, dpi=200); plt.close(fig)
+    fig.savefig(OUT, dpi=200, facecolor="none")   # margin transparent, axes white
+    plt.close(fig)
 
 
 def main():
@@ -115,11 +146,12 @@ def main():
     plot(r)
     print(f"material: MoSSe alloy (250716_MoSSe_mystery)")
     print(f"scale = {r['scale']:.5f} um^2/px^2 ; noise law {r['nl']}")
-    print(f"fit over CNR>={FLOOR}: naive D = {r['D_n']:.4f}  corrected D = "
-          f"{r['D_c']:.4f} um^2/ns  ratio {r['D_c']/r['D_n']:.3f}")
-    print(f"kept {int(r['keep'].sum())}/{r['t'].size} frames; "
-          f"t {r['t'][r['keep']].min():.2f}..{r['t'][r['keep']].max():.2f} ns; "
-          f"CNR {r['cnr'][r['keep']].min():.2f}..{r['cnr'][r['keep']].max():.1f}")
+    fm = r["fit_mask"]
+    print(f"fit over CNR>={FLOOR} & t<={T_FIT}ns: naive D = {r['D_n']:.4f}  "
+          f"corrected D = {r['D_c']:.4f} um^2/ns  ratio {r['D_c']/r['D_n']:.3f}")
+    print(f"{int(fm.sum())}/{r['t'].size} frames; "
+          f"t {r['t'][fm].min():.2f}..{r['t'][fm].max():.2f} ns; "
+          f"CNR {r['cnr'][fm].min():.2f}..{r['cnr'][fm].max():.1f}")
     print(f"-> {OUT}")
 
 
