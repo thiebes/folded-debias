@@ -26,10 +26,10 @@ from matplotlib.colors import to_rgb  # noqa: E402
 
 from weighting_wall.simulate import gaussian  # noqa: E402
 
-# Poster palette (Okabe-Ito, colourblind-safe): gold = early/bright frame,
-# red = late/dim frame; the gradient between them carries the time axis.
-ROLE2 = "#E69F00"   # flag gold   -- early frame (narrow, bright, high CNR)
-ROLE4 = "#D55E00"   # spanish red -- late frame (wide, dim, low CNR)
+# Spanish-flag palette (see plot_style.md): the gradient runs blue (high CNR,
+# early frame) to red (low CNR, late frame); the blend carries the time axis.
+ROLE2 = "#0077c8"   # spanish-flag blue -- early frame (narrow, bright, high CNR)
+ROLE4 = "#c60b1e"   # spanish-flag red  -- late frame  (wide, dim, low CNR)
 
 OUT = Path(__file__).resolve().parent / "measurement_schematic.png"
 
@@ -56,8 +56,10 @@ def build() -> Path:
     ax.text(2.1, 0.96, "time", color="#444", fontsize=9, ha="center")
     ax.text(0.0, 1.02, "early frame:\nnarrow, bright (high CNR)",
             color=ROLE2, fontsize=8, ha="center", va="bottom")
-    ax.text(4.6, 0.30, "late frame:\nwide, dim (low CNR)",
-            color=ROLE4, fontsize=8, ha="center")
+    # Late-frame label sits in the centre-bottom gap, below the peaks, so it
+    # clears the profile curves rather than overlapping them.
+    ax.text(0.0, 0.08, "late frame:\nwide, dim (low CNR)",
+            color=ROLE4, fontsize=8, ha="center", va="bottom")
     ax.set_xlabel("position")
     ax.set_ylabel("intensity")
     ax.set_xlim(x[0], x[-1])             # curves run to the frame edges
@@ -66,6 +68,11 @@ def build() -> Path:
     ax.set_xticks([])
     ax.set_yticks([])
     fig.tight_layout()
+    # Transparent outside the plot only (plot_style.md): the figure margin
+    # composites onto the poster background, while the axes patch stays opaque
+    # white. Do not pass transparent=True -- that would clear the axes patch too.
+    fig.patch.set_alpha(0.0)
+    ax.set_facecolor("white")
     fig.savefig(OUT, dpi=300)
     plt.close(fig)
     return OUT
