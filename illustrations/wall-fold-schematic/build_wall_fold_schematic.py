@@ -8,8 +8,10 @@ above the true value). The right panel shows that per-frame bias growing as CNR
 falls across late frames, tilting the MSD slope and overestimating D.
 
 Each panel is written as its own image so the poster can place them
-independently, and every output is saved with a transparent background. A
-combined two-panel image is also written for callers that want both at once.
+independently. Only the margin outside the axes is transparent -- the plot area
+itself is opaque white -- so a panel drops onto the dark poster without a white
+halo while its curves and labels stay readable. A combined two-panel image is
+also written for callers that want both at once.
 
 Requires the sibling `curved-text` package (the curved on-curve labels):
     .venv/Scripts/python.exe -m pip install -e ../curved-text
@@ -170,37 +172,50 @@ def _label_right(axR, data):
                anchor="center", offset=-5.0, color=ROLE1, fontsize=7)
 
 
+def _save_opaque_axes(fig, path: Path) -> None:
+    """Save with a transparent figure margin but an opaque white plot area.
+
+    ``transparent=True`` blanks the axes patch too, leaving the curves floating
+    on the dark poster. Instead we force each axes background to opaque white and
+    save with a transparent figure facecolor, so only the region outside the plot
+    proper lets the poster show through.
+    """
+    for ax in fig.axes:
+        ax.set_facecolor("white")
+    fig.savefig(path, dpi=300, facecolor="none")
+
+
 def build_left() -> Path:
-    """Standalone left panel (the fold at the wall), transparent background."""
+    """Standalone left panel (the fold at the wall); opaque plot, clear margin."""
     fig, axL = plt.subplots(figsize=(4.0, 3.4))
     data = _plot_left(axL)
     fig.tight_layout()
     _label_left(axL, data)
-    fig.savefig(OUT_LEFT, dpi=300, transparent=True)
+    _save_opaque_axes(fig, OUT_LEFT)
     plt.close(fig)
     return OUT_LEFT
 
 
 def build_right() -> Path:
-    """Standalone right panel (the tilted MSD slope), transparent background."""
+    """Standalone right panel (the tilted MSD slope); opaque plot, clear margin."""
     fig, axR = plt.subplots(figsize=(4.0, 3.4))
     data = _plot_right(axR)
     fig.tight_layout()
     _label_right(axR, data)
-    fig.savefig(OUT_RIGHT, dpi=300, transparent=True)
+    _save_opaque_axes(fig, OUT_RIGHT)
     plt.close(fig)
     return OUT_RIGHT
 
 
 def build_combined() -> Path:
-    """Both panels side by side in one image, transparent background."""
+    """Both panels side by side in one image; opaque plots, clear margin."""
     fig, (axL, axR) = plt.subplots(1, 2, figsize=(8.0, 3.4))
     data_l = _plot_left(axL)
     data_r = _plot_right(axR)
     fig.tight_layout()
     _label_left(axL, data_l)
     _label_right(axR, data_r)
-    fig.savefig(OUT_COMBINED, dpi=300, transparent=True)
+    _save_opaque_axes(fig, OUT_COMBINED)
     plt.close(fig)
     return OUT_COMBINED
 

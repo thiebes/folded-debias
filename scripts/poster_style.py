@@ -24,13 +24,10 @@ from matplotlib.colors import to_rgb
 # grayscale (red / green / blue collapse to nearly one lightness), so never let
 # a red / green / blue distinction carry meaning that must read without colour.
 ROLE1 = "#0077c8"   # blue                 -- the true value / Gaussian shape
-ROLE2 = "#ffc400"   # flag yellow (gualda) -- fitted-variance curve / Voigt shape
+ROLE2 = "#ffc400"   # flag yellow (gualda) -- fitted-variance curve, fills
 ROLE3 = "#4a7729"   # fern green           -- generalized-Gaussian shape
 ROLE4 = "#c60b1e"   # flag red             -- the biased/inflated value
-ROLE5 = "#540d6e"   # indigo               -- fills, region bands (use low alpha)
-# Flag yellow is bright and low-contrast on white; for thin lines or text in
-# yellow read against the page, use this deep companion instead (plot_style.md).
-YELLOW_DEEP = "#9E7900"  # deep gold        -- flag yellow as a thin line / text
+ROLE5 = "#540d6e"   # indigo               -- Voigt / inverse-variance line; fills & bands
 
 # DICE palette (Montana State; retained as a fallback for non-poster scripts).
 DICE_BLUE = "#003f7f"
@@ -44,19 +41,32 @@ SHAPE_LABEL = {
     "generalized_gaussian": "generalized-Gaussian",
     "genGauss": "generalized-Gaussian",
 }
-# One role colour per profile shape (the strong-contrast lines). Voigt takes the
-# deep gold rather than bright flag yellow so the thin line reads on white.
+# One role colour per profile shape (the strong-contrast lines): blue / indigo /
+# green for Gaussian / Voigt / generalized-Gaussian, all high-contrast on white.
 SHAPE_COLOR = {
     "gaussian": ROLE1,
-    "voigt": YELLOW_DEEP,
+    "voigt": ROLE5,
     "generalized_gaussian": ROLE3,
     "genGauss": ROLE3,
 }
 
 
 def style(ax) -> None:
-    """Apply the shared axis style: ticks inside the frame, on all four sides."""
-    ax.tick_params(direction="in", which="both", top=True, right=True)
+    """Poster axis style: ticks inward, on the left and bottom axes only -- the
+    poster reads cleaner without the top/right ticks the general plot style uses."""
+    ax.tick_params(direction="in", which="both", top=False, right=False)
+
+
+def save_poster(fig, path, dpi: int = 300) -> None:
+    """Save a poster panel with a transparent margin but an opaque white plot area.
+
+    Every panel drops onto the dark poster background, so the region outside the
+    axes must be transparent (no white halo) while the plot itself stays opaque
+    and readable. Pair with ``style`` (left/bottom ticks only).
+    """
+    for ax in fig.axes:
+        ax.set_facecolor("white")
+    fig.savefig(path, dpi=dpi, facecolor="none")
 
 
 def lerp(c0: str, c1: str, f: float) -> tuple[float, float, float]:

@@ -34,7 +34,7 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from poster_style import ROLE1, ROLE3, YELLOW_DEEP, style as _style  # noqa: E402
+from poster_style import ROLE1, ROLE3, ROLE5, save_poster, style as _style  # noqa: E402
 
 # Panel builders, each imported from its home (single source of truth).
 from build_measurement_schematic import build as figure_schematic_measurement  # noqa: E402
@@ -60,7 +60,7 @@ _FFTCNR_STYLE = {
     "Gaussian (p=2)": ("Gaussian", ROLE1),
     "heavy-tail (p=1.3)": ("gen-Gaussian (heavy tail)", ROLE3),
     "flat-top (p=4)": ("gen-Gaussian (flat top)", "#888888"),
-    "Voigt": ("Voigt", YELLOW_DEEP),
+    "Voigt": ("Voigt", ROLE5),
 }
 
 
@@ -104,7 +104,7 @@ def figure_fftcnr(npz_path: Path) -> Path | None:
     _style(ax)
     fig.tight_layout()
     path = OUTPUT / "poster_panel4_fftcnr.png"
-    fig.savefig(path, dpi=300)
+    save_poster(fig, path)
     plt.close(fig)
     return path
 
@@ -152,7 +152,7 @@ def figure_fftcnr_white_vs_shot(white_npz: Path, shot_npz: Path) -> Path | None:
     axS.set_xlabel(r"true contrast-to-noise  CNR")
     fig.tight_layout()
     path = OUTPUT / "fftcnr_white_vs_shot.png"
-    fig.savefig(path, dpi=300)
+    save_poster(fig, path)
     plt.close(fig)
     return path
 

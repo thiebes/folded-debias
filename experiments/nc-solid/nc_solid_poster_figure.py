@@ -272,10 +272,11 @@ def main() -> None:
     axin.tick_params(axis="both", which="both", direction="in", top=True,
                      right=True, labelsize=fs - 3)
 
-    fig.patch.set_facecolor("w")
-    fig.patch.set_alpha(1)
+    # Transparent margin, opaque plot area (the main axes and the inset stay
+    # white) so the panel drops onto the dark poster without a white halo.
+    ax.set_facecolor("white")
     path = OUTPUT / "nc_solid_poster_figure.png"
-    fig.savefig(path, dpi=300)
+    fig.savefig(path, dpi=300, facecolor="none")
     plt.close(fig)
     print(f"Saved {path.name}")
 
