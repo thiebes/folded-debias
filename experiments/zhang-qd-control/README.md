@@ -45,7 +45,7 @@ the correction does not distort already-healthy-CNR measurements. Figure:
 
 ## Depends on
 
-`weighting_wall`. The figure CSVs live beside the script (no external loader).
+`folded_debias`. The figure CSVs live beside the script (no external loader).
 
 ## See also
 

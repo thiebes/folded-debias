@@ -11,7 +11,7 @@ Stages, for every fluence subfolder under ``--sample-root``:
 3. **apply**     -- subtract the per-frame bias and fit corrected-vs-naive D.
 4. **summary**   -- collect D(fluence) for every scheme into a CSV and a plot.
 
-Heavy step is `calibrate`; it honours WEIGHTING_WALL via `--workers`. Pick stages
+Heavy step is `calibrate`; it honours FOLDED_DEBIAS via `--workers`. Pick stages
 with `--stages` to resume (e.g. `--stages apply,summary` after a calibration run).
 
 Example::

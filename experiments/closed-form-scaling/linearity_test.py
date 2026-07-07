@@ -34,8 +34,8 @@ from scipy.stats import norm
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall.montecarlo import run_ensemble  # noqa: E402
-from weighting_wall.simulate import Experiment  # noqa: E402
+from folded_debias.montecarlo import run_ensemble  # noqa: E402
+from folded_debias.simulate import Experiment  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)

@@ -3,7 +3,7 @@
 The validation has two stages, deliberately on independent random seeds:
 
 1. **Calibrate** -- run Monte Carlo ensembles across a CNR sweep and build a
-   :class:`~weighting_wall.truncation.TruncationModel` mapping CNR to the
+   :class:`~folded_debias.truncation.TruncationModel` mapping CNR to the
    truncation fraction, the MSD-point variance, and the additive variance bias.
 2. **Evaluate** -- run fresh ensembles, fit D under each scheme using only the
    per-frame CNR plus the calibrated model, and report ``<D_est> / D_true`` as
@@ -29,11 +29,11 @@ def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
                 seed: int = 1, model=None, noise_model=None) -> list:
     """Per-frame statistics from a Monte Carlo CNR sweep.
 
-    Returns one :class:`~weighting_wall.truncation.FrameStats` per CNR_0.  This
+    Returns one :class:`~folded_debias.truncation.FrameStats` per CNR_0.  This
     is the raw material both for the truncation model and for the diagnostic
     panel of the POC figure, so callers can reuse it instead of resampling.
-    ``model`` selects the profile model (see :mod:`weighting_wall.models`);
-    ``noise_model`` selects the noise law (see :mod:`weighting_wall.noise`,
+    ``model`` selects the profile model (see :mod:`folded_debias.models`);
+    ``noise_model`` selects the noise law (see :mod:`folded_debias.noise`,
     ``None`` = white).
     """
     stats = []
@@ -69,7 +69,7 @@ def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
     Generates the calibration profile sequence at ``D = 0``, so every frame's
     true variance is ``sigma_0^2`` and the resulting 1-D ``var_bias(CNR)``
     lookup is keyed on per-frame CNR alone. Application code (the slope fit
-    in :func:`weighting_wall.weights.msd_and_weights`) consumes the same
+    in :func:`folded_debias.weights.msd_and_weights`) consumes the same
     lookup it always has -- no change to the deployment interface.
 
     Use this whenever the application's D is unknown (real data), variable
@@ -200,7 +200,7 @@ def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
     ``model`` is the calibrated :class:`TruncationModel`; ``profile_model`` is
     the profile model (Gaussian / Voigt / generalized-Gaussian) and must match
     the one used for calibration. ``noise_model`` selects the noise law (see
-    :mod:`weighting_wall.noise`, ``None`` = white); to test robustness to a
+    :mod:`folded_debias.noise`, ``None`` = white); to test robustness to a
     noise-law mismatch, pass a ``model`` calibrated under one law and a
     ``noise_model`` of another.
     """

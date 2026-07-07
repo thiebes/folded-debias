@@ -41,7 +41,7 @@ Run from the repository root::
 
     .venv/Scripts/python.exe scripts/subdiffusive_alpha.py [profile_model] [--quick]
 
-Set ``WEIGHTING_WALL_WORKERS=0`` to use all cores for the Monte Carlo.
+Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores for the Monte Carlo.
 Outputs ``output/subdiffusive_alpha[_<model>].{png,txt}``.
 """
 from __future__ import annotations
@@ -59,11 +59,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from scipy.optimize import curve_fit  # noqa: E402
 
-from weighting_wall import AnomalousExperiment, calibrate_d_free  # noqa: E402
-from weighting_wall.models import MODELS  # noqa: E402
-from weighting_wall.montecarlo import run_ensemble  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias import AnomalousExperiment, calibrate_d_free  # noqa: E402
+from folded_debias.models import MODELS  # noqa: E402
+from folded_debias.montecarlo import run_ensemble  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)

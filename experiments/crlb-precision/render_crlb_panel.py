@@ -16,7 +16,7 @@ from pathlib import Path
 import numpy as np
 
 HERE = Path(__file__).resolve().parent
-sys.path.insert(0, str(HERE.parent.parent / "src"))      # weighting_wall
+sys.path.insert(0, str(HERE.parent.parent / "src"))      # folded_debias
 sys.path.insert(0, str(HERE.parent.parent / "scripts"))  # poster_style
 sys.path.insert(0, str(HERE))                            # local crlb.py
 
@@ -25,7 +25,7 @@ import matplotlib  # noqa: E402
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from weighting_wall.simulate import Experiment  # noqa: E402
+from folded_debias.simulate import Experiment  # noqa: E402
 from crlb import crlb_D  # noqa: E402  (this folder)
 from poster_style import ROLE3, ROLE4, save_poster, style  # noqa: E402
 

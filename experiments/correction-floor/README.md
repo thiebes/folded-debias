@@ -34,7 +34,7 @@ None. Fully synthetic.
 .venv/Scripts/python.exe experiments/correction-floor/per_frame_in_diffusion_experiment.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0`; `per_profile_floor.py` runs ~45 min (Gaussian) to
+Set `FOLDED_DEBIAS_WORKERS=0`; `per_profile_floor.py` runs ~45 min (Gaussian) to
 ~3 h (Voigt). Outputs to repo-root `output/`; committed snapshots are here.
 
 ## Key result + figure
@@ -47,7 +47,7 @@ Result tables: `per_profile_floor_<model>.txt`, `analytical_floor.txt`,
 
 ## Depends on
 
-`weighting_wall`. No sibling-folder helpers.
+`folded_debias`. No sibling-folder helpers.
 
 ## See also
 

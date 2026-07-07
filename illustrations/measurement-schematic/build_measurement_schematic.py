@@ -2,7 +2,7 @@
 per-frame contrast-to-noise falls frame by frame.
 
 A pure matplotlib illustration -- no data input. The single physical curve is the
-Gaussian profile from the simulation model (`weighting_wall.simulate.gaussian`);
+Gaussian profile from the simulation model (`folded_debias.simulate.gaussian`);
 everything else is annotation. Writes the figure into this folder.
 
 Run:
@@ -24,7 +24,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.colors import to_rgb  # noqa: E402
 
-from weighting_wall.simulate import gaussian  # noqa: E402
+from folded_debias.simulate import gaussian  # noqa: E402
 
 # Spanish-flag palette (see plot_style.md): the gradient runs blue (high CNR,
 # early frame) to red (low CNR, late frame); the blend carries the time axis.

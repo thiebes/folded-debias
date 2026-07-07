@@ -54,10 +54,10 @@ sys.path.insert(0, os.path.join(_HERE, "..", "..", "src"))
 sys.path.insert(0, _HERE)
 
 import reaction_diffusion_saha as rd  # noqa: E402
-from weighting_wall.calibration import CalibrationGrid  # noqa: E402
-from weighting_wall.models import GaussianModel  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias.calibration import CalibrationGrid  # noqa: E402
+from folded_debias.models import GaussianModel  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
 # Measurement grid the emission is resampled onto (matches nonfickian_validation
 # and the 2-D Saha calibration geometry).

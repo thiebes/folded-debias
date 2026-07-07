@@ -40,7 +40,7 @@ where dCNR/dt sets the sign of the bias-induced D error.
 Widths/MSD are in the published nm^2; sigma0^2 = (172 nm)^2 from the t=0 width.
 D is in cm^2/s (MSD in nm^2 over time in fs: D = slope/2, 1 nm^2/fs = 10 cm^2/s).
 
-Set ``WEIGHTING_WALL_WORKERS=1`` for the (cached) calibration build.
+Set ``FOLDED_DEBIAS_WORKERS=1`` for the (cached) calibration build.
 
 Usage::
 
@@ -59,9 +59,9 @@ from scipy.ndimage import gaussian_filter
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import fft_cnr  # noqa: E402
-from weighting_wall import GaussianModel, calibrate_d_free  # noqa: E402
-from weighting_wall.fit import fit_D, fit_variance  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
+from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
+from folded_debias.fit import fit_D, fit_variance  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
 
 RE = os.path.dirname(__file__)
 CALIB_CACHE = os.path.join("output", "calibration_zhang_qd.npz")

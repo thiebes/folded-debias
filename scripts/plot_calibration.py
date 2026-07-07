@@ -18,7 +18,7 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from weighting_wall import CalibrationGrid  # noqa: E402
+from folded_debias import CalibrationGrid  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 
@@ -33,7 +33,7 @@ def _marc_trajectories():
             0, os.path.join(os.path.dirname(__file__), "..", "experiments", "mn-trapping")
         )
         from diffusion_map import Parameters, diffusion, x_axis  # experiments/mn-trapping/
-        from weighting_wall.fit import fit_variance as fit_gaussian
+        from folded_debias.fit import fit_variance as fit_gaussian
     except ImportError:
         return []
     par = Parameters()

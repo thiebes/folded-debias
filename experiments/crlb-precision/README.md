@@ -23,7 +23,7 @@ Validated. Poster-scope (Panel 3/4 precision floor).
 
 ## Data
 
-None. Fully synthetic (uses `weighting_wall.simulate` geometry).
+None. Fully synthetic (uses `folded_debias.simulate` geometry).
 
 ## Run
 
@@ -40,7 +40,7 @@ assembles the poster figures.
 
 ## Depends on
 
-`weighting_wall` (`montecarlo.run_ensemble`, `simulate`) and `crlb.py` in this
+`folded_debias` (`montecarlo.run_ensemble`, `simulate`) and `crlb.py` in this
 folder; `render_crlb_panel.py` also imports shared poster primitives from
 `scripts/poster_style.py`.
 

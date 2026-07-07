@@ -33,7 +33,7 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from weighting_wall.fit import fit_variance  # noqa: E402
+from folded_debias.fit import fit_variance  # noqa: E402
 
 OUTDIR = os.path.join(os.path.dirname(__file__), "diagnostics", "_frame_ladder")
 RED = "#c60b1e"; BLUE = "#0077c8"; GREEN = "#0b8a3b"; INCH = 1 / 2.54

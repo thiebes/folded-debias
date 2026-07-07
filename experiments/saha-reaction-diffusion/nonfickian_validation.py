@@ -9,7 +9,7 @@ emission profile. Three distortions sit between the two:
 2. the instrument point-spread function,
 3. the emission-to-carrier mapping.
 
-The folded-normal correction in `weighting_wall` removes distortion 1 only. The
+The folded-normal correction in `folded_debias` removes distortion 1 only. The
 Saha emission is nonlinear in carrier density -- E = qe nu (1-x) n + qf rho x^2
 n^2 -- so distortion 3 is present and large, and no width estimator plus noise
 correction can reach the carrier transport on its own. That is the forward-model
@@ -84,10 +84,10 @@ sys.path.insert(0, os.path.join(_HERE, "..", "..", "src"))
 sys.path.insert(0, _HERE)
 
 import reaction_diffusion_saha as rd  # noqa: E402
-from weighting_wall.calibration import CalibrationGrid  # noqa: E402
-from weighting_wall.models import GaussianModel, MomentModel  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias.calibration import CalibrationGrid  # noqa: E402
+from folded_debias.models import GaussianModel, MomentModel  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
 # Physical pixel grid the Saha emission is resampled onto, in um. Matched by the
 # calibration build above (n_pixels / half_window identical). The absolute scale

@@ -19,7 +19,7 @@ Every model exposes the same two-method interface used by ``montecarlo``:
 
 * ``noise_free_series(exp)`` -- the clean profile stack for an Experiment.
 * ``fit_variance(x, y)``     -- fit one noisy profile, return its diffusive
-  variance as a :class:`~weighting_wall.fit.FrameFit`.
+  variance as a :class:`~folded_debias.fit.FrameFit`.
 
 For every model the *diffusive variance* (the quantity that grows as
 sigma^2(t) = sigma_0^2 + 2 D t and enters MSD(t) = variance(t) - variance(0))
@@ -45,11 +45,11 @@ class GaussianModel:
     """Pure Gaussian profile; the model the original POC was built on.
 
     ``max_var`` is the optional upper bound on the fitted variance, forwarded to
-    :func:`weighting_wall.fit.fit_variance`. The default (``None``) keeps the
+    :func:`folded_debias.fit.fit_variance`. The default (``None``) keeps the
     historical ``span^2`` bound; pass a physical cap ``(G * sigma0) ** 2`` when
     the output window is far wider than the spot, so the low-CNR fit cannot
     wander out to the window scale. It must match between calibration and
-    application (see :func:`weighting_wall.fit.fit_variance`).
+    application (see :func:`folded_debias.fit.fit_variance`).
     """
 
     name = "gaussian"

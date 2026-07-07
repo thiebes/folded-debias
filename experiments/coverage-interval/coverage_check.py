@@ -38,7 +38,7 @@ Run from the repository root::
 
     .venv/Scripts/python.exe scripts/coverage_check.py
 
-Set ``WEIGHTING_WALL_WORKERS=0`` to use all cores. Reuses the standard-geometry
+Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores. Reuses the standard-geometry
 D-free Gaussian calibration cached by ``subdiffusive_alpha.py``; builds it if
 absent. Outputs ``output/coverage_check.{png,txt}``.
 """
@@ -53,10 +53,10 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from weighting_wall import Experiment, GaussianModel, calibrate_d_free  # noqa: E402
-from weighting_wall.montecarlo import run_ensemble  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import msd_and_weights  # noqa: E402
+from folded_debias import Experiment, GaussianModel, calibrate_d_free  # noqa: E402
+from folded_debias.montecarlo import run_ensemble  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import msd_and_weights  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
@@ -102,7 +102,7 @@ def wls_slope(msd, t, w) -> tuple[np.ndarray, float]:
     ``msd`` has frames on its last axis (any leading shape). ``D_se`` is the
     covariance SE of D and is a scalar -- it depends only on the (deterministic)
     weights and times, not on the data, so every measurement at one CNR_0 shares
-    it. Mirrors :func:`weighting_wall.fit.fit_D`.
+    it. Mirrors :func:`folded_debias.fit.fit_D`.
     """
     g = w > 0
     tg, wg = t[g], w[g]

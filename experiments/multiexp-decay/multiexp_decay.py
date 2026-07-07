@@ -29,7 +29,7 @@ Run from the repository root::
 
     .venv/Scripts/python.exe scripts/multiexp_decay.py
 
-Set ``WEIGHTING_WALL_WORKERS=0`` to use all cores. Reuses the standard-geometry
+Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores. Reuses the standard-geometry
 D-free Gaussian calibration cached by ``subdiffusive_alpha.py``
 (``output/calibration_subdiffusive.npz``); builds it if absent.
 Outputs ``output/multiexp_decay.{png,txt}``.
@@ -45,9 +45,9 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from weighting_wall import (Experiment, MultiExpExperiment, GaussianModel,  # noqa: E402
+from folded_debias import (Experiment, MultiExpExperiment, GaussianModel,  # noqa: E402
                             calibrate_d_free, evaluate, per_frame_diagnostic)
-from weighting_wall.truncation import TruncationModel  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)

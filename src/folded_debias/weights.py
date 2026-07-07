@@ -26,11 +26,11 @@ isolates the effect of the bias correction.
 
 Every scheme takes the *per-frame CNR* as input. In the Monte Carlo validation
 the CNR is known exactly; on real data it is measured from each profile with
-the ``fft-cnr`` package (see :mod:`weighting_wall.cnr`).
+the ``fft-cnr`` package (see :mod:`folded_debias.cnr`).
 
-The ``model`` (a :class:`~weighting_wall.truncation.TruncationModel`) can be
+The ``model`` (a :class:`~folded_debias.truncation.TruncationModel`) can be
 either a legacy 1-D, D-aware calibration or the 2-D, D-free one from
-:func:`~weighting_wall.calibration.calibrate_cnr_sigma2`. With the joint
+:func:`~folded_debias.calibration.calibrate_cnr_sigma2`. With the joint
 (CNR, sigma^2) calibration the
 per-frame raw fitted variance is also passed into the lookup, so the
 correction is width-aware and carries no reference to D.
@@ -57,7 +57,7 @@ def corrected_variance(scheme: str, variance_row: np.ndarray,
 
     This is the single place the bias correction is applied.
     :func:`msd_and_weights` calls it to form the MSD, and
-    :func:`weighting_wall.validate.per_frame_diagnostic` calls it to report
+    :func:`folded_debias.validate.per_frame_diagnostic` calls it to report
     the per-frame residual bias. Because the slope fit is linear in these
     corrected variances and the weights are deterministic in CNR, the
     per-frame residual ``E[sigma_tilde^2] - sigma^2_true`` fully determines
@@ -96,7 +96,7 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     cnr_frame : array, shape (n_frames,)
         Per-frame CNR (known in Monte Carlo; measured with ``fft-cnr`` on real
         data).
-    model : calibrated :class:`~weighting_wall.truncation.TruncationModel`.
+    model : calibrated :class:`~folded_debias.truncation.TruncationModel`.
 
     Notes
     -----

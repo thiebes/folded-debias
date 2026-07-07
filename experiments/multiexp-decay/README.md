@@ -25,7 +25,7 @@ None. Fully synthetic. Reuses the cached `calibration_subdiffusive.npz`.
 .venv/Scripts/python.exe experiments/multiexp-decay/multiexp_decay.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0`; ~6 min. Outputs to repo-root `output/`; committed
+Set `FOLDED_DEBIAS_WORKERS=0`; ~6 min. Outputs to repo-root `output/`; committed
 snapshots are here.
 
 ## Key result + figure
@@ -39,7 +39,7 @@ single-exponential-specific -- state thresholds in per-frame CNR. Figure:
 
 ## Depends on
 
-`weighting_wall` (`MultiExpExperiment`). No sibling-folder helpers.
+`folded_debias` (`MultiExpExperiment`). No sibling-folder helpers.
 
 ## See also
 

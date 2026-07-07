@@ -32,7 +32,7 @@ sys.path.insert(0, os.path.join(_HERE, "..", "..", "src"))
 sys.path.insert(0, _HERE)
 
 import nonfickian_validation as nf  # noqa: E402
-from weighting_wall.fit import fit_variance  # noqa: E402
+from folded_debias.fit import fit_variance  # noqa: E402
 
 
 def diagnose(A: float, cnr0: float, power: int = 2, n_mc: int = 4000,

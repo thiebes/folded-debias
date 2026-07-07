@@ -7,7 +7,7 @@ microscopy detectors are dominated by *shot* (photon-counting) noise, whose
 variance scales with the local signal, plus a read-noise floor. A correction
 calibrated and validated only on white noise has not been tested against the
 noise it will actually meet -- so this module makes the noise law pluggable, the
-same way :mod:`weighting_wall.models` makes the profile shape pluggable.
+same way :mod:`folded_debias.models` makes the profile shape pluggable.
 
 A noise model carries everything needed to (1) turn a clean profile stack into
 one noisy realisation and (2) report the per-frame contrast-to-noise ratio that
@@ -40,7 +40,7 @@ class WhiteNoise:
     The noise RMS is ``peak0 / cnr0`` -- independent of position and time -- so
     the per-frame CNR is just the (decaying, spreading) peak divided by that
     fixed RMS. Reproduces the inline default in
-    :func:`weighting_wall.montecarlo.run_ensemble`.
+    :func:`folded_debias.montecarlo.run_ensemble`.
     """
 
     name: str = "white"

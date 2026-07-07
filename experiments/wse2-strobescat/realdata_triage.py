@@ -33,7 +33,7 @@ from scipy.ndimage import gaussian_filter1d
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 import fft_cnr  # noqa: E402
-from weighting_wall.fit import fit_D, fit_variance  # noqa: E402
+from folded_debias.fit import fit_D, fit_variance  # noqa: E402
 
 ROOT = r"P:\Lab\Enrique\lab"   # raw collaborator data stays on the pshare
 OUT = os.path.join(os.path.dirname(__file__), "diagnostics", "triage_deparity.csv")

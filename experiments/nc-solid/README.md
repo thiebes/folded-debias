@@ -42,7 +42,7 @@ large derived artifact kept in-repo.
 ```bash
 # regenerate the figure (needs the calibration in output/ first):
 cp experiments/nc-solid/calibration_nc_solid_gaussian.npz output/
-WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe experiments/nc-solid/nc_solid_poster_figure.py
+FOLDED_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/nc-solid/nc_solid_poster_figure.py
 ```
 
 Rebuild the calibration via `run_nc_solid_calibration.sh` following
@@ -59,7 +59,7 @@ only raises alpha -- it masks subdiffusion, never manufactures it. Figure:
 
 ## Depends on
 
-`weighting_wall` (`GaussianModel`, `noise.WhiteNoise`, `truncation`, `validate`,
+`folded_debias` (`GaussianModel`, `noise.WhiteNoise`, `truncation`, `validate`,
 `weights`). Local sibling modules `nc_data.py`, `nc_solid_sim.py`,
 `nc_solid_alpha_vs_cnr.py`. Optional `curved_text` (the figure's curved label;
 `pip install -e ../curved-text`).

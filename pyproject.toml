@@ -3,9 +3,9 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "weighting-wall"
+name = "folded-debias"
 version = "0.1.0"
-description = "CNR-aware weighting for MSD diffusion fits: correcting the truncation-at-zero bias in fitted Gaussian widths."
+description = "Folded-normal debiasing of the low-CNR truncation-at-zero bias in bounded width fits (e.g. MSD diffusion)."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }

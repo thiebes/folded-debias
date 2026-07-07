@@ -27,7 +27,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from weighting_wall.fit import fit_D  # noqa: E402
+from folded_debias.fit import fit_D  # noqa: E402
 from realdata_diagnostics import MEASUREMENTS, _find_canonical  # noqa: E402
 
 WIP = os.path.join(os.path.dirname(__file__), "diagnostics")

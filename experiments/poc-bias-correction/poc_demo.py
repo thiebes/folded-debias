@@ -24,8 +24,8 @@ import numpy as np
 # Allow running from a source checkout without installing the package.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall import MODELS, Experiment, evaluate, sweep_stats  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
+from folded_debias import MODELS, Experiment, evaluate, sweep_stats  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
 
 # Nanocrystal-solid regime: short diffusion length against the spot size.
 # D and tau are chosen so that L_D = sqrt(2 D tau) ~ 0.20 sigma0, i.e.

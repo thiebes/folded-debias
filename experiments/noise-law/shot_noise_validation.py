@@ -23,11 +23,11 @@ For each noise law this script asks the two questions an expert panel raised:
     another law, still de-bias D, or must the calibration be rebuilt?
 
 Everything runs through the same audited calibrate/evaluate path (`validate.py`)
-with only the noise law swapped (`weighting_wall.noise`), so the comparison
+with only the noise law swapped (`folded_debias.noise`), so the comparison
 isolates the noise model. The metric is mean(D_hat)/D_true for the folded-normal
 scheme across an initial-CNR sweep; uncorrected OLS is the raw bias to remove.
 
-Run from the repository root (serial by default; set WEIGHTING_WALL_WORKERS to
+Run from the repository root (serial by default; set FOLDED_DEBIAS_WORKERS to
 parallelise)::
 
     .venv/Scripts/python.exe scripts/shot_noise_validation.py
@@ -44,9 +44,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall.noise import ShotNoise, WhiteNoise  # noqa: E402
-from weighting_wall.simulate import Experiment  # noqa: E402
-from weighting_wall.validate import calibrate_d_free, evaluate  # noqa: E402
+from folded_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
+from folded_debias.simulate import Experiment  # noqa: E402
+from folded_debias.validate import calibrate_d_free, evaluate  # noqa: E402
 
 GEOM = dict(sigma0=1.0, tau=1.0, half_window=6.0, n_pixels=241,
             n_frames=12, t_max=3.0)
@@ -79,7 +79,7 @@ def main() -> None:
     print(f"  D_true = {D_TRUE} sigma_0^2/tau")
     print(f"  calibration: {CAL_CNR0.size} CNR_0 in [2, 80], {N_CAL} runs/cell")
     print(f"  evaluation:  {EVAL_CNR0.size} CNR_0 in [3, 60], {N_EVAL} runs/cell")
-    print(f"  workers = {os.environ.get('WEIGHTING_WALL_WORKERS', '(serial)')}")
+    print(f"  workers = {os.environ.get('FOLDED_DEBIAS_WORKERS', '(serial)')}")
 
     # One calibration per noise law (matched). The white calibration is the
     # default the method ships with; it doubles as the robustness reference.
