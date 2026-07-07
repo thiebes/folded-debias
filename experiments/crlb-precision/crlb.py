@@ -7,7 +7,7 @@ derivation cannot answer by itself -- "how close to optimal is the estimator?"
 -- and separates the removable artefact (bias) from the irreducible cost
 (variance).
 
-Model (as simulated by ``weighting_wall.simulate``): at frame i the noise-free
+Model (as simulated by ``folded_debias.simulate``): at frame i the noise-free
 profile is mu(x) = A_i * exp(-x^2 / (2 v_i)), with v_i = sigma_0^2 + 2 D t_i and
 A_i the peak amplitude. Each pixel carries iid Gaussian noise of standard
 deviation sigma_noise. For Gaussian noise with known sigma_noise the Fisher
@@ -33,8 +33,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall.montecarlo import run_ensemble  # noqa: E402
-from weighting_wall.simulate import Experiment, noise_sigma_for_cnr0  # noqa: E402
+from folded_debias.montecarlo import run_ensemble  # noqa: E402
+from folded_debias.simulate import Experiment, noise_sigma_for_cnr0  # noqa: E402
 
 
 def fisher_information(exp: Experiment, noise_sigma: float) -> np.ndarray:

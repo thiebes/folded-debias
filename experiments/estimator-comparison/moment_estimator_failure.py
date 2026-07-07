@@ -30,9 +30,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall import (Experiment, GaussianModel, MomentModel,  # noqa: E402
+from folded_debias import (Experiment, GaussianModel, MomentModel,  # noqa: E402
                             evaluate, sweep_stats)
-from weighting_wall.truncation import TruncationModel  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
 
 EXP = Experiment(sigma0=1.0, D=0.02, tau=1.0, n_frames=12, t_max=3.0)
 CNR0_GRID = np.array([5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 90.0])

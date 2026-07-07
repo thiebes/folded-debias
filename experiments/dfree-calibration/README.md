@@ -37,7 +37,7 @@ None. Fully synthetic.
 .venv/Scripts/python.exe experiments/dfree-calibration/dense_calibration_and_test.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0` for the dense run. Outputs to repo-root `output/`;
+Set `FOLDED_DEBIAS_WORKERS=0` for the dense run. Outputs to repo-root `output/`;
 committed snapshots are in this folder.
 
 ## Key result + figure
@@ -49,7 +49,7 @@ Result tables: `validate_d_zero_<model>.txt`, `dense_calibration_and_test.txt`.
 
 ## Depends on
 
-`weighting_wall`. No sibling-folder helpers.
+`folded_debias`. No sibling-folder helpers.
 
 ## See also
 

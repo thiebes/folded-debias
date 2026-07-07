@@ -14,7 +14,7 @@ bias per frame, then weight by inverse variance. The per-frame CNR (from the
 
 Typical use::
 
-    from weighting_wall import Experiment, calibrate, evaluate
+    from folded_debias import Experiment, calibrate, evaluate
     import numpy as np
 
     exp = Experiment(D=0.02)                 # short-L_D nanocrystal-solid regime

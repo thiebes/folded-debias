@@ -26,7 +26,7 @@ None. Fully synthetic. Reuses the cached `calibration_subdiffusive.npz`.
 .venv/Scripts/python.exe experiments/coverage-interval/coverage_check.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0`; ~5 min. Outputs to repo-root `output/`; committed
+Set `FOLDED_DEBIAS_WORKERS=0`; ~5 min. Outputs to repo-root `output/`; committed
 snapshots are here.
 
 ## Key result + figure
@@ -40,7 +40,7 @@ Figure: `coverage_check.png`; table `coverage_check.txt`.
 
 ## Depends on
 
-`weighting_wall` (`fit.fit_D` returns `D_se`). No sibling-folder helpers.
+`folded_debias` (`fit.fit_D` returns `D_se`). No sibling-folder helpers.
 
 ## See also
 

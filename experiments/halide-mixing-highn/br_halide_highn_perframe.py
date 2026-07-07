@@ -14,7 +14,7 @@ calibration is the separate real-data path). It is cached per fraction.
 
 Run from the repository root (needs the pshare)::
 
-    WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py
+    FOLDED_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py
 
 Outputs ``output/br_halide_highn_perframe.{png,txt}`` and caches each D-aware
 calibration to ``output/cal_highn_daware_x<frac>.npz``.
@@ -32,13 +32,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "halide-mixing-brI-legacy"))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from weighting_wall import GaussianModel  # noqa: E402
-from weighting_wall.simulate import Experiment  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.validate import calibrate  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias import GaussianModel  # noqa: E402
+from folded_debias.simulate import Experiment  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.validate import calibrate  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
-from weighting_wall.fit import fit_variance as _fit_gaussian  # noqa: E402
+from folded_debias.fit import fit_variance as _fit_gaussian  # noqa: E402
 
 from br_halide_validation import fit_msd_powerlaw  # noqa: E402
 from br_halide_highn_validation import STRIDE, subsample  # noqa: E402

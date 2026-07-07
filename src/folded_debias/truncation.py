@@ -22,7 +22,7 @@ The class supports **two calibration modes** with the same API:
   ``rel_variance`` from CNR alone. The calibration implicitly conditions on
   the D used to generate the sweep -- see ``docs/DERIVATION.md``.
 * **2-D, D-free** (recommended): built from a
-  :class:`~weighting_wall.calibration.CalibrationGrid` via
+  :class:`~folded_debias.calibration.CalibrationGrid` via
   :meth:`TruncationModel.from_calibration`. Looks up ``var_bias`` and
   per-frame ``rel_variance`` from (CNR, fitted-variance) jointly. The
   calibration carries no reference to *D*; the lookup is queried at each
@@ -263,7 +263,7 @@ class TruncationModel:
         With a 1-D calibration this is the MSD-point variance
         ``Var(sigma_hat^2(t) - sigma_hat^2(0))`` empirically measured per CNR.
         With a 2-D calibration this is the per-frame ``Var(sigma_hat^2)``; the
-        MSD-point variance is formed in :mod:`weighting_wall.weights` by
+        MSD-point variance is formed in :mod:`folded_debias.weights` by
         adding the t=0 frame's contribution.
         """
         if variance is None or not self.is_2d:

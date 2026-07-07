@@ -1,6 +1,6 @@
 """2-D per-frame calibration of the variance-fit bias -- experimental.
 
-The recommended D-free calibration is :func:`weighting_wall.calibrate_d_free`,
+The recommended D-free calibration is :func:`folded_debias.calibrate_d_free`,
 a 1-D lookup that simply runs the original calibration at ``D = 0``. It
 captures the bias at ``sigma^2 = sigma_0^2``, which is the relevant region
 for the low-D regime where the truncation bias bites (sigma^2(t) barely
@@ -47,7 +47,7 @@ class CalibrationGrid:
     sample variance of those fits -- the per-frame ``Var(sigma_hat^2)``.
 
     The grids are 1-D and ascending; bilinear interpolation between cells is
-    handled by :class:`~weighting_wall.truncation.TruncationModel`.
+    handled by :class:`~folded_debias.truncation.TruncationModel`.
 
     Also carries the calibration's pixel grid (``pixel_x``) so saved
     calibrations can be reloaded without re-deriving the geometry the lookup
@@ -235,8 +235,8 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
 
     Parameters
     ----------
-    model : profile model instance (see :mod:`weighting_wall.models`).
-        Defaults to :class:`~weighting_wall.models.GaussianModel`. The
+    model : profile model instance (see :mod:`folded_debias.models`).
+        Defaults to :class:`~folded_debias.models.GaussianModel`. The
         model's name is recorded; its class and ``model_kwargs`` are used to
         reconstruct the model inside worker processes.
     pixel_x : the spatial axis on which the fit will run. Must match the

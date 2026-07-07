@@ -85,7 +85,7 @@ unable to fix the bias, however the weights are chosen.
    does not change the variance, so the weight is the ordinary inverse-variance
    weight; the bias correction is the new ingredient.
 
-In `weighting_wall` this is the `folded_normal` scheme. It differs from
+In `folded_debias` this is the `folded_normal` scheme. It differs from
 `inverse_variance` *only* by step 1, so comparing the two isolates the effect
 of the bias correction.
 
@@ -178,7 +178,7 @@ information-theoretic floor for *any* unbiased estimator at these CNRs); the
 calibration is not at fault.
 
 An experimental joint `var_bias(CNR, σ²)` calibration
-(`weighting_wall.calibration.calibrate_cnr_sigma2`) was prototyped for
+(`folded_debias.calibration.calibrate_cnr_sigma2`) was prototyped for
 cases of large `σ²` spread (high-`D`, heterogeneous transport). It is not currently
 competitive: the per-cell Monte-Carlo noise at low CNR dominates the lookup,
 and the additional sample budget needed to fix that (≳ 5000 runs/cell plus

@@ -38,7 +38,7 @@ clipping pile-up at CNR around 1. Figures: `boundary_diagnostic.png`,
 
 ## Depends on
 
-`weighting_wall`. No sibling-folder helpers.
+`folded_debias`. No sibling-folder helpers.
 
 ## See also
 

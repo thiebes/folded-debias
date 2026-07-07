@@ -26,10 +26,10 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from weighting_wall.calibration import CalibrationGrid     # noqa: E402
-from weighting_wall.truncation import TruncationModel       # noqa: E402
-from weighting_wall.weights import msd_and_weights, SCHEMES  # noqa: E402
-from weighting_wall.fit import fit_D                         # noqa: E402
+from folded_debias.calibration import CalibrationGrid     # noqa: E402
+from folded_debias.truncation import TruncationModel       # noqa: E402
+from folded_debias.weights import msd_and_weights, SCHEMES  # noqa: E402
+from folded_debias.fit import fit_D                         # noqa: E402
 
 UM2_PER_NS_TO_CM2_PER_S = 10.0      # 1 um^2/ns = 10 cm^2/s
 

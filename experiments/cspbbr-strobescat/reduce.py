@@ -33,9 +33,9 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from weighting_wall.fit import fit_variance        # noqa: E402
+from folded_debias.fit import fit_variance        # noqa: E402
 try:
-    from weighting_wall.cnr import per_frame_cnr
+    from folded_debias.cnr import per_frame_cnr
     HAVE_FFT_CNR = True
 except Exception:                                  # pragma: no cover
     HAVE_FFT_CNR = False

@@ -44,7 +44,7 @@ above the floor, so the correction is inactive (naive ~ corrected). Figure:
 
 ## Depends on
 
-`weighting_wall`. Local sibling loader `br_data.py`.
+`folded_debias`. Local sibling loader `br_data.py`.
 
 ## See also
 

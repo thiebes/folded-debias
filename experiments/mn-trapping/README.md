@@ -48,7 +48,7 @@ carrier-recovery path is the forward fit. Figures: `marc_diffmap_validation.png`
 
 ## Depends on
 
-`weighting_wall` (`CalibrationGrid`, `fit`, `models`, `truncation`, `weights`).
+`folded_debias` (`CalibrationGrid`, `fit`, `models`, `truncation`, `weights`).
 Local sibling loaders `marc_data.py`, `diffusion_map.py`. The calibrations come
 from `scripts/build_calibration.py` (shared tooling).
 

@@ -31,7 +31,7 @@ None. Fully synthetic.
 .venv/Scripts/python.exe experiments/estimator-comparison/unbounded_fit_comparison.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0`. Outputs to repo-root `output/`; committed
+Set `FOLDED_DEBIAS_WORKERS=0`. Outputs to repo-root `output/`; committed
 snapshots are here.
 
 ## Key result + figure
@@ -45,7 +45,7 @@ table `unbounded_fit_comparison.txt`.
 
 ## Depends on
 
-`weighting_wall` (`MomentModel`, `UnboundedGaussianModel`). No sibling-folder
+`folded_debias` (`MomentModel`, `UnboundedGaussianModel`). No sibling-folder
 helpers.
 
 ## See also

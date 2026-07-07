@@ -34,9 +34,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall import MODELS, Experiment, per_frame_diagnostic  # noqa: E402
-from weighting_wall.montecarlo import run_ensemble  # noqa: E402
-from weighting_wall.truncation import TruncationModel, frame_stats  # noqa: E402
+from folded_debias import MODELS, Experiment, per_frame_diagnostic  # noqa: E402
+from folded_debias.montecarlo import run_ensemble  # noqa: E402
+from folded_debias.truncation import TruncationModel, frame_stats  # noqa: E402
 
 
 # Match dense_calibration_and_test.py exactly for an apples-to-apples test.

@@ -43,10 +43,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from scipy.optimize import curve_fit  # noqa: E402
 
-from weighting_wall import CalibrationGrid  # noqa: E402
-from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias import CalibrationGrid  # noqa: E402
+from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
 from nc_data import load_all  # noqa: E402
 

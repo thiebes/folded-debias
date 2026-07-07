@@ -75,7 +75,7 @@ caches, `index.md`, `METHOD.md`, `triage*.csv`).
 .venv/Scripts/python.exe experiments/wse2-strobescat/render_recovery_demo.py
 ```
 
-`WEIGHTING_WALL_WORKERS=1` (serial) is the safe default for the calibration
+`FOLDED_DEBIAS_WORKERS=1` (serial) is the safe default for the calibration
 builds; `=0` (all cores) is faster but the Windows process pool can break under
 CPU contention.
 
@@ -102,7 +102,7 @@ CPU contention.
 
 ## Depends on
 
-`weighting_wall` (`calibration`, `truncation`, `weights`, `cnr`, `fit`,
+`folded_debias` (`calibration`, `truncation`, `weights`, `cnr`, `fit`,
 `noise`). `fft-cnr` for per-frame CNR. The diagnostic scripts share
 `realdata_diagnostics.py` (local sibling).
 

@@ -19,7 +19,7 @@ divergence (naive only -- the correction breaks down erratically below the
 per-frame floor there).
 
 Reuses the parallel sweep machinery in `nc_solid_alpha_vs_cnr.py`. Heavy
-(one sample x dense grid x many seeds). Set WEIGHTING_WALL_WORKERS to the number
+(one sample x dense grid x many seeds). Set FOLDED_DEBIAS_WORKERS to the number
 of PHYSICAL cores, NOT 0 (all logical): these CPU-bound fits do not gain from
 hyperthreading, and on a hyperthreaded box 8 workers on 4 physical cores
 oversubscribe and roughly halve throughput. Pin the BLAS thread count to 1 as
@@ -29,7 +29,7 @@ memory (OpenBLAS allocation failure) -- most acute for the inset's low-CNR_0
 points, whose ill-conditioned fits iterate to maxfev. Each sweep prints a
 per-CNR_0 progress line (elapsed + ETA)::
 
-    $env:WEIGHTING_WALL_WORKERS = 4       # PowerShell; physical-core count
+    $env:FOLDED_DEBIAS_WORKERS = 4       # PowerShell; physical-core count
     $env:OPENBLAS_NUM_THREADS = 1
     $env:OMP_NUM_THREADS = 1
     .venv/Scripts/python.exe scripts/nc_solid_poster_figure.py
@@ -59,7 +59,7 @@ from scipy.optimize import curve_fit  # noqa: E402
 from curved_text import curved_text  # noqa: E402
 
 import nc_solid_alpha_vs_cnr as base  # noqa: E402  (reuse compute_row / run_tasks)
-from weighting_wall.noise import WhiteNoise  # noqa: E402
+from folded_debias.noise import WhiteNoise  # noqa: E402
 from nc_data import load_case  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"

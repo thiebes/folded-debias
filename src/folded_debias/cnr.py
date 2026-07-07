@@ -1,7 +1,7 @@
 """Per-frame CNR estimation -- the input the whole weighting scheme rests on.
 
 For Monte Carlo validation the per-frame CNR is known exactly (it is set by the
-simulation; see :func:`weighting_wall.simulate.cnr_per_frame`).  For *real*
+simulation; see :func:`folded_debias.simulate.cnr_per_frame`).  For *real*
 measurements it must be estimated from each spatial profile, with no repeated
 frames and no separate background region available.  That is exactly what the
 ``fft-cnr`` package does: it separates slowly varying signal from rapid noise

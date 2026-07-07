@@ -18,7 +18,7 @@ Validated. Poster-scope (source for Panels 2 and 5).
 
 ## Data
 
-None. Fully synthetic (`weighting_wall` Monte Carlo); no pshare datasets.
+None. Fully synthetic (`folded_debias` Monte Carlo); no pshare datasets.
 
 ## Run
 
@@ -28,7 +28,7 @@ None. Fully synthetic (`weighting_wall` Monte Carlo); no pshare datasets.
 .venv/Scripts/python.exe experiments/poc-bias-correction/poc_demo.py generalized_gaussian
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0` (all cores) to speed up the Monte Carlo. Outputs
+Set `FOLDED_DEBIAS_WORKERS=0` (all cores) to speed up the Monte Carlo. Outputs
 are written to the repo-root `output/` directory; the committed snapshots in this
 folder are the current results.
 
@@ -41,7 +41,7 @@ Mean `|mean(D_hat)/D_true - 1|` over the CNR sweep: OLS 10.3, inverse-variance
 
 ## Depends on
 
-`weighting_wall` (`MODELS`, `Experiment`, `evaluate`, `sweep_stats`,
+`folded_debias` (`MODELS`, `Experiment`, `evaluate`, `sweep_stats`,
 `TruncationModel`). No sibling-folder helpers.
 
 ## See also

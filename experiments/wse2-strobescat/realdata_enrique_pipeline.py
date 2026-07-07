@@ -41,7 +41,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from realdata_diagnostics import (MEASUREMENTS, FIT_HALF_SIGMA,  # noqa: E402
                                   load_measurement, per_frame_cnr,
                                   build_or_load_calibration, decide_noise_law)
-from weighting_wall.fit import fit_variance  # noqa: E402
+from folded_debias.fit import fit_variance  # noqa: E402
 
 WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
 RED = "#c60b1e"

@@ -59,9 +59,9 @@ from scipy.ndimage import gaussian_filter1d
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import fft_cnr  # noqa: E402
-from weighting_wall import GaussianModel, calibrate_d_free  # noqa: E402
-from weighting_wall.fit import fit_D, fit_variance  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
+from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
+from folded_debias.fit import fit_D, fit_variance  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
 
 # outputs live with the experiment (this folder's diagnostics/ subtree), tracked
 WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
@@ -266,9 +266,9 @@ def build_or_load_calibration(sigma0_px: float, npix: int, noise_law: str):
                                relvar_grid=z["relvar_grid"],
                                varbias_grid=z["varbias_grid"])
     half_window = (npix / 2.0) / sigma0_px
-    noise_model = None  # white. (Shot would pass weighting_wall.noise.ShotNoise.)
+    noise_model = None  # white. (Shot would pass folded_debias.noise.ShotNoise.)
     if noise_law == "shot":
-        from weighting_wall.noise import ShotNoise
+        from folded_debias.noise import ShotNoise
         noise_model = ShotNoise(read=1.0, poisson=True)
     print(f"  building calibration ({noise_law}, npix={npix}, "
           f"half_window={half_window:.1f}) ...", flush=True)

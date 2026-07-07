@@ -26,9 +26,9 @@ physical terms needs the detector's photon budget: the floor here is in the same
 counts as the peak, which holds cnr0**2 counts at frame 0, so a floor of r counts
 matters most for the dim, low-CNR frames where peak counts are fewest.
 
-Run from the repository root (set WEIGHTING_WALL_WORKERS to parallelise)::
+Run from the repository root (set FOLDED_DEBIAS_WORKERS to parallelise)::
 
-    WEIGHTING_WALL_WORKERS=0 .venv/Scripts/python.exe scripts/read_floor_sweep.py
+    FOLDED_DEBIAS_WORKERS=0 .venv/Scripts/python.exe scripts/read_floor_sweep.py
 
 Sweep sizes follow the SHOT_* environment variables (small defaults for a quick
 serial smoke run; raise for the full run).
@@ -46,9 +46,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall.noise import ShotNoise, WhiteNoise  # noqa: E402
-from weighting_wall.simulate import Experiment  # noqa: E402
-from weighting_wall.validate import calibrate_d_free, evaluate  # noqa: E402
+from folded_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
+from folded_debias.simulate import Experiment  # noqa: E402
+from folded_debias.validate import calibrate_d_free, evaluate  # noqa: E402
 
 OUTPUT = os.path.join(os.path.dirname(__file__), "..", "output")
 
@@ -77,7 +77,7 @@ def main() -> None:
     print(f"  calibration: {CAL_CNR0.size} CNR_0 in [2, 80], {N_CAL} runs/cell")
     print(f"  evaluation:  {EVAL_CNR0.size} CNR_0 in [3, 60], {N_EVAL} runs/cell")
     print(f"  read floors (counts): {READ_FLOORS.tolist()}")
-    print(f"  workers = {os.environ.get('WEIGHTING_WALL_WORKERS', '(serial)')}")
+    print(f"  workers = {os.environ.get('FOLDED_DEBIAS_WORKERS', '(serial)')}")
 
     # The shipped default: a white-noise calibration. Used as the robustness
     # reference (applied to every read-floor case) and as the large-r limit.

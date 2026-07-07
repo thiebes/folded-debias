@@ -22,7 +22,7 @@ Two figures:
 
 Both are noise-free-referenced; neither claims carrier-alpha recovery on the
 Saha bed. Self-contained: depends only on the model port and the shipped
-weighting_wall package, not on the (actively reworked) validation harness.
+folded_debias package, not on the (actively reworked) validation harness.
 
 Style: the plot style guide, Okabe-Ito palette (blue = truth/
 reference, gold = emission/intermediate, red = biased/uncorrected, green =
@@ -49,10 +49,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 import reaction_diffusion_saha as rd  # noqa: E402
-from weighting_wall.calibration import CalibrationGrid  # noqa: E402
-from weighting_wall.models import GaussianModel  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias.calibration import CalibrationGrid  # noqa: E402
+from folded_debias.models import GaussianModel  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
 # Okabe-Ito roles (see plot_style.md; match scripts/poster_figures.py).
 BLUE = "#0072B2"    # truth / noise-free reference

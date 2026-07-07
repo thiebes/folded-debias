@@ -48,11 +48,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from scipy.optimize import curve_fit  # noqa: E402
 
-from weighting_wall import CalibrationGrid  # noqa: E402
-from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
-from weighting_wall.noise import ShotNoise, WhiteNoise  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias import CalibrationGrid  # noqa: E402
+from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from folded_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
 from nc_data import load_all, load_case  # noqa: E402
 
@@ -114,7 +114,7 @@ def fit_each_row(x, profiles):
 def compute_row(x, t, profiles, cnr0, n_seeds, trunc, noise_model, seed_base=0):
     """Apparent transport at one CNR_0 over n_seeds noise realisations.
 
-    The noise law is pluggable (``noise_model`` is a ``weighting_wall.noise``
+    The noise law is pluggable (``noise_model`` is a ``folded_debias.noise``
     model). ``cnr_frame`` is the per-frame contrast-to-noise the model reports
     -- for white noise the peak over a constant RMS, for shot noise the
     peak-local member ``peak / sqrt(peak + read^2)`` (the bias-governing CNR per
@@ -169,7 +169,7 @@ def _row_worker(packed):
 
 
 def _n_workers():
-    env = os.environ.get("WEIGHTING_WALL_WORKERS")
+    env = os.environ.get("FOLDED_DEBIAS_WORKERS")
     n = int(env) if env not in (None, "") else 1
     if n <= 0:
         n = os.cpu_count() or 1

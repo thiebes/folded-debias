@@ -35,7 +35,7 @@ Run from the repository root (needs the pshare for the maps)::
 
     .venv/Scripts/python.exe scripts/br_halide_validation.py
 
-Set ``WEIGHTING_WALL_WORKERS=0`` to use all cores for the calibration.
+Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores for the calibration.
 Outputs ``output/br_halide_validation.{png,txt}``.
 """
 from __future__ import annotations
@@ -52,11 +52,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from scipy.optimize import curve_fit  # noqa: E402
 
-from weighting_wall import GaussianModel, calibrate_d_free  # noqa: E402
-from weighting_wall.fit import fit_variance as fit_gaussian  # noqa: E402
-from weighting_wall.models import MomentModel  # noqa: E402
-from weighting_wall.truncation import TruncationModel  # noqa: E402
-from weighting_wall.weights import corrected_variance  # noqa: E402
+from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
+from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from folded_debias.models import MomentModel  # noqa: E402
+from folded_debias.truncation import TruncationModel  # noqa: E402
+from folded_debias.weights import corrected_variance  # noqa: E402
 
 from br_data import load_all  # noqa: E402
 

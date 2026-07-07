@@ -81,9 +81,9 @@ shorter effective window, which is the fair test).
 The `max_var` bound lives in the shared fit so calibration and application use one
 implementation:
 
-- `src/weighting_wall/fit.py` -- `fit_variance(x, y, max_var=None)`; default
+- `src/folded_debias/fit.py` -- `fit_variance(x, y, max_var=None)`; default
   `None` keeps the historical `span^2`.
-- `src/weighting_wall/models.py` -- `GaussianModel(max_var=...)` forwards it.
+- `src/folded_debias/models.py` -- `GaussianModel(max_var=...)` forwards it.
 
 The scripts also reuse two pure helpers (`fit_msd_powerlaw`, `fit_each_row`) from
 `experiments/halide-mixing-brI-legacy/br_halide_validation.py`.
@@ -94,7 +94,7 @@ Needs the pshare for the collapsed maps. Pin the BLAS threads so the process poo
 does not oversubscribe, and use a modest worker count if the machine is busy:
 
 ```bash
-OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 WEIGHTING_WALL_WORKERS=4 \
+OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 FOLDED_DEBIAS_WORKERS=4 \
   .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py
 ```
 

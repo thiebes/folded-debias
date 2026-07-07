@@ -42,7 +42,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from weighting_wall import MODELS, calibrate_cnr_sigma2  # noqa: E402
+from folded_debias import MODELS, calibrate_cnr_sigma2  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)

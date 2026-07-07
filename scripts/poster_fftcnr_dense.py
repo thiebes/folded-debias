@@ -16,7 +16,7 @@ mismatch. Each profile is estimated through ``fit_model="generalized_gaussian"``
 
 A noise mode is selected on the command line. ``white`` (the default) adds the
 constant-sigma Gaussian noise the calibration is built on; ``shot`` uses the
-project's photon-counting :class:`weighting_wall.noise.ShotNoise` (pure Poisson,
+project's photon-counting :class:`folded_debias.noise.ShotNoise` (pure Poisson,
 no read floor), whose variance follows the local signal. Under shot noise the
 true CNR is the peak SNR -- peak counts / sqrt(peak counts) -- so the frame-0
 peak holds ``cnr**2`` counts and the target CNR is recovered by construction;
@@ -42,7 +42,7 @@ from scipy.special import voigt_profile
 from fft_cnr import fft_cnr
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from weighting_wall.noise import ShotNoise  # noqa: E402
+from folded_debias.noise import ShotNoise  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)

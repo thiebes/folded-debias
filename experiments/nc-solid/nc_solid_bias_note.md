@@ -219,12 +219,12 @@ Gaussian as the bed's truth. The reconstruction conserves the population and
 makes the peak fall as 1/σ with spreading (the raw histogram `max` instead rises,
 biasing the per-frame CNR high). Its second moment is the ground truth σ²(t).
 Each per-frame width is then fit with the bounded Gaussian estimator
-([`weighting_wall.fit`](../src/weighting_wall/fit.py)); the MSD uses the fitted
+([`folded_debias.fit`](../src/folded_debias/fit.py)); the MSD uses the fitted
 t = 0 width, MSD = σ̂²(t) − σ̂²(0). The exponent and diffusion coefficient come
 from a nonlinear least-squares fit of MSD = 2D·t^α with α ∈ [0.2, 2]. The bias
 is the exponent of the mean MSD over 1000 noise realisations; the single-shot
 standard deviation is taken across per-realisation exponents. Noise laws are the
-pluggable models in [`weighting_wall.noise`](../src/weighting_wall/noise.py):
+pluggable models in [`folded_debias.noise`](../src/folded_debias/noise.py):
 white noise with standard deviation peak₀/CNR₀, and shot noise with Poisson
 counts and an optional read floor, whose per-frame CNR is
 peak / √(peak + read²). CNR₀ is the frame-0 peak CNR and means the same starting

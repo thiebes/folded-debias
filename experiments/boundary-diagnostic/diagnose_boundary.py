@@ -33,8 +33,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall import MODELS  # noqa: E402
-from weighting_wall.simulate import Experiment  # noqa: E402
+from folded_debias import MODELS  # noqa: E402
+from folded_debias.simulate import Experiment  # noqa: E402
 
 TRUE_SIGMA = 1.0
 TRUE_VAR = TRUE_SIGMA ** 2

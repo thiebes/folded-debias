@@ -27,7 +27,7 @@ reused by multiexp-decay and coverage-interval).
 .venv/Scripts/python.exe experiments/subdiffusive-alpha/subdiffusive_alpha.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0`; ~10 min first run, ~3 min cached. Outputs to
+Set `FOLDED_DEBIAS_WORKERS=0`; ~10 min first run, ~3 min cached. Outputs to
 repo-root `output/`; committed snapshots are here.
 
 ## Key result + figure
@@ -39,7 +39,7 @@ D to `<D>/D_true ~ 0.93-1.05`. Figure: `subdiffusive_alpha.png`; table
 
 ## Depends on
 
-`weighting_wall` (`AnomalousExperiment`). No sibling-folder helpers.
+`folded_debias` (`AnomalousExperiment`). No sibling-folder helpers.
 
 ## See also
 

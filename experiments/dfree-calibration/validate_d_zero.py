@@ -21,7 +21,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from weighting_wall import MODELS, Experiment, calibrate, evaluate  # noqa: E402
+from folded_debias import MODELS, Experiment, calibrate, evaluate  # noqa: E402
 
 
 CNR0_GRID = np.array([5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 90.0])

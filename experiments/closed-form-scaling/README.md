@@ -26,7 +26,7 @@ None. Fully synthetic.
 .venv/Scripts/python.exe experiments/closed-form-scaling/linearity_test.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0`. Outputs to repo-root `output/`; committed
+Set `FOLDED_DEBIAS_WORKERS=0`. Outputs to repo-root `output/`; committed
 snapshots are here.
 
 ## Key result + figure
@@ -37,7 +37,7 @@ band, but the mean is corrupted by broken-fit saturation outliers. Figure:
 
 ## Depends on
 
-`weighting_wall`. No sibling-folder helpers.
+`folded_debias`. No sibling-folder helpers.
 
 ## See also
 

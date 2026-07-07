@@ -22,7 +22,7 @@ Validated. Poster-scope framing (Panels 2-3; see
 
 ## Data
 
-None. Fully synthetic (`weighting_wall.noise` models).
+None. Fully synthetic (`folded_debias.noise` models).
 
 ## Run
 
@@ -31,7 +31,7 @@ None. Fully synthetic (`weighting_wall.noise` models).
 .venv/Scripts/python.exe experiments/noise-law/read_floor_sweep.py
 ```
 
-Set `WEIGHTING_WALL_WORKERS=0`. Outputs to repo-root `output/`; committed
+Set `FOLDED_DEBIAS_WORKERS=0`. Outputs to repo-root `output/`; committed
 snapshots are here.
 
 ## Key result + figure
@@ -43,7 +43,7 @@ negative). Figures: `read_floor_sweep.png`, `fftcnr_white_vs_shot.png`.
 
 ## Depends on
 
-`weighting_wall` (`noise`). No sibling-folder helpers.
+`folded_debias` (`noise`). No sibling-folder helpers.
 
 ## See also
 

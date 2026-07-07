@@ -12,7 +12,7 @@ Status tags: **scope** = poster / paper / control / adjacent / parked;
 ## Layout
 
 ```text
-src/weighting_wall/   core library -- imported by everything; never moved
+src/folded_debias/   core library -- imported by everything; never moved
 experiments/          one folder per experiment set (below)
 illustrations/        one folder per hand-built matplotlib schematic (below)
 scripts/              shared tooling + poster assembly (not per-bed; below)
@@ -26,7 +26,7 @@ tests/                package tests
 
 ## Experiment sets
 
-### Method / synthetic beds (use `src/weighting_wall` + synthetic Experiments)
+### Method / synthetic beds (use `src/folded_debias` + synthetic Experiments)
 
 | Set | Scripts | Scope / maturity | Key result | Figure(s) |
 | ------- | ------- | ------- | ------- | ------- |
@@ -76,7 +76,7 @@ and `scripts/build_poster.py` pulls the panels from these folders.
 
 ## Shared (not per-bed; stay in place)
 
-- `src/weighting_wall/` -- the core library. Unchanged by the reorg.
+- `src/folded_debias/` -- the core library. Unchanged by the reorg.
 - `scripts/` -- shared tooling and poster assembly:
   - `build_calibration.py`, `plot_calibration.py` -- geometry-specific calibration
     builder + diagnostic (used by several beds).

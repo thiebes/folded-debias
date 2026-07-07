@@ -42,7 +42,7 @@ data) and `matplotlib` (figures) are optional extras.
 
 ```python
 import numpy as np
-from weighting_wall import Experiment, calibrate, evaluate
+from folded_debias import Experiment, calibrate, evaluate
 
 exp = Experiment(D=0.02)                      # short-L_D nanocrystal regime
 cnr0 = np.array([2, 3, 5, 8, 12, 20, 40])
@@ -57,7 +57,7 @@ for s, r in results.items():
 ## Profile models
 
 The truncation bias afflicts any non-negative width estimator, so the profile
-model is pluggable (`weighting_wall.models`): `GaussianModel`, `VoigtModel`
+model is pluggable (`folded_debias.models`): `GaussianModel`, `VoigtModel`
 (diffusing Gaussian + fixed Lorentzian PSF — the form Prins' group fits), and
 `GeneralizedGaussianModel` (tunable shape exponent — the `fft-cnr` family, the
 handle for non-Gaussian transport). Scripts take a model name argument:
@@ -90,14 +90,14 @@ pytest
 
 | Path | Role |
 |------|------|
-| `src/weighting_wall/simulate.py`  | profile geometry: diffusion, decay, noise |
-| `src/weighting_wall/models.py`    | profile models: Gaussian, Voigt, generalized-Gaussian |
-| `src/weighting_wall/fit.py`       | per-frame Gaussian width fit; MSD→D linear fit |
-| `src/weighting_wall/montecarlo.py`| Monte Carlo ensembles (model-pluggable) |
-| `src/weighting_wall/truncation.py`| truncation fraction p(CNR); `TruncationModel` |
-| `src/weighting_wall/weights.py`   | OLS / inverse-variance / CNR-aware schemes |
-| `src/weighting_wall/cnr.py`       | per-frame CNR from real data via `fft-cnr` |
-| `src/weighting_wall/validate.py`  | calibrate + evaluate → bias curves |
+| `src/folded_debias/simulate.py`  | profile geometry: diffusion, decay, noise |
+| `src/folded_debias/models.py`    | profile models: Gaussian, Voigt, generalized-Gaussian |
+| `src/folded_debias/fit.py`       | per-frame Gaussian width fit; MSD→D linear fit |
+| `src/folded_debias/montecarlo.py`| Monte Carlo ensembles (model-pluggable) |
+| `src/folded_debias/truncation.py`| truncation fraction p(CNR); `TruncationModel` |
+| `src/folded_debias/weights.py`   | OLS / inverse-variance / CNR-aware schemes |
+| `src/folded_debias/cnr.py`       | per-frame CNR from real data via `fft-cnr` |
+| `src/folded_debias/validate.py`  | calibrate + evaluate → bias curves |
 | `scripts/poc_demo.py`             | proof-of-concept figure (`[model]` arg) |
 | `scripts/diagnose_boundary.py`    | clipping-vs-reflection diagnostic (`[model]` arg) |
 | `scripts/explore_regime.py`       | (D, CNR₀) parameter-space sweep |

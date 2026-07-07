@@ -11,13 +11,13 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
 
-from weighting_wall import (AnomalousExperiment, Experiment, GaussianModel,
+from folded_debias import (AnomalousExperiment, Experiment, GaussianModel,
                             GeneralizedGaussianModel, MomentModel,
                             MultiExpExperiment, UnboundedGaussianModel,
                             VoigtModel, calibrate, evaluate,
                             frame_stats, run_ensemble)
-from weighting_wall.fit import fit_D, fit_variance
-from weighting_wall.simulate import noise_free_series
+from folded_debias.fit import fit_D, fit_variance
+from folded_debias.simulate import noise_free_series
 
 
 def test_noise_free_fit_recovers_variance():
