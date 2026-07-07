@@ -93,11 +93,14 @@ def _plot_left(axL):
                  arrowprops=dict(arrowstyle="<->", color="k", lw=1.0,
                                  mutation_scale=8))
     axL.text(m_folded + 0.09, 1.66, "bias", fontsize=8, ha="left", va="center")
-    axL.text(m_true - 0.13, 2.40, "true $\\sigma^2$", fontsize=7, color=ROLE1,
-             rotation=90, rotation_mode="anchor", va="center", ha="right")
-    axL.text(m_folded - 0.13, 2.40, "mean $\\langle\\hat\\sigma^2\\rangle$",
+    # va="bottom" anchors the edge nearest the dotted line (not the text centre),
+    # so the taller "mean" label -- raised by the hat and angle brackets -- grows
+    # away from its line and both labels keep an equal gap to their line.
+    axL.text(m_true - 0.05, 2.40, "true $\\sigma^2$", fontsize=7, color=ROLE1,
+             rotation=90, rotation_mode="anchor", va="bottom", ha="right")
+    axL.text(m_folded - 0.05, 2.40, "mean $\\langle\\hat\\sigma^2\\rangle$",
              fontsize=7, color=ROLE4, rotation=90, rotation_mode="anchor",
-             va="center", ha="right")
+             va="bottom", ha="right")
 
     axL.set_xlabel("fitted variance,  $\\hat\\sigma^2$")
     axL.set_ylabel("probability density")
@@ -114,7 +117,7 @@ def _label_left(axL, data):
     needs the settled display transform, so this is called after layout."""
     v, g, g_ref, folded = data["v"], data["g"], data["g_ref"], data["folded"]
     fm = (v >= -2.4) & (v <= -0.3)
-    CurvedText(v[fm], g[fm], "forbidden:  variance < 0", axL, offset=5.0,
+    CurvedText(v[fm], g[fm], "forbidden:  variance $< 0$", axL, offset=5.0,
                pos=0.5, anchor="center", color=INDIGO, alpha=0.7, fontsize=7)
     sm = (v >= 0.3) & (v <= 2.3)
     CurvedText(v[sm], folded[sm], "distribution of fits", axL, offset=5.0,
@@ -124,7 +127,7 @@ def _label_left(axL, data):
                pos=0.4, anchor="center", color=INDIGO, fontsize=7)
     rm = (v >= 0.4) & (v <= 2.4)
     CurvedText(v[rm], g_ref[rm], "reflected tail", axL, offset=5.5,
-               pos=0.65, anchor="center", color=INDIGO, fontsize=7)
+               pos=0.55, anchor="center", color=INDIGO, fontsize=7)
 
 
 def _plot_right(axR):
