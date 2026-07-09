@@ -48,7 +48,7 @@ tests/                package tests
 | ------- | ------- | ------- | ------- | ------- |
 | [nc-solid](../experiments/nc-solid/) | `nc_solid_*` (+ loaders `nc_data.py`, `nc_solid_sim.py`) | poster P6 headline / validated | naive alpha climbs to ballistic; folded recovers nominal ~0.88 | pshare; committed `.npz` calibration |
 | [mn-trapping](../experiments/mn-trapping/) | `marc_diffmap_validation.py`, `marc_mn_trapping_plan_a.py` (+ loaders) | paper P6 / validated | folded removes noise bias; shape gap needs forward fit | pshare; local `data/` (gitignored) |
-| [saha-reaction-diffusion](../experiments/saha-reaction-diffusion/) | `nonfickian_validation.py`, `forward_fit_validation.py`, ... (+ adjacent `Lifetime_fit_*`) | not-a-panel / parked | correction robust; forward fit recovers carrier transport | pshare |
+| [saha-reaction-diffusion](../experiments/saha-reaction-diffusion/) | `nonfickian_validation.py`, `forward_fit_validation.py`, `reaction_diffusion_saha.py` | not-a-panel / parked | correction robust; forward fit recovers carrier transport (lifetime/diffusion-paper work now in `free-exciton-diffusion` repo) | pshare |
 | [halide-mixing-brI-legacy](../experiments/halide-mixing-brI-legacy/) | `br_halide_validation.py` (+ loader) | coverage / preliminary | mixing suppresses transport; correction inactive (short window) | pshare |
 | [halide-mixing-highn](../experiments/halide-mixing-highn/) | `br_halide_highn_*`, `render_perframe_figure.py` (+ loader) | fit-bound finding / paper | width-fit upper bound governs apparent bias; clean Fickian truth | pshare (collapsed 1-D) |
 
