@@ -1,4 +1,4 @@
-weighting-wall POC demo
+folded-debias POC demo
   profile model: generalized_gaussian
   experiment: D=0.02, tau=1.0, n_frames=12, L_D/FWHM_0=0.085
   CNR_0 sweep: [ 5.  8. 13. 21. 34. 55. 90.]

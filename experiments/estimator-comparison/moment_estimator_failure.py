@@ -56,7 +56,7 @@ def _run(model, seed_cal, seed_eval):
 
 
 def main() -> None:
-    print("weighting-wall method comparison")
+    print("folded-debias method comparison")
     print(f"  experiment: D={EXP.D}, n_frames={EXP.n_frames}, {N_RUNS} runs/CNR_0\n")
 
     print("Running Gaussian-fit estimator ...")

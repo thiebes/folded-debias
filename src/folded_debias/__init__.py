@@ -1,4 +1,4 @@
-"""weighting-wall: correcting the truncation-at-zero bias in MSD diffusion fits.
+"""folded-debias: correcting the truncation-at-zero bias in MSD diffusion fits.
 
 A fitted width cannot be negative, so at low CNR the sampling distribution of
 the fitted variance is right-skewed and biased high. That bias leaks through

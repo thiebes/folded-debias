@@ -12,7 +12,7 @@ The clean profiles match case-11 exactly: a generalized-Gaussian family
 tail), and 4 (flat top), plus a true Voigt (Gaussian core + Lorentzian wings)
 that sits outside the generalized-Gaussian family and so tests genuine model
 mismatch. Each profile is estimated through ``fit_model="generalized_gaussian"``
--- the path weighting-wall uses -- and the true CNR is amplitude / noise_std.
+-- the path folded-debias uses -- and the true CNR is amplitude / noise_std.
 
 A noise mode is selected on the command line. ``white`` (the default) adds the
 constant-sigma Gaussian noise the calibration is built on; ``shot`` uses the

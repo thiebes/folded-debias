@@ -4,7 +4,7 @@ The panel render code lives with its figure -- schematics in `illustrations/`, d
 panels with their experiment under `experiments/` -- and this module is the
 orchestrator that calls them. The only panels defined here are the two fft-cnr
 recovery figures, which are sourced from the sibling `fft-cnr-paper` repo and so
-have no weighting-wall experiment to live in. Shared poster primitives (palette,
+have no folded-debias experiment to live in. Shared poster primitives (palette,
 axis style) come from `scripts/poster_style.py`.
 
 Run from the repository root::
@@ -68,7 +68,7 @@ def figure_fftcnr(npz_path: Path) -> Path | None:
     """Panel 4 (CNR-centric spine): fft-cnr recovers CNR across profile shapes.
 
     Restyles the sibling fft-cnr-paper case-11 sweep (generalized-Gaussian fit
-    path -- the one weighting-wall uses) into the poster palette: the recovery
+    path -- the one folded-debias uses) into the poster palette: the recovery
     ratio (estimated / true CNR) vs true CNR, median + interquartile band, one
     line per shape, centred on 1.0. The three poster-primary shapes carry roles
     1-3; the flat-top is a neutral secondary reference.

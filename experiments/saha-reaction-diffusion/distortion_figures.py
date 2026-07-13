@@ -1,9 +1,9 @@
 """Diagnostic figures for the Saha bed: the two distortions, made concrete.
 
 These are illustration/diagnostic figures, NOT poster figures. The Saha bed did
-not earn a weighting-wall poster panel (see README.md): the truncation effect is
+not earn a folded-debias poster panel (see README.md): the truncation effect is
 modest in the trusted band, and the emission-to-carrier framing is out of
-weighting-wall's scope and not novel. The figures are kept because they make the
+folded-debias's scope and not novel. The figures are kept because they make the
 validation framework (docs/VALIDATION_DESIGN.md) concrete.
 
 Two figures:

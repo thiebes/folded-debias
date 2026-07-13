@@ -1,4 +1,4 @@
-"""Sanity tests for the weighting-wall POC.
+"""Sanity tests for the folded-debias POC.
 
 These are smoke tests, not a validation suite -- they keep the moving parts
 wired together.

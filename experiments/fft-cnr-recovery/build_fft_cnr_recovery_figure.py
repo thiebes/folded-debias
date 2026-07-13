@@ -36,7 +36,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.ticker import NullFormatter, ScalarFormatter  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
-# Repos sit side by side: repo root is parents[2]/weighting-wall, its sibling is
+# Repos sit side by side: repo root is parents[2]/folded-debias, its sibling is
 # ../fft-cnr-paper. The full-trial validation array lives there (see DATASETS.md).
 SOURCE = HERE.parents[2] / "fft-cnr-paper" / "validation" / "results" / "case1_gaussian_1d.npz"
 SUMMARY = HERE / "fft_cnr_recovery_summary.npz"

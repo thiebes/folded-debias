@@ -1,4 +1,4 @@
-# weighting-wall
+# folded-debias
 
 **CNR-aware weighting for MSD diffusion fits — correcting the
 truncation-at-zero bias in fitted Gaussian widths.**

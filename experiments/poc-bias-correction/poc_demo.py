@@ -48,7 +48,7 @@ def main() -> None:
     model_name, pmodel = _profile_model_from_argv()
     fwhm = 2.3548 * EXP.sigma0
     ld = np.sqrt(2.0 * EXP.D * EXP.tau)
-    print("weighting-wall POC demo")
+    print("folded-debias POC demo")
     print(f"  profile model: {model_name}")
     print(f"  experiment: D={EXP.D}, tau={EXP.tau}, n_frames={EXP.n_frames}, "
           f"L_D/FWHM_0={ld / fwhm:.3f}")
@@ -96,7 +96,7 @@ def _plot(stats, results, model_name) -> None:
         import matplotlib.pyplot as plt
     except ImportError:
         print("\n[matplotlib not installed -- skipping figure; "
-              "install with `pip install weighting-wall[plot]`]")
+              "install with `pip install folded-debias[plot]`]")
         return
 
     cnr = np.concatenate([s.cnr for s in stats])
