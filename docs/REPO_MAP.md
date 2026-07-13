@@ -133,7 +133,7 @@ under active edit; moving its assets mid-edit risks collisions):
    `docs/poster/figure_candidates/INDEX.md` for the full candidate -> location map.
    Only the `panel4_fftcnr_*` candidates remain in `docs/poster/figure_candidates/`,
    because they are sourced from the sibling `fft-cnr` / `fft-cnr-paper` repos and
-   have no weighting-wall experiment to live in.
+   have no folded-debias experiment to live in.
 
 2. **`scripts/poster_figures.py` split (done).** Every panel's render code now
    lives with its figure: the schematics in `illustrations/`, the data panels in
@@ -142,7 +142,7 @@ under active edit; moving its assets mid-edit risks collisions):
    `correction-floor`). `poster_figures.py` is now an orchestrator that imports each
    builder; the only panels it still defines are the two fft-cnr recovery figures,
    which are sourced from the sibling `fft-cnr-paper` repo and have no
-   weighting-wall experiment to live in. Shared poster primitives (palette, axis
+   folded-debias experiment to live in. Shared poster primitives (palette, axis
    style, the report parsers) are in `scripts/poster_style.py`. `build_poster.py`
    pulls each panel from its home (only the sibling-sourced fft-cnr panel still comes
    from `output/`).

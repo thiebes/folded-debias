@@ -55,12 +55,12 @@ def per_frame_cnr(profiles: np.ndarray,
     ------
     ImportError
         If the optional ``fft-cnr`` dependency is not installed.  Install it
-        with ``pip install weighting-wall[cnr]``.
+        with ``pip install folded-debias[cnr]``.
     """
     if not HAVE_FFT_CNR:
         raise ImportError(
             "fft-cnr is required for CNR estimation from real data; "
-            "install it with `pip install weighting-wall[cnr]`."
+            "install it with `pip install folded-debias[cnr]`."
         )
     profiles = np.atleast_2d(np.asarray(profiles, float))
     return np.array(

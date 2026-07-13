@@ -1,6 +1,6 @@
 # Noise-induced bias in the measured transport exponent for disordered nanocrystal-solid diffusion maps
 
-Working technical note for the weighting-wall method and the disordered
+Working technical note for the folded-debias method and the disordered
 perovskite nanocrystal-solid simulations (the maps behind Fig. 5 of Solari et
 al.). It is intended for the collaboration, not for circulation. Numbers and
 figures are produced by [`scripts/nc_solid_alpha_vs_cnr.py`](../scripts/nc_solid_alpha_vs_cnr.py)
@@ -201,7 +201,7 @@ design rule into a statement about a real measurement:
   bias regime applies at all.
 
 A practical consequence follows for applying the correction to real data. The
-weighting-wall folded-normal correction is calibrated on white noise and keyed
+folded-debias folded-normal correction is calibrated on white noise and keyed
 on the spectral CNR. On shot-dominated data both assumptions are off — the
 bias-governing CNR is the peak-local member, and a white calibration
 over-corrects photon-limited data — so the correct order of operations is to
