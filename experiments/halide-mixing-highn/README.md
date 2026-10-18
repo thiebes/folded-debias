@@ -43,6 +43,49 @@ relative to the FWHM, so its effective width bound already scales with the spot.
 The problem is specific to analysing fixed wide-window simulation maps with
 `span^2`.
 
+## Per-frame residual: the CNR-only lookup and the reference offset
+
+An earlier per-frame table at CNR0 = 20 showed the mean |residual| over the
+usable band rising after correction (132 -> 525, 89 -> 155, 142 -> 260 nm^2 for
+x = 0.25 / 0.5 / 0.75). Two separate effects produced it.
+
+1. **The 1-D lookup mixes widths.** The D-aware calibration is keyed on CNR
+   alone, but here sigma^2 grows ~64x over the usable band and var_bias scales
+   with sigma^2. The calibration reaches each CNR along its own peak-decay path,
+   while the data's CNR also falls as the spot spreads, so one CNR value pools
+   calibration frames from sigma^2 = 625 to ~38,000 nm^2, and `np.interp`
+   through those unsmoothed points is erratic (2031, 7773, and 529 nm^2 at CNR
+   1.71, 1.56, and 1.48 for x = 0.25). The script now defaults to a joint
+   (CNR, sigma^2) D-free calibration on the data's pixel grid
+   (`cnr_sigma2_calibration`); `daware` reproduces the old table.
+2. **The carrier reference is not the noise-free fit.** At CNR 3 to 10, where
+   the noise bias is negligible, the naive residual against `var_true` is
+   already -50 to -170 nm^2: the Gaussian fit of the noise-free profile sits
+   118 to 148 nm^2 below the carrier second moment on average (up to 256 nm^2).
+   That is the shape and emission-to-carrier gap, which the noise correction
+   does not address, so a residual against `var_true` mixes it in. The clean
+   metric for the noise correction is the residual against the noise-free fit.
+
+Against the noise-free fit at CNR0 = 20 (800 seeds), mean |residual| over the
+usable band goes 144 -> 70, 94 -> 61, 170 -> 58 nm^2 with the joint calibration
+(signed +140 -> +36, +94 -> -6, +170 -> +5), against 144 -> 462, 94 -> 56,
+170 -> 211 with the old lookup.
+
+The joint calibration (600 runs per cell) is accurate only above CNR 2. At
+CNR0 = 10, frames with CNR >= 2 go from a signed residual (against the
+noise-free fit) of +37, +52, +49 to +4, +10, +1 nm^2, but frames between the
+floor and CNR 2 are over-subtracted (+456 -> +30, +691 -> -1350,
++858 -> -1154 nm^2 for x = 0.25 / 0.5 / 0.75), and the short-window D at
+CNR0 = 8 is 0.87 / 0.36 / 0.35 of D_ref (the old lookup gave 0.97 / 1.02 /
+1.03). With this budget, use a floor of CNR 2 with the joint calibration; a
+denser joint calibration at low CNR is the alternative. Until one of those is
+run, the committed figure and its caption remain the earlier D-aware result.
+Tables: `br_halide_highn_perframe_cnrsig2_cnr020.txt`,
+`br_halide_highn_perframe_daware_cnr020.txt`,
+`br_halide_highn_perframe_cnrsig2_cnr010.txt` (these runs predate the script's
+noise-free-fit column; the noise-free comparison above was computed from them
+separately).
+
 ## The bed
 
 Marc Melendez's 20k-walker Br-I maps carry Poisson sampling noise that floors the
@@ -71,9 +114,10 @@ shorter effective window, which is the fair test).
   corrected alpha/D. Uses the 1-D D=0 calibration, which **under**-corrects here
   because the width grows 26-61x (the 2-D (CNR, sigma^2) D-free calibration is the
   deployable path; paper scope).
-- `br_halide_highn_perframe.py` -- the per-frame mean residual and short-window D
-  with the D-aware calibration, and the poster figure. This is the canonical
-  result.
+- `br_halide_highn_perframe.py [cnr_sigma2|daware] [CNR0]` -- the per-frame
+  residual (with a signed per-frame table) and short-window D, and the poster
+  figure. Default calibration is the joint (CNR, sigma^2) one; `daware` is the
+  earlier 1-D lookup that made the committed figure.
 - `br_halide_highn_perframe.png` -- the poster figure (CNR0 = 10).
 
 ## Depends on (in the library, not here)

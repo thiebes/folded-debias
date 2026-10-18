@@ -32,9 +32,15 @@ repo-root `output/`; committed snapshots are here.
 
 ## Key result + figure
 
-The naive fit pins at the ballistic alpha = 2.0 for CNR0 <~ 13; the correction
-recovers true alpha to `|alpha_rec - alpha_true| ~ 0.02-0.10` for CNR0 >= 20, and
-D to `<D>/D_true ~ 0.93-1.05`. Figure: `subdiffusive_alpha.png`; table
+The naive fit pins at the ballistic alpha = 2.0 for CNR0 <~ 13. Over CNR0 21
+to 90 (2000 runs per cell, Monte Carlo SE from 200 resamples of the
+realisations) the mean corrected |alpha - alpha_ref| is 0.030 +/- 0.020,
+0.018 +/- 0.022, 0.046 +/- 0.023, and 0.100 +/- 0.041 for alpha = 0.6, 0.8, 1.0,
+and 1.2 (naive 0.18 to 0.30): consistent with zero for 0.6 and 0.8, about 2 SE
+for 1.0 and 1.2. Corrected D is 0.84 to 1.05 of D_ref there. The floor cut drops
+no frame at CNR0 >= 21, so those numbers isolate the subtraction; the table's
+naive + cut arm separates the cut from the subtraction below that (for
+alpha = 0.6 the cut alone moves the naive exponent from 2.0 to 0.92 to 1.13). Figure: `subdiffusive_alpha.png`; table
 `subdiffusive_alpha.txt`.
 
 ## Depends on

@@ -16,11 +16,13 @@ MAS-vs-folded recommendation).
 
 - `validate_d_zero.py [profile_model]` -- D-independence test: one calibration
   built at `D = 0`, applied across `D in {0.005, 0.01, 0.02, 0.05, 0.1}` on
-  Gaussian / Voigt / generalized-Gaussian.
+  Gaussian / Voigt / generalized-Gaussian (`generalized_gaussian:1.5`,
+  `generalized_gaussian:4`; the bare name is p = 2). Prints each cell's Monte
+  Carlo SE.
 - `dense_calibration_and_test.py` -- dense (100 log-spaced CNR0) D-free
   calibration then a random log-distributed test, all four schemes (`ols`,
-  `inverse_variance`, `folded_normal`, `mas`) on all three shapes. Wall time
-  ~3 h.
+  `inverse_variance`, `folded_normal`, `mas`). The default runs Gaussian,
+  Voigt, and p = 2; pass specs to run others. Wall time ~3 h per shape.
 - `render_bias_panels.py` -- renders the poster bias panels from this set's
   `dense_calibration_and_test.txt`: Panel 3 (`poster_panel3_bias.png`, the two
   standard fits fail) and Panel 5 (`poster_panel5_corrected_bias.png`, corrected,
@@ -42,10 +44,24 @@ committed snapshots are in this folder.
 
 ## Key result + figure
 
-In the poster regime (`D >= 0.02`) the corrected mean `|bias-1|` is 0.01-0.10 per
-shape. Dense folded-normal overall mean: gaussian 0.119, voigt 0.175, gengauss
-0.155; `folded_normal` is the robust default (`mas` overshoots at `CNR0 < ~4`).
-Result tables: `validate_d_zero_<model>.txt`, `dense_calibration_and_test.txt`.
+Validated domain (`validate_d_zero`, 300-run calibration): corrected
+`mean(D_hat)/D_ref` is 0.99 to 1.09 for `D >= 0.02` at `CNR0 >= 21` and for
+`D >= 0.05` at `CNR0 >= 13`, on Gaussian, Voigt, and p = 1.5 and p = 4. Not
+validated for `D <= 0.01` or at `CNR0 <= 13` for `D = 0.02`. The calibration's
+own Monte Carlo error is not in the printed SE and dominates at small D (see
+`docs/STATUS.md`, 2026-10-18).
+
+Dense sweep (5000-run calibration), overall mean `|bias-1|`, folded-normal vs
+MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, p = 2 0.155 vs 0.151,
+p = 1.5 0.178 vs 0.815, p = 4 0.179 vs 0.509. Folded-normal is the default: it
+wins clearly where the deep-CNR bias is large (Gaussian, p = 1.5) and ties
+elsewhere, and MAS fails upward at `CNR0 < ~4`.
+
+Tables: `validate_d_zero_{gaussian,voigt,genGauss_p1.5,genGauss_p4}.txt`,
+`dense_calibration_and_test.txt` (Gaussian, Voigt, p = 2),
+`dense_calibration_and_test_genGauss_p1.5_p4.txt`. `validate_d_zero_genGauss.txt`
+is an older p = 2 draw. The poster's Panel 5 "three shapes" are Gaussian,
+Voigt, and p = 2.
 
 ## Depends on
 
