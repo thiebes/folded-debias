@@ -50,7 +50,7 @@ from folded_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
 from folded_debias.simulate import Experiment  # noqa: E402
 from folded_debias.validate import calibrate_d_free, evaluate  # noqa: E402
 
-OUTPUT = os.path.join(os.path.dirname(__file__), "..", "output")
+OUTPUT = os.path.join(os.path.dirname(__file__), "..", "..", "output")
 
 GEOM = dict(sigma0=1.0, tau=1.0, half_window=6.0, n_pixels=241,
             n_frames=12, t_max=3.0)

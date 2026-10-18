@@ -363,3 +363,29 @@ MODELS = {
     "moment": MomentModel,
     "unbounded_gaussian": UnboundedGaussianModel,
 }
+
+
+def model_from_spec(spec: str):
+    """Build a profile model from a ``name`` or ``name:shape`` string.
+
+    ``"generalized_gaussian"`` alone gives the default shape p = 2, which is a
+    Gaussian profile fitted by scale -- it does not test a non-Gaussian shape.
+    A validation of the generalized-Gaussian family must name the exponent,
+    e.g. ``"generalized_gaussian:1.5"`` (heavy-tailed) or
+    ``"generalized_gaussian:4"`` (flat-topped). Scripts pass the spec string
+    (not the model) to worker processes, so it must rebuild the same model.
+    """
+    name, _, shape = spec.partition(":")
+    if name not in MODELS:
+        raise ValueError(f"unknown model {name!r}; choose from {sorted(MODELS)}")
+    if not shape:
+        return MODELS[name]()
+    if name != "generalized_gaussian":
+        raise ValueError(f"only generalized_gaussian takes a shape, got {spec!r}")
+    return MODELS[name](shape=float(shape))
+
+
+def spec_tag(spec: str) -> str:
+    """File-name tag for a model spec: ``generalized_gaussian:1.5`` -> ``..._p1.5``."""
+    name, _, shape = spec.partition(":")
+    return f"{name}_p{float(shape):g}" if shape else name

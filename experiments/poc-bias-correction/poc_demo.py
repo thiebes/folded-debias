@@ -2,7 +2,9 @@
 
 Run from the repository root::
 
-    python scripts/poc_demo.py [gaussian|voigt|generalized_gaussian]
+    python experiments/poc-bias-correction/poc_demo.py [MODEL]
+
+MODEL is ``gaussian``, ``voigt``, or ``generalized_gaussian:<p>``.
 
 Produces ``output/poc_demo.png`` (if matplotlib is installed) with two panels:
 
@@ -24,7 +26,8 @@ import numpy as np
 # Allow running from a source checkout without installing the package.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import MODELS, Experiment, evaluate, sweep_stats  # noqa: E402
+from folded_debias import (Experiment, evaluate, model_from_spec,  # noqa: E402
+                           spec_tag, sweep_stats)
 from folded_debias.truncation import TruncationModel  # noqa: E402
 
 # Nanocrystal-solid regime: short diffusion length against the spot size.
@@ -37,11 +40,17 @@ N_RUNS = 400
 
 
 def _profile_model_from_argv():
-    """Profile model selected by an optional command-line argument."""
-    name = sys.argv[1] if len(sys.argv) > 1 else "gaussian"
-    if name not in MODELS:
-        sys.exit(f"unknown model {name!r}; choose from {sorted(MODELS)}")
-    return name, MODELS[name]()
+    """Profile model selected by an optional command-line argument.
+
+    ``generalized_gaussian:<p>`` sets the shape exponent; the bare
+    ``generalized_gaussian`` is p = 2, a Gaussian profile fitted by scale.
+    """
+    spec = sys.argv[1] if len(sys.argv) > 1 else "gaussian"
+    try:
+        model = model_from_spec(spec)
+    except ValueError as err:
+        sys.exit(str(err))
+    return spec_tag(spec), model
 
 
 def main() -> None:
@@ -66,12 +75,13 @@ def main() -> None:
                        seed=20000, profile_model=pmodel)
 
     # --- summary table ---------------------------------------------------
-    print("\n  <D_est> / D_true   (1.000 = unbiased)")
-    print("  CNR_0     OLS     inv-var   folded-normal")
+    print("\n  <D_est> / D_true   (1.000 = unbiased; SE = Monte Carlo standard error)")
+    print("  CNR_0     OLS     inv-var   folded-normal     SE")
+    fn_se = results["folded_normal"].spread / np.sqrt(N_RUNS)
     for i, c0 in enumerate(CNR0_GRID):
         print(f"  {c0:6.0f}  {results['ols'].mean_bias[i]:7.3f}  "
               f"{results['inverse_variance'].mean_bias[i]:7.3f}  "
-              f"{results['folded_normal'].mean_bias[i]:11.3f}")
+              f"{results['folded_normal'].mean_bias[i]:11.3f}  {fn_se[i]:9.3f}")
 
     ols = results["ols"].mean_bias
     iv = results["inverse_variance"].mean_bias

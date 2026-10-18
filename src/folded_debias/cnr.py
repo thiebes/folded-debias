@@ -10,6 +10,16 @@ in the spatial frequency domain and returns a CNR estimate per 1-D profile.
 This module wraps ``fft-cnr`` behind a single function and degrades gracefully
 when the package is not installed, so the simulation-only POC has no hard
 dependency on it.
+
+The calibration is keyed on the exact CNR, and the estimate is not an unbiased
+stand-in for it near the floor: it reads slightly low at CNR 1 to 2 and about
+twice the exact value below CNR 0.5, and its error is correlated with the
+frame's width error. Keying the correction on the per-frame estimate is
+therefore reliable only where every fitted frame stays well above the floor
+(CNR_0 about 34 at D = 0.02 sigma_0^2/tau in the reference geometry). See
+``experiments/wse2-strobescat/README.md`` for the domain and its evidence.
+Use fft-cnr at commit 69cd361 or later, which refuses degenerate
+generalized-Gaussian fits below CNR 1 instead of reporting runaway CNRs.
 """
 from __future__ import annotations
 

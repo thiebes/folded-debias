@@ -8,16 +8,20 @@ The honest test is the project's actual metric -- the per-frame mean residual
 the correction reduce the upward bias the naive fit carries, and does the
 short-window D move toward the truth?
 
-The calibration is built D-aware at each fraction's fitted D (the quick,
-sound choice for a known-D validation bed; the D-free 2-D (CNR, sigma^2)
-calibration is the separate real-data path). It is cached per fraction.
+The correction is keyed on (CNR, sigma^2) through a joint D-free calibration
+on the data's pixel grid (``cnr_sigma2``, the default). An earlier version used
+a 1-D D-aware calibration keyed on CNR alone (``daware``, kept for
+reproducing that table); because the spot's variance grows ~64x over the
+usable band, that lookup mis-subtracted in the late frames above the floor and
+raised the per-frame mean |residual| after correction (see
+``cnr_sigma2_calibration``).
 
 Run from the repository root (needs the pshare)::
 
-    FOLDED_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py
+    .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py [cnr_sigma2|daware] [CNR0]
 
-Outputs ``output/br_halide_highn_perframe.{png,txt}`` and caches each D-aware
-calibration to ``output/cal_highn_daware_x<frac>.npz``.
+Outputs ``output/br_halide_highn_perframe[_daware][_cnr0<N>].{png,txt}`` and
+caches the calibrations under ``output/``.
 """
 from __future__ import annotations
 
@@ -32,7 +36,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "halide-mixing-brI-legacy"))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from folded_debias import GaussianModel  # noqa: E402
+from folded_debias import (CalibrationGrid, GaussianModel,  # noqa: E402
+                           calibrate_cnr_sigma2)
 from folded_debias.simulate import Experiment  # noqa: E402
 from folded_debias.truncation import TruncationModel  # noqa: E402
 from folded_debias.validate import calibrate  # noqa: E402
@@ -79,6 +84,11 @@ N_SEEDS = 800
 FLOOR_CNR = 1.3      # project floor: folded-normal over-subtracts below ~1.3
 CAL_CNR0 = np.geomspace(1.2, 60.0, 30)
 N_RUNS_CAL = 600
+# Joint (CNR, sigma^2) calibration: sigma spans the true widths of the usable
+# band (25 nm at t = 0 to ~125 nm where the CNR reaches the floor) with margin.
+SIGMA_GRID_NM = np.linspace(20.0, 220.0, 26)
+CAL2_CNR = np.geomspace(1.0, 60.0, 30)
+N_RUNS_CAL2 = 600
 
 
 def daware_calibration(d_true: float, frac: str, n_frames: int) -> TruncationModel:
@@ -96,6 +106,36 @@ def daware_calibration(d_true: float, frac: str, n_frames: int) -> TruncationMod
     np.savez(path, cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
              relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid)
     return trunc
+
+
+def cnr_sigma2_calibration(pixel_x: np.ndarray) -> TruncationModel:
+    """Joint (CNR, sigma^2) calibration on the data's pixel grid; cached.
+
+    The 1-D D-aware lookup above is keyed on CNR alone, but this bed's spot
+    grows ~8x in sigma (~64x in sigma^2) over the usable band, and var_bias
+    scales with sigma^2. Its calibration reaches each CNR along its own
+    peak-decay path (amplitude ~ exp(-t/tau)), while the data's CNR also falls
+    as sigma_0/sigma(t) as the spot spreads, so one CNR value pools calibration
+    frames from sigma^2 = 625 to ~38,000 nm^2. np.interp through those
+    unsmoothed points returns erratic var_bias in the late frames above the
+    floor (e.g. 2031, 7773, 529 nm^2 at CNR 1.71, 1.56, 1.48 for x = 0.25) and
+    over-subtracts on average. Keying on (CNR, sigma^2), with the fixed-point
+    inversion in TruncationModel.var_bias, removes the path dependence. The
+    grid is independent of D, so one calibration serves every fraction.
+    """
+    path = OUTPUT / f"cal_highn_cnrsig2_g{int(G_MAX)}.npz"
+    if path.exists():
+        grid = CalibrationGrid.load(path)
+        if grid.pixel_x is None or not np.allclose(grid.pixel_x, pixel_x):
+            raise RuntimeError(f"{path.name} was built on a different pixel grid")
+        return TruncationModel.from_calibration(grid)
+    grid = calibrate_cnr_sigma2(
+        GaussianModel(max_var=MAX_VAR), pixel_x=pixel_x,
+        sigma_grid=SIGMA_GRID_NM, cnr_grid=CAL2_CNR, n_runs=N_RUNS_CAL2,
+        seed=4242, model_kwargs={"max_var": MAX_VAR}, verbose=True,
+        n_workers=int(os.environ.get("FOLDED_DEBIAS_WORKERS") or 0) or None)
+    grid.save(path)
+    return TruncationModel.from_calibration(grid)
 
 
 def per_frame_means(case, trunc, cnr0, n_seeds):
@@ -127,12 +167,25 @@ def short_window_D(case, trunc, cnr0, n_seeds):
 
 
 def main():
+    # "cnr_sigma2" (default) keys the correction on (CNR, sigma^2); "daware"
+    # reproduces the earlier 1-D D-aware lookup, which mis-subtracts here (see
+    # cnr_sigma2_calibration).
+    mode = sys.argv[1] if len(sys.argv) > 1 else "cnr_sigma2"
+    if mode not in ("cnr_sigma2", "daware"):
+        sys.exit("usage: br_halide_highn_perframe.py [cnr_sigma2|daware]")
+    tag = "" if mode == "cnr_sigma2" else "_daware"
+    global CNR0
+    if len(sys.argv) > 2:
+        CNR0 = float(sys.argv[2])
+        tag += f"_cnr0{CNR0:g}"
     cases = [subsample(c, STRIDE) for c in load_all()]
     if not cases:
         print("No high-N maps found.")
         return
+    label = ("joint (CNR, sigma^2) D-free calibration" if mode == "cnr_sigma2"
+             else "1-D D-aware calibration, CNR-only lookup")
     lines = ["=" * 76,
-             "High-N Br-I: per-frame residual + short-window D (D-aware calibration)",
+             f"High-N Br-I: per-frame residual + short-window D ({label})",
              f"floor CNR = {FLOOR_CNR}; n_seeds = {N_SEEDS}; panel CNR0 = {CNR0:.0f}",
              f"width-fit bound: max_var = (G*sigma0)^2, G = {G_MAX:.0f} "
              f"(sigma capped at {G_MAX * SIGMA0_HINT_NM:.0f} nm)",
@@ -140,7 +193,11 @@ def main():
     panels = []
     for case in cases:
         d_true, a_true = fit_msd_powerlaw(case.t, case.var_true)
-        trunc = daware_calibration(d_true, case.name.split("=")[-1], case.profiles.shape[0])
+        if mode == "cnr_sigma2":
+            trunc = cnr_sigma2_calibration(case.x)
+        else:
+            trunc = daware_calibration(d_true, case.name.split("=")[-1],
+                                       case.profiles.shape[0])
 
         mraw, mcor, cnrf = per_frame_means(case, trunc, CNR0, N_SEEDS)
         use = cnrf >= FLOOR_CNR
@@ -156,7 +213,26 @@ def main():
                      f"t<= {case.t[use].max():.2f} ns, CNR down to {cnrf[use].min():.2f}")
         lines.append(f"  mean |residual| over usable band: naive "
                      f"{np.nanmean(np.abs(resid_naive[use])):.0f} -> corrected "
-                     f"{np.nanmean(np.abs(resid_corr[use])):.0f} nm^2")
+                     f"{np.nanmean(np.abs(resid_corr[use])):.0f} nm^2 "
+                     f"(mean signed: {np.nanmean(resid_naive[use]):+.0f} -> "
+                     f"{np.nanmean(resid_corr[use]):+.0f} nm^2)")
+        # The noise correction addresses distortion (1) only; var_true also
+        # carries the shape / emission-to-carrier gap (the noise-free fit's
+        # offset from the carrier second moment). Report the residual against
+        # the noise-free fit of the same profile as the clean metric.
+        nf = fit_each_row(case.x, case.profiles)
+        lines.append(f"  vs noise-free fit (noise only): mean |residual| naive "
+                     f"{np.nanmean(np.abs((mraw - nf)[use])):.0f} -> corrected "
+                     f"{np.nanmean(np.abs((mcor - nf)[use])):.0f} nm^2 (mean signed: "
+                     f"{np.nanmean((mraw - nf)[use]):+.0f} -> "
+                     f"{np.nanmean((mcor - nf)[use]):+.0f} nm^2); noise-free fit "
+                     f"minus var_true over the band: {np.nanmean((nf - case.var_true)[use]):+.0f} nm^2")
+        lines.append("  per frame (usable band): t (ns) | CNR | var_true | "
+                     "resid naive | resid corrected | noise-free fit - var_true  (nm^2)")
+        for i in np.flatnonzero(use):
+            lines.append(f"    {case.t[i]:5.2f} | {cnrf[i]:5.2f} | "
+                         f"{case.var_true[i]:7.0f} | {resid_naive[i]:+7.0f} | "
+                         f"{resid_corr[i]:+7.0f} | {nf[i] - case.var_true[i]:+7.0f}")
         lines.append("  short-window D (usable band):  CNR0 | D naive/corr (ratio to truth) "
                      "| alpha naive/corr")
         for c0 in CNR0_TABLE:
@@ -170,8 +246,8 @@ def main():
 
     report = "\n".join(lines)
     print(report)
-    (OUTPUT / "br_halide_highn_perframe.txt").write_text(report)
-    make_figure(panels, OUTPUT / "br_halide_highn_perframe.png")
+    (OUTPUT / f"br_halide_highn_perframe{tag}.txt").write_text(report)
+    make_figure(panels, OUTPUT / f"br_halide_highn_perframe{tag}.png")
 
 
 def make_figure(panels, path):
