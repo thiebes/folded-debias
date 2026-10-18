@@ -7,17 +7,17 @@ folded-debias POC demo
 Calibrating truncation model ...
 Evaluating schemes ...
 
-  <D_est> / D_true   (1.000 = unbiased)
-  CNR_0     OLS     inv-var   folded-normal
-       5    5.976    1.943        0.832
-       8    7.563    1.687        0.680
-      13    4.465    1.310        0.949
-      21    1.747    1.177        1.070
-      34    1.193    1.017        0.883
-      55    1.072    1.029        0.992
-      90    1.010    0.991        0.993
+  <D_est> / D_true   (1.000 = unbiased; SE = Monte Carlo standard error)
+  CNR_0     OLS     inv-var   folded-normal     SE
+       5    9.278    3.293        2.466      0.427
+       8    4.114    1.165        0.667      0.211
+      13    3.962    1.129        0.923      0.110
+      21    1.427    0.982        0.857      0.067
+      34    1.176    1.010        0.999      0.040
+      55    1.142    1.027        1.044      0.024
+      90    1.035    1.000        0.984      0.015
 
-  mean |bias-1|  ols=2.29  inv-var=0.310  folded-normal=0.106
+  mean |bias-1|  ols=2.16  inv-var=0.377  folded-normal=0.297
   Reading: OLS is catastrophically biased at low CNR, and
   inverse-variance weighting leaves a residual it cannot remove.
   The folded-normal scheme subtracts the additive variance bias
