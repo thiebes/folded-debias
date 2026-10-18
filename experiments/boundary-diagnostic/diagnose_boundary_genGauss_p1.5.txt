@@ -1,0 +1,18 @@
+Clipping-vs-reflection diagnostic -- model: generalized_gaussian_p1.5
+  true variance = 1.000; 6000 fits per CNR level
+
+   CNR   mean(var)  median   skew   P(var<true)  wall-mass   verdict
+    1.0      1.212    0.822   14.37       0.60         6%   CLIPPING (wall pile-up 6%)
+    1.5      1.033    0.942    1.93       0.56         2%   reflection-like (right-skew, no pile-up)
+    2.0      1.015    0.962    1.01       0.55         0%   reflection-like (right-skew, no pile-up)
+    3.0      1.011    0.988    0.77       0.52         0%   reflection-like (right-skew, no pile-up)
+    5.0      1.002    0.994    0.42       0.52         0%   near-Gaussian
+   10.0      1.000    0.999    0.18       0.51         0%   near-Gaussian
+   30.0      1.000    1.000    0.07       0.51         0%   near-Gaussian
+
+Overall (generalized_gaussian_p1.5):
+  -> CLIPPING: a delta-mass accumulates at the lower bound as
+     CNR falls. Route: Tobit / inverse-Mills-ratio.
+  Run this for every profile model used on the target data.
+
+Figure written to output\boundary_diagnostic_generalized_gaussian_p1.5.png

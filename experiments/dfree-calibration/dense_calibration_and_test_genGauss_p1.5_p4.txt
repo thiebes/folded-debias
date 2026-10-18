@@ -1,0 +1,103 @@
+Dense parallel D-free calibration and test
+  D_true = 0.02 sigma_0^2/tau   (L_D/FWHM_0 ~ 0.085)
+  workers = 7
+
+======================================================================
+=== generalized_gaussian:1.5  (n_workers = 7) ===
+======================================================================
+
+  Calibration: 100 log-spaced CNR_0 in [2.0, 100.0], 5000 runs/cell
+    [calib] 10/100 ( 10%)  elapsed  3974s  ETA 35768s
+    [calib] 20/100 ( 20%)  elapsed  5410s  ETA 21640s
+    [calib] 30/100 ( 30%)  elapsed  7310s  ETA 17057s
+    [calib] 40/100 ( 40%)  elapsed  7932s  ETA 11898s
+    [calib] 50/100 ( 50%)  elapsed  8806s  ETA 8806s
+    [calib] 60/100 ( 60%)  elapsed  9167s  ETA 6111s
+    [calib] 70/100 ( 70%)  elapsed  9479s  ETA 4063s
+    [calib] 80/100 ( 80%)  elapsed 10053s  ETA 2513s
+    [calib] 90/100 ( 90%)  elapsed 10328s  ETA 1148s
+    [calib] 100/100 (100%)  elapsed 10749s  ETA    0s
+  Calibration done [10749s]; lookup spans per-frame CNR 0.100 -> 100.0 (1200 data points)
+
+  Test: 100 random log-distributed CNR_0 in [2.0, 100.0], 1000 runs/cell
+    [test] 10/100 ( 10%)  elapsed   649s  ETA 5840s
+    [test] 20/100 ( 20%)  elapsed   971s  ETA 3885s
+    [test] 30/100 ( 30%)  elapsed  1349s  ETA 3148s
+    [test] 40/100 ( 40%)  elapsed  1501s  ETA 2252s
+    [test] 50/100 ( 50%)  elapsed  1662s  ETA 1662s
+    [test] 60/100 ( 60%)  elapsed  1736s  ETA 1158s
+    [test] 70/100 ( 70%)  elapsed  1832s  ETA  785s
+    [test] 80/100 ( 80%)  elapsed  1899s  ETA  475s
+    [test] 90/100 ( 90%)  elapsed  1962s  ETA  218s
+    [test] 100/100 (100%)  elapsed  2036s  ETA    0s
+  Test done [2036s]
+
+  Decile report (mean(D_hat) / D_true, averaged within each log-CNR_0 decile):
+  CNR_0 range              n         OLS   inv-var    folded       mas
+  [ 2.00,  2.96]     8       7.513     8.556     0.542     5.487
+  [ 2.96,  4.37]    16      11.942     5.306     0.846     3.148
+  [ 4.37,  6.47]    11      13.862     2.784     1.076     1.660
+  [ 6.47,  9.56]     8      11.568     1.796     1.047     1.182
+  [ 9.56, 14.14]     6       7.168     1.294     0.911     0.937
+  [14.14, 20.91]    10       3.091     1.194     1.021     1.025
+  [20.91, 30.92]     9       1.572     1.112     1.007     1.007
+  [30.92, 45.73]     7       1.212     1.056     1.008     1.009
+  [45.73, 67.62]    11       1.125     1.029     1.005     1.004
+  [67.62, 100.00]    14       1.058     1.020     1.005     1.005
+
+  Overall mean |mean(D_hat)/D_true - 1| across all test points:
+                     ols: 5.199  (median 2.859)
+        inverse_variance: 1.610  (median 0.216)
+           folded_normal: 0.178  (median 0.050)
+                     mas: 0.815  (median 0.066)
+
+======================================================================
+=== generalized_gaussian:4  (n_workers = 7) ===
+======================================================================
+
+  Calibration: 100 log-spaced CNR_0 in [2.0, 100.0], 5000 runs/cell
+    [calib] 10/100 ( 10%)  elapsed  1596s  ETA 14366s
+    [calib] 20/100 ( 20%)  elapsed  2675s  ETA 10700s
+    [calib] 30/100 ( 30%)  elapsed  3938s  ETA 9188s
+    [calib] 40/100 ( 40%)  elapsed  4440s  ETA 6660s
+    [calib] 50/100 ( 50%)  elapsed  5274s  ETA 5274s
+    [calib] 60/100 ( 60%)  elapsed  5655s  ETA 3770s
+    [calib] 70/100 ( 70%)  elapsed  5991s  ETA 2567s
+    [calib] 80/100 ( 80%)  elapsed  6580s  ETA 1645s
+    [calib] 90/100 ( 90%)  elapsed  6867s  ETA  763s
+    [calib] 100/100 (100%)  elapsed  7289s  ETA    0s
+  Calibration done [7289s]; lookup spans per-frame CNR 0.100 -> 100.0 (1200 data points)
+
+  Test: 100 random log-distributed CNR_0 in [2.0, 100.0], 1000 runs/cell
+    [test] 10/100 ( 10%)  elapsed   311s  ETA 2797s
+    [test] 20/100 ( 20%)  elapsed   450s  ETA 1800s
+    [test] 30/100 ( 30%)  elapsed   670s  ETA 1564s
+    [test] 40/100 ( 40%)  elapsed   771s  ETA 1157s
+    [test] 50/100 ( 50%)  elapsed   940s  ETA  940s
+    [test] 60/100 ( 60%)  elapsed  1014s  ETA  676s
+    [test] 70/100 ( 70%)  elapsed  1082s  ETA  464s
+    [test] 80/100 ( 80%)  elapsed  1201s  ETA  300s
+    [test] 90/100 ( 90%)  elapsed  1260s  ETA  140s
+    [test] 100/100 (100%)  elapsed  1346s  ETA    0s
+  Test done [1346s]
+
+  Decile report (mean(D_hat) / D_true, averaged within each log-CNR_0 decile):
+  CNR_0 range              n         OLS   inv-var    folded       mas
+  [ 2.00,  2.96]    12      -3.355    -1.988     0.060    -1.975
+  [ 2.96,  4.37]     8      -1.846    -0.232     0.601    -0.194
+  [ 4.37,  6.47]     8      -0.455     0.645     0.843     0.650
+  [ 6.47,  9.56]    17       0.274     0.966     0.973     0.923
+  [ 9.56, 14.14]     6       0.577     0.955     0.946     0.921
+  [14.14, 20.91]     6       0.768     0.999     0.990     0.977
+  [20.91, 30.92]    14       0.940     1.010     1.001     0.997
+  [30.92, 45.73]    13       1.030     1.008     0.999     0.998
+  [45.73, 67.62]    12       1.023     1.007     1.003     1.002
+  [67.62, 100.00]     4       1.004     0.994     0.993     0.992
+
+  Overall mean |mean(D_hat)/D_true - 1| across all test points:
+                     ols: 1.046  (median 0.289)
+        inverse_variance: 0.508  (median 0.029)
+           folded_normal: 0.179  (median 0.024)
+                     mas: 0.509  (median 0.038)
+
+[total wall time: 357.0 min]

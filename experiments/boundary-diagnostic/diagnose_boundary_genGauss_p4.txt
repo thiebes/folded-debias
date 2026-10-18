@@ -1,0 +1,18 @@
+Clipping-vs-reflection diagnostic -- model: generalized_gaussian_p4
+  true variance = 1.000; 6000 fits per CNR level
+
+   CNR   mean(var)  median   skew   P(var<true)  wall-mass   verdict
+    1.0      0.980    0.943    4.17       0.57         1%   reflection-like (right-skew, no pile-up)
+    1.5      0.994    0.989   -0.26       0.53         0%   near-Gaussian
+    2.0      0.999    0.991   -0.36       0.53         0%   near-Gaussian
+    3.0      1.003    0.998    0.35       0.51         0%   near-Gaussian
+    5.0      1.000    0.998    0.17       0.51         0%   near-Gaussian
+   10.0      1.000    1.000    0.07       0.50         0%   near-Gaussian
+   30.0      1.000    1.000    0.03       0.50         0%   near-Gaussian
+
+Overall (generalized_gaussian_p4):
+  -> REFLECTION: the fitted-variance distribution is strictly
+     interior and right-skewed, no pile-up. Route: folded-normal.
+  Run this for every profile model used on the target data.
+
+Figure written to output\boundary_diagnostic_generalized_gaussian_p4.png
