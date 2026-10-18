@@ -25,7 +25,9 @@ Wall-time estimate: ~5-15 min for Gaussian, ~25-45 min for Voigt,
 
 Usage::
 
-    .venv/Scripts/python.exe scripts/dense_calibration_and_test.py
+    .venv/Scripts/python.exe experiments/dfree-calibration/dense_calibration_and_test.py [MODEL ...]
+
+MODEL is ``gaussian``, ``voigt``, or ``generalized_gaussian:<p>``.
 """
 from __future__ import annotations
 
@@ -38,7 +40,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import MODELS, Experiment, SCHEMES  # noqa: E402
+from folded_debias import Experiment, SCHEMES, model_from_spec  # noqa: E402
 from folded_debias.fit import fit_D  # noqa: E402
 from folded_debias.montecarlo import run_ensemble  # noqa: E402
 from folded_debias.truncation import TruncationModel, frame_stats  # noqa: E402
@@ -65,7 +67,7 @@ N_WORKERS = max(1, (os.cpu_count() or 4) - 1)
 def _calib_one(args):
     """Run a single-CNR_0 calibration ensemble and return the FrameStats."""
     cnr0, exp, n_runs, seed, model_name = args
-    model = MODELS[model_name]()
+    model = model_from_spec(model_name)
     ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed, model=model)
     return frame_stats(ens)
 
@@ -73,7 +75,7 @@ def _calib_one(args):
 def _test_one(args):
     """Run a single-CNR_0 evaluation ensemble across all schemes."""
     cnr0, exp, n_runs, seed, model_name, trunc = args
-    model = MODELS[model_name]()
+    model = model_from_spec(model_name)
     ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed, model=model)
     out = {}
     times = exp.times
@@ -202,7 +204,15 @@ def main() -> None:
     print(f"  workers = {N_WORKERS}")
     rng = np.random.default_rng(20260521)
     t0 = time.time()
-    for name in ("gaussian", "voigt", "generalized_gaussian"):
+    # Optional model specs on the command line, e.g.
+    # "generalized_gaussian:1.5 generalized_gaussian:4". The default list is
+    # the committed run; its bare "generalized_gaussian" is p = 2, a Gaussian
+    # profile. The test CNR_0 draws come from one shared generator, so a
+    # different spec list draws different test points.
+    specs = sys.argv[1:] or ["gaussian", "voigt", "generalized_gaussian"]
+    for spec in specs:
+        model_from_spec(spec)          # fail fast on a bad spec
+    for name in specs:
         run_shape(name, rng)
     print(f"\n[total wall time: {(time.time() - t0) / 60:.1f} min]")
 

@@ -25,14 +25,21 @@ tracks decay only (the project's CNR convention), the per-frame CNR is
 ``cnr0 * exp(-t/tau)`` for every alpha and D, so the noise is identical across
 panels and the comparison is fair.
 
-Two analyses per operating point:
+Three analyses per operating point:
 
 * **naive** -- the field-standard fit: raw fitted variances, all frames, power
   law ``2 D t^alpha``.
+* **naive + cut** -- the raw variances fitted over only the frames above the
+  per-profile CNR floor, with no subtraction. It separates the two
+  interventions the corrected arm combines.
 * **corrected** -- folded-normal subtraction of the calibrated per-frame
   ``var_bias(CNR)``, then the same power-law fit over only the frames above the
   per-profile CNR floor (the design rule: keep ``cnr0 * exp(-t/tau) >~ 1``,
   i.e. ``cnr0 >~ exp(t_max/tau) ~ 20`` for ``t_max = 3 tau``).
+
+Each mean-trajectory exponent carries a Monte Carlo standard error from
+resampling the realisations; quote the bias only where it exceeds about two of
+these.
 
 The calibration is D-free (built at D = 0, so it is also alpha-free) and
 geometry-matched to the bed; it is cached to ``output/`` after the first build.
@@ -88,6 +95,7 @@ FLOOR_CNR = 1.0              # per-profile working floor (nc_solid bed)
 CAL_CNR0 = np.geomspace(2.0, 100.0, 60)
 N_RUNS_CAL = 1500
 N_RUNS_EVAL = 2000
+N_BOOT = 200                 # resamples for the mean-trajectory exponent SE
 EVAL_SEED = 20000            # independent of the calibration seed (invariant)
 
 
@@ -162,7 +170,11 @@ class CellSamples:
     cnr0: float
     frames_kept: float          # frames surviving the floor cut (deterministic in CNR)
     a_naive_traj: float         # exponent from the mean raw trajectory, all frames
+    a_naive_cut_traj: float     # exponent from the mean raw trajectory + floor cut
     a_corr_traj: float          # exponent from the mean corrected trajectory + cut
+    a_naive_se: float           # Monte Carlo standard errors of the three
+    a_naive_cut_se: float       #   mean-trajectory exponents (resampling the
+    a_corr_se: float            #   realisations with replacement)
     d_naive_traj: float         # D / D_true from the mean raw trajectory
     d_corr_traj: float          # D / D_true from the mean corrected trajectory
     a_corr_samples: np.ndarray  # per-realisation corrected exponent (precision band)
@@ -187,9 +199,29 @@ def recover_alpha(alpha_true: float, cnr0: float, model,
         for r in range(ens.n_runs)])
 
     # Bias: fit the mean trajectory (naive over all frames, corrected over the
-    # frames above the per-profile CNR floor).
+    # frames above the per-profile CNR floor). The naive + cut arm applies the
+    # floor cut without the subtraction, so naive -> naive + cut isolates the
+    # cut and naive + cut -> corrected isolates the subtraction; below the
+    # design floor, where the cut drops frames, naive -> corrected mixes both.
     dn, a_naive_traj = fit_msd_powerlaw(t, np.nanmean(ens.variance, axis=0))
+    _, a_naive_cut_traj = fit_msd_powerlaw(t, np.nanmean(ens.variance, axis=0),
+                                           mask=work)
     dc, a_corr_traj = fit_msd_powerlaw(t, np.nanmean(corrected, axis=0), mask=work)
+
+    # Monte Carlo standard error of each mean-trajectory exponent: refit the
+    # mean of realisations drawn with replacement. The per-realisation s.d. /
+    # sqrt(n) would understate it, because the exponent of the mean trajectory
+    # is a nonlinear functional of the realisations (nc_solid convention).
+    rng = np.random.default_rng(seed + 7)
+    boot = np.full((N_BOOT, 3), np.nan)
+    for b in range(N_BOOT):
+        idx = rng.integers(0, ens.n_runs, ens.n_runs)
+        raw_b = np.nanmean(ens.variance[idx], axis=0)
+        boot[b, 0] = fit_msd_powerlaw(t, raw_b)[1]
+        boot[b, 1] = fit_msd_powerlaw(t, raw_b, mask=work)[1]
+        boot[b, 2] = fit_msd_powerlaw(t, np.nanmean(corrected[idx], axis=0),
+                                      mask=work)[1]
+    a_naive_se, a_naive_cut_se, a_corr_se = np.nanstd(boot, axis=0, ddof=1)
 
     # Precision: the corrected exponent a single measurement would report.
     a_corr_samples = []
@@ -200,7 +232,9 @@ def recover_alpha(alpha_true: float, cnr0: float, model,
 
     return CellSamples(
         alpha_true=alpha_true, cnr0=cnr0, frames_kept=float(work.sum()),
-        a_naive_traj=a_naive_traj, a_corr_traj=a_corr_traj,
+        a_naive_traj=a_naive_traj, a_naive_cut_traj=a_naive_cut_traj,
+        a_corr_traj=a_corr_traj, a_naive_se=float(a_naive_se),
+        a_naive_cut_se=float(a_naive_cut_se), a_corr_se=float(a_corr_se),
         d_naive_traj=dn / exp.D, d_corr_traj=dc / exp.D,
         a_corr_samples=np.array(a_corr_samples))
 
@@ -251,27 +285,38 @@ def write_report(cells: list[CellSamples], model_name: str, n_frames: int,
         lines.append("-" * 78)
         lines.append(f"=== true alpha = {alpha:.2f}   (D = "
                      f"{d_for_alpha(alpha, t_max):.4g} sigma0^2/tau^alpha) ===")
-        lines.append("  cnr0 | frames | a naive | a corr | a corr 1-shot "
-                     "med[IQR] | D corr/D")
+        lines.append("  cnr0 | frames | a naive (SE)  | a naive+cut (SE) | "
+                     "a corr (SE)   | a corr 1-shot med[IQR] | D corr/D")
         for c in cells_a:
             _, med, lo, hi = _summary(c.a_corr_samples)
             lines.append(
                 f"  {c.cnr0:5.0f} | {c.frames_kept:4.0f}/{n_frames} | "
-                f"{c.a_naive_traj:6.2f}  | {c.a_corr_traj:6.2f} | "
+                f"{c.a_naive_traj:5.2f} ({c.a_naive_se:4.2f}) | "
+                f"{c.a_naive_cut_traj:5.2f} ({c.a_naive_cut_se:4.2f})     | "
+                f"{c.a_corr_traj:5.2f} ({c.a_corr_se:4.2f}) | "
                 f"{med:5.2f} [{lo:4.2f},{hi:4.2f}]      | {c.d_corr_traj:7.2f}")
         lines.append("")
 
     # Figure of merit: mean-trajectory exponent error over the working regime
-    # (cnr0 >= design floor), naive against corrected.
+    # (cnr0 >= design floor). There the cut drops no frame, so naive + cut
+    # equals naive and naive -> corrected is the subtraction alone. The SE of
+    # the mean error combines the cells' SEs (independent seeds per cell).
     lines.append("=" * 78)
     lines.append(f"Mean |exponent(mean trajectory) - alpha_true| over cnr0 >= "
-                 f"{design_floor:.0f} (the design floor):")
-    lines.append("  true alpha | naive | corrected")
+                 f"{design_floor:.0f} (the design floor), with Monte Carlo SE:")
+    lines.append("  true alpha | naive         | naive+cut     | corrected")
     for alpha, cells_a in by_alpha.items():
         work_cells = [c for c in cells_a if c.cnr0 >= design_floor]
-        err_naive = np.nanmean([abs(c.a_naive_traj - alpha) for c in work_cells])
-        err_corr = np.nanmean([abs(c.a_corr_traj - alpha) for c in work_cells])
-        lines.append(f"  {alpha:9.2f}  | {err_naive:5.3f} | {err_corr:5.3f}")
+
+        def merit(a_attr, se_attr):
+            err = np.nanmean([abs(getattr(c, a_attr) - alpha) for c in work_cells])
+            se = np.sqrt(np.nansum([getattr(c, se_attr) ** 2
+                                    for c in work_cells])) / len(work_cells)
+            return f"{err:5.3f} ({se:5.3f})"
+
+        lines.append(f"  {alpha:9.2f}  | {merit('a_naive_traj', 'a_naive_se')} | "
+                     f"{merit('a_naive_cut_traj', 'a_naive_cut_se')} | "
+                     f"{merit('a_corr_traj', 'a_corr_se')}")
     report = "\n".join(lines)
     print(report)
     path.write_text(report)

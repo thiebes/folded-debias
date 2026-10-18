@@ -15,7 +15,8 @@ from folded_debias import (AnomalousExperiment, Experiment, GaussianModel,
                             GeneralizedGaussianModel, MomentModel,
                             MultiExpExperiment, UnboundedGaussianModel,
                             VoigtModel, calibrate, evaluate,
-                            frame_stats, run_ensemble)
+                            frame_stats, model_from_spec, run_ensemble,
+                            spec_tag)
 from folded_debias.fit import fit_D, fit_variance
 from folded_debias.simulate import noise_free_series
 
@@ -229,6 +230,26 @@ def test_generalized_gaussian_variance_factor():
     """The p=2 generalized Gaussian must reduce to the plain Gaussian."""
     g2 = GeneralizedGaussianModel(shape=2.0)
     assert g2.var_factor == pytest.approx(1.0, rel=1e-6)
+
+
+def test_model_from_spec_sets_shape():
+    """A shape in the spec must reach the model; the bare name is p = 2.
+
+    The bare ``generalized_gaussian`` is a Gaussian profile, so a validation
+    that means to test a non-Gaussian shape must carry the exponent through
+    the spec string that worker processes rebuild the model from.
+    """
+    assert model_from_spec("generalized_gaussian").shape == 2.0
+    heavy = model_from_spec("generalized_gaussian:1.5")
+    assert isinstance(heavy, GeneralizedGaussianModel)
+    assert heavy.shape == 1.5
+    assert isinstance(model_from_spec("voigt"), VoigtModel)
+    assert spec_tag("generalized_gaussian:4") == "generalized_gaussian_p4"
+    assert spec_tag("gaussian") == "gaussian"
+    with pytest.raises(ValueError):
+        model_from_spec("voigt:1.5")
+    with pytest.raises(ValueError):
+        model_from_spec("lorentzian")
 
 
 def test_evaluate_runs_and_returns_all_schemes():

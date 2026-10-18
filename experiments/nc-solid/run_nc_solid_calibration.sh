@@ -9,10 +9,10 @@
 # coverage gaps (CNR 100 -> 250; sigma-max 0.28 -> 0.35). ~96M small fits.
 #
 # Run in WSL on the 16-core machine. See nc_solid_calibration_rerun.md (this folder).
-#   PYTHON=.venv-linux/bin/python bash scripts/run_nc_solid_calibration.sh
+#   PYTHON=.venv-linux/bin/python bash experiments/nc-solid/run_nc_solid_calibration.sh
 # Override the worker count with WORKERS=N (default: all logical cores).
 set -euo pipefail
-cd "$(dirname "$0")/.."   # repo root
+cd "$(dirname "$0")/../.."   # repo root (this script lives in experiments/<set>/)
 
 # The fits are tiny nonlinear least-squares; BLAS threading does not help and
 # one BLAS thread per worker times all cores oversubscribes and can exhaust

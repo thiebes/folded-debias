@@ -27,7 +27,7 @@
 #   --n-runs     8000 is high-statistics (~96M fits); drop to ~2000 for a quick
 #                look.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."   # repo root (this script lives in experiments/<set>/)
 
 exec bash scripts/run_calibration.sh \
   --tag cspbbr_gaussian \

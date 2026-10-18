@@ -34,7 +34,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import MODELS, Experiment, per_frame_diagnostic  # noqa: E402
+from folded_debias import (Experiment, model_from_spec,  # noqa: E402
+                           per_frame_diagnostic)
 from folded_debias.montecarlo import run_ensemble  # noqa: E402
 from folded_debias.truncation import TruncationModel, frame_stats  # noqa: E402
 
@@ -52,7 +53,7 @@ N_WORKERS = max(1, (os.cpu_count() or 4) - 1)
 
 def _calib_one(args):
     cnr0, exp, n_runs, seed, model_name = args
-    model = MODELS[model_name]()
+    model = model_from_spec(model_name)
     ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed, model=model)
     return frame_stats(ens)
 
@@ -90,7 +91,7 @@ def dense_calibrate(model_name: str) -> TruncationModel:
 
 
 def diagnostic_report(model_name: str, trunc: TruncationModel) -> None:
-    pmodel = MODELS[model_name]()
+    pmodel = model_from_spec(model_name)
     exp = Experiment(D=D_TRUE)
     print(f"\n=== {model_name}: per-frame diagnostic with DENSE calibration ===",
           flush=True)
@@ -129,7 +130,13 @@ def main() -> None:
           f"(D = {D_TRUE} sigma_0^2/tau, L_D/FWHM_0 ~ "
           f"{np.sqrt(2 * D_TRUE) / 2.355:.3f})", flush=True)
     t_start = time.time()
-    for name in ("gaussian", "voigt", "generalized_gaussian"):
+    # Optional model specs; "generalized_gaussian:<p>" sets the shape. The
+    # default list is the committed run, whose bare "generalized_gaussian" is
+    # p = 2 (a Gaussian profile).
+    specs = sys.argv[1:] or ["gaussian", "voigt", "generalized_gaussian"]
+    for spec in specs:
+        model_from_spec(spec)          # fail fast on a bad spec
+    for name in specs:
         t0 = time.time()
         trunc = dense_calibrate(name)
         print(f"  Calibration done [{time.time() - t0:.0f}s]", flush=True)

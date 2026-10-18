@@ -20,7 +20,10 @@ PDF of the fitted variance.
 
 Run from the repository root::
 
-    python scripts/diagnose_boundary.py [gaussian|voigt|generalized_gaussian]
+    python experiments/boundary-diagnostic/diagnose_boundary.py [MODEL]
+
+MODEL is ``gaussian``, ``voigt``, or ``generalized_gaussian:<p>`` (for example
+``generalized_gaussian:1.5``); the bare ``generalized_gaussian`` is p = 2.
 
 Writes ``output/boundary_diagnostic_<model>.png`` and prints a per-CNR verdict.
 """
@@ -33,7 +36,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import MODELS  # noqa: E402
+from folded_debias import model_from_spec, spec_tag  # noqa: E402
 from folded_debias.simulate import Experiment  # noqa: E402
 
 TRUE_SIGMA = 1.0
@@ -44,10 +47,14 @@ AMPLITUDE = 1.0
 
 
 def _model_from_argv():
-    name = sys.argv[1] if len(sys.argv) > 1 else "gaussian"
-    if name not in MODELS:
-        sys.exit(f"unknown model {name!r}; choose from {sorted(MODELS)}")
-    return name, MODELS[name]()
+    # A spec such as "generalized_gaussian:1.5" sets the shape exponent; the
+    # bare name gives p = 2, which is a Gaussian profile.
+    spec = sys.argv[1] if len(sys.argv) > 1 else "gaussian"
+    try:
+        model = model_from_spec(spec)
+    except ValueError as err:
+        sys.exit(str(err))
+    return spec_tag(spec), model
 
 
 def diagnose() -> None:
