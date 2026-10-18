@@ -63,4 +63,4 @@ Result tables: `per_profile_floor_<model>.txt` (`genGauss` is the older p = 2 ru
 
 ## See also
 
-`docs/STATUS.md`, `docs/poster/POSTER_PLAN.md` Panel 5.
+`docs/DERIVATION.md` section 9, `docs/poster/POSTER_PLAN.md` Panel 5.

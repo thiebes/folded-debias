@@ -41,4 +41,4 @@ band, but the mean is corrupted by broken-fit saturation outliers. Figure:
 
 ## See also
 
-`docs/DERIVATION.md` section 10 (parked closed-form scaling), `docs/STATUS.md`.
+`docs/DERIVATION.md` section 10 (parked closed-form scaling).

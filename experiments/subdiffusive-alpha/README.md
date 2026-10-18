@@ -49,5 +49,4 @@ alpha = 0.6 the cut alone moves the naive exponent from 2.0 to 0.92 to 1.13). Fi
 
 ## See also
 
-`docs/STATUS.md` (2026-06-14 subdiffusive-alpha update),
 `docs/poster/POSTER_PLAN.md` Panel 6.

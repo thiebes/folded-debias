@@ -54,4 +54,4 @@ from `scripts/build_calibration.py` (shared tooling).
 
 ## See also
 
-`docs/VALIDATION_DESIGN.md`, `docs/STATUS.md` (2026-06-09 reframe).
+`docs/VALIDATION_DESIGN.md`.

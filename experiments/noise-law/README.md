@@ -54,4 +54,4 @@ negative). Figures: `read_floor_sweep.png`, `fftcnr_white_vs_shot.png`.
 
 ## See also
 
-`docs/poster/NOISE_LAW_REFRAME.md`, `docs/STATUS.md` (2026-06-11 update).
+`docs/poster/NOISE_LAW_REFRAME.md`.

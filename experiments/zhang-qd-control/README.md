@@ -49,5 +49,5 @@ the correction does not distort already-healthy-CNR measurements. Figure:
 
 ## See also
 
-`docs/STATUS.md`. Source paper: Zhang et
+Source paper: Zhang et
 al., "Ultrafast exciton transport at early times in quantum dot solids" (2022).

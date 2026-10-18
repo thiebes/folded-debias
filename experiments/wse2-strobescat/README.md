@@ -154,7 +154,7 @@ CPU contention.
 
 ## See also
 
-`docs/STATUS.md`, `docs/poster/POSTER_PLAN.md` Panel 6,
+`docs/poster/POSTER_PLAN.md` Panel 6,
 `docs/email_collaborators.md` (Enrique).
 fft-cnr note: the per-frame CNR must be measured on the spot window, not the full
 line-cut (off-spot structure corrupts the spectral CNR at low signal) --

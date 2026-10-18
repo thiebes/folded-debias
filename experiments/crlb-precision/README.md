@@ -46,4 +46,4 @@ folder; `render_crlb_panel.py` also imports shared poster primitives from
 
 ## See also
 
-`docs/poster/POSTER_PLAN.md` Panel 3/4, `docs/STATUS.md`.
+`docs/poster/POSTER_PLAN.md` Panel 3/4.

@@ -61,5 +61,5 @@ for reference. Figures: `poc_demo*.png`.
 
 ## See also
 
-`docs/DERIVATION.md` (folded-normal derivation), `docs/STATUS.md`,
+`docs/DERIVATION.md` (folded-normal derivation),
 `docs/poster/POSTER_PLAN.md` Panels 2 and 5.

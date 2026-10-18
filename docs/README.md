@@ -1,13 +1,12 @@
 # docs
 
-Project documentation, grouped by what it relates to. Start with `STATUS.md`
-(the single source of truth) and `REPO_MAP.md` (where everything is).
+Project documentation, grouped by what it relates to. Start with
+`REPO_MAP.md` (where everything is).
 
 ## Living references (read these first)
 
 | File | What it is |
 | ------- | ------- |
-| [STATUS.md](STATUS.md) | Single source of truth -- dated log, newest first; what the project is and where it stands. |
 | [REPO_MAP.md](REPO_MAP.md) | The inventory: every experiment set, illustration, and dataset pointer, in one hop. |
 | [EXPERIMENT_CONVENTIONS.md](EXPERIMENT_CONVENTIONS.md) | The rulebook for adding any experiment or figure (folder layout, figures/captions, pshare data). |
 | [PLOT_STYLE.md](PLOT_STYLE.md) | Plot style specifics for this project (points to the user-level style guide). |
@@ -45,5 +44,4 @@ Project documentation, grouped by what it relates to. Start with `STATUS.md`
 - **Dataset-specific notes** live with their experiment: `nc_solid_bias_note.md`
   and `nc_solid_calibration_rerun.md` in `experiments/nc-solid/`,
   `cspbbr_calibration_run.md` in `experiments/cspbbr-strobescat/`.
-- **Prior-art survey** (`prior_art_map.md`) and **citation audit**
-  (`citations_audit.md`) are at the repo root.
+- **Citation audit** (`citations_audit.md`) is at the repo root.

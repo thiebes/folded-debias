@@ -50,4 +50,4 @@ profile with the generalized-Gaussian fitter's bounds).
 
 ## See also
 
-`docs/DERIVATION.md` section 2, `docs/STATUS.md`.
+`docs/DERIVATION.md` section 2.
