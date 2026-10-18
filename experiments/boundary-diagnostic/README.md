@@ -25,6 +25,8 @@ None. Fully synthetic.
 ```bash
 .venv/Scripts/python.exe experiments/boundary-diagnostic/diagnose_boundary.py
 .venv/Scripts/python.exe experiments/boundary-diagnostic/diagnose_boundary.py voigt
+.venv/Scripts/python.exe experiments/boundary-diagnostic/diagnose_boundary.py generalized_gaussian:1.5
+.venv/Scripts/python.exe experiments/boundary-diagnostic/diagnose_boundary.py generalized_gaussian:4
 ```
 
 Outputs to repo-root `output/`; committed snapshots are in this folder.
@@ -32,9 +34,15 @@ Outputs to repo-root `output/`; committed snapshots are in this folder.
 ## Key result + figure
 
 The fit **reflects** rather than clips, so the **folded-normal** route applies
-(not Tobit/clipping). Voigt and generalized-Gaussian show only a minor ~5%
-clipping pile-up at CNR around 1. Figures: `boundary_diagnostic.png`,
-`boundary_diagnostic_voigt.png`, `boundary_diagnostic_generalized_gaussian.png`.
+(not Tobit/clipping). Voigt and the generalized-Gaussian p = 1.5 show a minor
+wall pile-up (0.05 to 0.06 of fits) only at CNR 1; the script's overall verdict
+line reads that single CNR 1 row, so it prints "CLIPPING" for them although
+every row from CNR 1.5 up is reflection-like. The flat-topped p = 4 shows no
+pile-up; its mean fitted variance is slightly low at CNR 1 (0.98 sigma_0^2).
+Tables: `diagnose_boundary_genGauss_p1.5.txt`, `diagnose_boundary_genGauss_p4.txt`.
+Figures: `boundary_diagnostic.png`, `boundary_diagnostic_voigt.png`, and
+`boundary_diagnostic_generalized_gaussian.png` (an older p = 2 run, a Gaussian
+profile with the generalized-Gaussian fitter's bounds).
 
 ## Depends on
 

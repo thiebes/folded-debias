@@ -2,7 +2,7 @@
 
 **Figure N.** Per-frame fitted variance σ²(t) for three Br-I halide-mixing maps
 (Br fraction (a) 0.25, (b) 0.5, (c) 0.75), on high-statistics (400,000-walker)
-data at initial contrast-to-noise CNR₀ = 10. Each point is the mean over 300
+data at initial contrast-to-noise CNR₀ = 10. Each point is the mean over 800
 noisy realizations; the indigo line is the reference carrier transport, computed
 exactly from the simulation without fitting or added noise. The naive fit (red
 circles) rises above the reference as the per-frame contrast falls, consistent
@@ -26,5 +26,5 @@ reference value D_ref, is:
 
 The naive ratios (D_naive/D_ref) all exceed unity; the corrected ratios
 (D_corr/D_ref) lie within 0.06 of unity, scattered on both sides. The ratios are
-ensemble-mean point estimates over the 300 realizations; no per-ratio uncertainty
+ensemble-mean point estimates over the 800 realizations; no per-ratio uncertainty
 is shown.

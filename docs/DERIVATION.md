@@ -2,10 +2,12 @@
 
 This note derives, from a folded-normal model of the fitted width, why the
 diffusion coefficient is overestimated and what the correct fix is. The model
-is the one the boundary diagnostic selected: `scripts/diagnose_boundary.py`
-found the fitted-variance distribution strictly interior and right-skewed with
-no delta-mass at the lower bound, for all three profile models — **reflection,
-not clipping**.
+is the one the boundary diagnostic selected:
+`experiments/boundary-diagnostic/diagnose_boundary.py` found the
+fitted-variance distribution strictly interior and right-skewed with no
+delta-mass at the lower bound for the Gaussian, Voigt, and generalized-Gaussian
+p = 1.5 and p = 4 fits (a wall pile-up of 0.05 to 0.06 of fits appears only at
+CNR ≈ 1 for Voigt and p = 1.5) — **reflection, not clipping**.
 
 ## 1. Model
 
@@ -126,16 +128,24 @@ removed the deep-regime overshoot.
 **On the wider `CNR₀ ∈ [2,100]` sweep, however, the recommendation flips.**
 At very low CNR₀ (≲ 4) the MAS gate switches the correction off where the
 truncation bias is large, leaving most of the raw inflation in. On
-`scripts/dense_calibration_and_test.py`'s 100-point sweep across all three
-profile shapes, folded-normal's overall mean |⟨D⟩/D_true − 1| beats MAS:
-Gaussian 0.195 vs 0.497, Voigt 0.145 vs 0.237, GenGauss 0.152 vs 0.172.
-The medians remain nearly equal (the gap is in the deep-CNR tail), so for
-typical measurements either scheme works. But **folded-normal degrades
-gracefully** in deep noise (residuals erratic but bounded), while MAS
-**fails ungracefully** (large positive residuals that grow with CNR
-depth — the gate-off-leaves-bias problem). **Folded-normal is the
-recommended scheme.** MAS remains in the codebase for paper-scope
-comparison.
+`experiments/dfree-calibration/dense_calibration_and_test.py`'s 100-point
+sweep (5000 calibration runs per cell, 1000 test runs; the committed
+`dense_calibration_and_test.txt`), the overall mean |⟨D⟩/D_true − 1| is,
+folded-normal vs MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, and the
+p = 2 generalized-Gaussian fit 0.155 vs 0.151 (that row is a Gaussian
+profile); the non-Gaussian rows (`dense_calibration_and_test_genGauss_p1.5_p4.txt`)
+give 0.178 vs 0.815 for p = 1.5 and 0.179 vs 0.509 for p = 4. Folded-normal
+wins clearly where MAS leaves a large deep-CNR inflation in (Gaussian,
+p = 1.5, and p = 4, whose CNR₀ < 4 deciles MAS sends negative); for Voigt and
+the p = 2 fit the two tie. (An earlier
+1000-run calibration gave 0.195 vs 0.497, 0.145 vs 0.237, and 0.152 vs 0.172;
+the 5000-run table supersedes it.) The medians are close (0.02 to 0.07 for
+both schemes on every shape), so for typical measurements either scheme works. The case for
+folded-normal is the failure mode, not the mean: it degrades gracefully in
+deep noise (residuals erratic but bounded), while MAS fails with large
+positive residuals that grow with CNR depth when its gate switches the
+correction off. **Folded-normal is the recommended scheme.** MAS remains in
+the codebase for paper-scope comparison.
 
 **Non-truncated moment estimator (`MomentModel`).** The alternative is to
 remove the wall entirely: estimate the variance from the discrete second
@@ -169,13 +179,22 @@ runs the standard calibration sweep at `D = 0`; the lookup it returns is
 keyed on per-frame CNR alone and is reused unchanged across any application
 `D`.
 
-Validated by Monte Carlo across `D ∈ [0.005, 0.1]` on Gaussian, Voigt, and
-generalized-Gaussian profiles (`scripts/validate_d_zero.py`). In the
-poster-relevant regime `D ≥ 0.02` (`L_D / FWHM ≥ 4%`), the corrected mean
-|bias − 1| is 0.01–0.10 per shape with the same calibration. At `D < 0.02`
-the residual bias grows (`D ≈ 0.005` has `L_D ≈ 1.5% FWHM`, near the
-information-theoretic floor for *any* unbiased estimator at these CNRs); the
-calibration is not at fault.
+Tested by Monte Carlo at `D ∈ {0.005, 0.01, 0.02, 0.05, 0.1}` on Gaussian,
+Voigt, and generalized-Gaussian p = 1.5 and p = 4 profiles
+(`experiments/dfree-calibration/validate_d_zero.py`, 300-run calibration and
+300 evaluation runs per cell, with each cell's Monte Carlo standard error).
+The corrected ⟨D⟩/D_ref is 0.99 to 1.09 for `D ≥ 0.02` at `CNR₀ ≥ 21` and for
+`D ≥ 0.05` at `CNR₀ ≥ 13`, on all four shapes; most of those cells sit above 1
+(1.02 to 1.09), by one to three of their standard errors. The domain is not
+validated for `D ≤ 0.01` (mean |bias − 1| from 0.10 for p = 4 to 1.7 for the
+Gaussian) or at `CNR₀ ≤ 13` for `D = 0.02`. Two causes contribute at small D.
+First, `D = 0.005` has `L_D ≈ 0.015 FWHM`, so the slope is near the
+precision limit of any estimator at these CNRs (evaluation SE up to 0.4 at
+`CNR₀ = 13`). Second, the calibration's own Monte Carlo error, which the
+reported SE does not include: two calibration draws of the same 300-run
+sweep give 0.849 and 1.065 at `D = 0.02`, `CNR₀ = 34`, a difference of 0.22
+against an evaluation SE of 0.04. A low-CNR application therefore needs a
+larger calibration budget, or a calibration-error term in its uncertainty.
 
 An experimental joint `var_bias(CNR, σ²)` calibration
 (`folded_debias.calibration.calibrate_cnr_sigma2`) was prototyped for
@@ -208,32 +227,58 @@ per CNR cell and the dense calibration. For Gaussian profiles at
 | 0.3 – 0.5 | 0.3 – 0.8 | failing; residuals comparable to σ²_true |
 | < 0.3 | ≳ σ²_true | broken |
 
-Voigt and generalized-Gaussian sweeps in progress (launched 26 May).
-Expected to show the same floor *location* with smaller residual
-*magnitudes* — at very low CNR, Gaussian profiles inflate the most (E[raw]
-≈ 6.7 σ_0² at per-profile CNR 0.25), while Voigt and GenGauss inflate
-only ≈ 1.3× because their heavier tails resist the truncation fold.
+The same sweep on the other shapes (`per_profile_floor_{voigt,genGauss_p1.5,genGauss_p4}.txt`),
+with the floor taken as the deepest CNR reached, walking down, before the
+first cell whose residual exceeds both 2 SE and 0.01 σ_0²:
+
+| shape | floor (CNR) | first failure below it |
+| ------- | ------- | ------- |
+| Gaussian | 1.16 | +0.036 σ_0² at 0.89, −0.34 at 0.69 |
+| Voigt | 1.5 | −0.013 at 1.16; within 0.01 again down to 0.53; +0.34 at 0.41 |
+| generalized-Gaussian p = 1.5 | 0.89 | −0.12 at 0.69 |
+| generalized-Gaussian p = 4 | 0.69 | +0.013 at 0.53; within 0.012 down to 0.11 |
+
+Severity differs more than location. Uncorrected, the Gaussian fit inflates
+the most at deep CNR (E[raw] ≈ 6–8 σ_0² below CNR 0.25), Voigt and p = 1.5
+reach 1.5–2.3 σ_0², and the flat-topped p = 4 fit reads *low* (E[raw] 0.55
+σ_0² at CNR 0.05), so for p = 4 the correction adds to the variance there. (The
+earlier "GenGauss" floor table was p = 2, a Gaussian profile under the
+generalized-Gaussian fitter's tighter bound.)
 
 ### Analytical handle on where the model breaks
 
-The calibrated `var_bias(CNR)` follows the localization-CRLB power-law
-`var_bias(CNR) ≈ A / CNR²` σ_0² at high CNR. Fitting that form to the
-calibration on `CNR > 8` (`scripts/analytical_floor.py`) gives `A ≈ 0.37`
-σ_0² for Gaussian (0.42 for Voigt, 0.37 for GenGauss). The power-law
-holds from CNR = 0.2 up to 100. Below CNR ≈ 0.1, the empirical
-`var_bias(CNR)` saturates because the σ̂² distribution is bounded above
-by the fit's `var_max ≈ 144 σ_0²` — values that would land beyond pile
-up at the ceiling instead. So `E[σ̂²]` stops growing as `1/CNR²` and
-approaches a plateau.
+The model predicts its own bias without a fit. With `σ̂ = σ + ε` and
+`ε ~ N(0, s²)`, `E[σ̂²] = σ² + s²`, so `var_bias = s² = Var(σ̂)`, and for a
+small width error `Var(σ̂²) = 4σ² Var(σ̂)`. Var(σ̂²) is measured to a few
+parts in a hundred per calibration cell at any CNR, while the mean bias
+above CNR ≈ 3 is below 0.01 σ_0² and noise-dominated in a 300-run cell.
+`experiments/correction-floor/analytical_floor.py` therefore takes
+`A = CNR² Var(σ̂²)/4` at `CNR ≥ 8`, predicts `var_bias = A / CNR²`, and
+compares the prediction with the calibrated var_bias pooled into log-CNR
+bins with standard errors:
 
-This saturation is *not* a failure of the correction in the
-mean-unbiased sense — the calibration captures the empirical mean
-whether or not the distribution is folded-normal, and subtracting the
-calibrated mean still recovers `σ²_true` in expectation. **There is no
-fundamental analytical floor of the correction**; the practical floor is
-set by calibration MC budget. The gap between the per-profile **working
-floor** (CNR ≈ 0.5–1.0) and the **model-breakdown CNR** (≈ 0.1) is what
-denser calibration could close, at exponential cost.
+| shape | A (σ_0²) | model holds down to | resolved departure |
+| ------- | ------- | ------- | ------- |
+| Gaussian | 0.058 | CNR ≈ 1.2 | CNR ≈ 0.85 (bias 3.8x the prediction) |
+| Voigt | 0.082 | CNR ≈ 0.3 | none located above 0.28 |
+| generalized-Gaussian p = 1.5 | 0.10 | CNR ≈ 1.2 | CNR ≈ 0.85 (3.0x) |
+| generalized-Gaussian p = 4 | 0.019 | CNR ≈ 3.6 | CNR ≈ 0.36 (bias negative) |
+
+The Gaussian A agrees with the 50,000-fit per-profile tables (0.05 to 0.07
+σ_0² at CNR 1.5 to 6). So the folded-normal model breaks near CNR 1 for the
+Gaussian and p = 1.5 fits, at the same place as the per-profile working
+floor. The flat-topped p = 4 fit departs differently: its low-CNR bias is
+negative (−0.38 σ_0² at CNR 0.12), and the fit underestimates the width
+instead of folding it upward.
+
+Below the breakdown the calibration still captures the empirical mean, so a
+subtraction can remain unbiased in expectation if the calibration resolves
+that mean, and the per-profile tables show it does not at practical budgets.
+An earlier version of this analysis reported a breakdown at CNR ≈ 0.1 with
+`A ≈ 0.37` σ_0²: its floor loop exited without setting a floor when the
+highest-CNR cell was out of band and fell back to the bottom of the grid,
+and its A came from noise-dominated high-CNR cells with the negative ones
+removed.
 
 ### Design recommendation that follows
 
@@ -385,9 +430,9 @@ application).
 
 - **Resolved — subdiffusive transport (`MSD ∝ t^α`, α < 1).** The correction
   de-biases α as well as D: `scripts/subdiffusive_alpha.py` on the
-  `AnomalousExperiment` bed recovers true α to `|α−α_true| ≈ 0.02–0.10` for
-  CNR₀ ≥ 20 (α ∈ {0.6, 0.8, 1.0, 1.2}), where the naive fit pins at the
-  ballistic α = 2.0. The exponent is read from the mean trajectory (§4's bias
+  `AnomalousExperiment` bed: the mean corrected |α−α_ref| over CNR₀ 21 to 90 (2000 runs per cell, Monte Carlo SE from resampling the realisations) is 0.030 ± 0.020, 0.018 ± 0.022, 0.046 ± 0.023, and 0.100 ± 0.041 for α = 0.6, 0.8, 1.0, and 1.2, against 0.18 to 0.30 naive. The corrected error is consistent
+  with zero for α = 0.6 and 0.8 and about 2 SE for α = 1.0 and 1.2. Below
+  CNR₀ 20 the naive fit pins at the ballistic α = 2.0. The exponent is read from the mean trajectory (§4's bias
   carries into the slope's curvature, not only its slope).
 - **Resolved — decay-law independence.** The correction subtracts
   `var_bias(per-frame CNR)`, so it depends on the per-frame CNR, not on how the

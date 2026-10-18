@@ -30,14 +30,14 @@ tests/                package tests
 
 | Set | Scripts | Scope / maturity | Key result | Figure(s) |
 | ------- | ------- | ------- | ------- | ------- |
-| [poc-bias-correction](../experiments/poc-bias-correction/) | `poc_demo.py` | poster P2/P5 / validated | folded-normal mean \|bias-1\| 0.12 (G), 0.106 (V), 0.096 (GG) | `poc_demo*.png` |
+| [poc-bias-correction](../experiments/poc-bias-correction/) | `poc_demo.py` | poster P2/P5 / validated | folded-normal mean \|bias-1\| over CNR0 13-90: 0.04-0.06 on Gaussian, Voigt, p = 1.5, p = 4 (CNR0 5-8 depend on the calibration draw) ||bias-1\| 0.12 (G), 0.106 (V), 0.096 (GG) | `poc_demo*.png` |
 | [boundary-diagnostic](../experiments/boundary-diagnostic/) | `diagnose_boundary.py` | framing ref / validated | fit reflects, not clips -> folded-normal route | `boundary_diagnostic*.png` |
-| [dfree-calibration](../experiments/dfree-calibration/) | `validate_d_zero.py`, `dense_calibration_and_test.py` | poster P5 / validated | corrected \|bias-1\| 0.01-0.10 per shape; folded is the robust default | `.txt` tables |
+| [dfree-calibration](../experiments/dfree-calibration/) | `validate_d_zero.py`, `dense_calibration_and_test.py` | poster P5 / validated | D-free calibration holds for D >= 0.02 (mean \|bias-1\| 0.05-0.10 per shape at D = 0.02-0.05, 0.01 at D = 0.1); not validated at D = 0.005-0.01 (0.33-0.55); see STATUS 2026-10-17 | `.txt` tables |
 | [correction-floor](../experiments/correction-floor/) | `per_profile_floor.py`, `analytical_floor.py`, `per_frame_in_diffusion_experiment.py` | poster P5 inset / validated | reliable per-profile CNR >~ 1, fails < ~0.3 | `.txt` tables |
 | [noise-law](../experiments/noise-law/) | `shot_noise_validation.py`, `read_floor_sweep.py` | poster P2-3 framing / validated | bias is a constant-noise-floor phenomenon; match calibration to the law | `read_floor_sweep.png`, `fftcnr_white_vs_shot.png` |
 | [coverage-interval](../experiments/coverage-interval/) | `coverage_check.py` | paper / validated | covariance CI under-covers; report bootstrap/profile interval | `coverage_check.png` |
 | [estimator-comparison](../experiments/estimator-comparison/) | `moment_estimator_failure.py`, `unbounded_fit_comparison.py` | poster aside/paper / validated | removing the wall does not substitute for the correction | `method_comparison.png`, `unbounded_fit_comparison.png` |
-| [subdiffusive-alpha](../experiments/subdiffusive-alpha/) | `subdiffusive_alpha.py` | poster P6 / validated | recovers true alpha to \|d alpha\| 0.02-0.10 for CNR0 >= 20 | `subdiffusive_alpha.png` |
+| [subdiffusive-alpha](../experiments/subdiffusive-alpha/) | `subdiffusive_alpha.py` | poster P6 / validated | corrected exponent tracks the true alpha for CNR0 >= 20; per-cell Monte Carlo SE reported in the table (STATUS 2026-10-17) | `subdiffusive_alpha.png` |
 | [multiexp-decay](../experiments/multiexp-decay/) | `multiexp_decay.py` | caveat/paper / validated | correction keys on per-frame CNR, not the decay law | `multiexp_decay.png` |
 | [crlb-precision](../experiments/crlb-precision/) | `crlb.py` (+ `precision_limit.md`) | poster P3/4 / validated | sqrt(CRLB)/D is several x D at low CNR | `poster_panel4_crlb.png` |
 | [closed-form-scaling](../experiments/closed-form-scaling/) | `linearity_test.py` | parked/paper | median bias tracks lambda(-s)/s in a band | `linearity_test.png` |
@@ -56,7 +56,8 @@ tests/                package tests
 
 | Set | Scripts | Scope / maturity | Key result | Data |
 | ------- | ------- | ------- | ------- | ------- |
-| [wse2-strobescat](../experiments/wse2-strobescat/) | `wse2_realdata_panel.py` (canonical) + `realdata_*` (exploratory) | poster P6 real / validated | D -7% on real WSe2 stroboSCAT (naive 1.10 -> 1.02) | pshare (Enrique) |
+| [wse2-strobescat](../experiments/wse2-strobescat/) | `render_realdata_panel.py` (canonical, MoSSe panel) + `realdata_*`; `wse2_realdata_panel.py` is the retracted WSe2 panel | poster P6 real / validated | MoSSe alloy `26_32/250716`: corrected/naive D 0.95 (full range) and 0.97 (t <= 2 ns); the earlier WSe2 0.020 panel is retracted (batch-offset artifact) | pshare (Enrique) |
+| [fft-cnr-recovery](../experiments/fft-cnr-recovery/) | `build_fft_cnr_recovery_figure.py` (+ committed summary `.npz`) | poster P4 / validated | fft-cnr recovers the true CNR on the 1:1 line from CNR 2 to 100, N = 128-1024 | committed summary; source array in the sibling fft-cnr repo |
 | [cspbbr-strobescat](../experiments/cspbbr-strobescat/) | `reduce.py`, `apply_correction.py`, `run_all.py` | adjacent / WIP | end-to-end real-data correction (Antonella/Carlos paper) | pshare (Upasana) |
 | [zhang-qd-control](../experiments/zhang-qd-control/) | `zhang_qd_panel.py` (+ committed figure CSVs) | control / validated | Zhang QD Dfast robust to the correction (high CNR) | committed CSVs; `.opju` gitignored |
 

@@ -14,8 +14,9 @@ Validated. Poster-scope (source for the Panel 5 floor inset).
 
 - `per_profile_floor.py [profile_model]` -- isolated single-profile sweep
   (50,000 fits per CNR cell); residual `mean(sigma_tilde^2) - sigma^2_true`.
-- `analytical_floor.py` -- power-law fit `var_bias(CNR) ~ A/CNR^2` and the
-  model-saturation breakdown point.
+- `analytical_floor.py [MODEL ...]` -- tests the folded-normal prediction
+  `var_bias = A/CNR^2`, with `A = CNR^2 Var(sigma_hat^2)/4` measured at high
+  CNR, against the binned calibration, and reports where it breaks.
 - `per_frame_in_diffusion_experiment.py [profile_model]` -- the per-frame
   folded-normal / MAS corrections inside a 12-frame diffusion experiment.
 - `render_floor_panel.py` -- renders the poster floor panel
@@ -39,10 +40,21 @@ Set `FOLDED_DEBIAS_WORKERS=0`; `per_profile_floor.py` runs ~45 min (Gaussian) to
 
 ## Key result + figure
 
-Reliable for per-profile CNR >~ 1, useful to ~0.7, fails below ~0.3. The
-power-law breakdown is much deeper (CNR ~0.1) where sigma_hat^2 saturates against
-the fit's `var_max`. Design rule: keep every frame's per-profile CNR above ~1.
-Result tables: `per_profile_floor_<model>.txt`, `analytical_floor.txt`,
+Per-profile floor (50,000 fits per cell; deepest CNR before the first cell
+whose residual exceeds both 2 SE and 0.01 sigma_0^2): Gaussian 1.16, Voigt 1.5
+(within 0.01 sigma_0^2 again from 1.16 down to 0.53), p = 1.5 0.89, p = 4 0.69
+(within 0.013 down to 0.11). The p = 4 fit reads low, not high, at deep CNR.
+The script's floor readout used significance alone, which at 50,000 fits flags
+1e-4 calibration offsets and reported the top of the grid; it now also
+requires |residual| > 0.01 sigma_0^2. The folded-normal model
+breaks at about the same place: `A` = 0.058 (Gaussian), 0.082 (Voigt), 0.10
+(p = 1.5), 0.019 (p = 4) sigma_0^2; resolved departure at CNR ~0.85 for
+Gaussian and p = 1.5, none above 0.28 for Voigt, and a negative low-CNR bias
+for p = 4 (departure at CNR ~0.36). The earlier "breakdown at CNR ~0.1, A ~0.37"
+came from a floor-loop bug and a noise-biased A. Design rule: keep every frame's
+per-profile CNR above ~1.
+Result tables: `per_profile_floor_<model>.txt` (`genGauss` is the older p = 2 run;
+`genGauss_p1.5`, `genGauss_p4`), `analytical_floor.txt`,
 `per_frame_in_diffusion_experiment.txt`.
 
 ## Depends on
