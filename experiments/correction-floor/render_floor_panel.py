@@ -42,7 +42,7 @@ def build() -> Path | None:
         return None
 
     fig, ax = plt.subplots(figsize=(4.6, 3.4))
-    # Regime dividers (per-profile CNR, from STATUS / DERIVATION sec. 9), kept
+    # Regime dividers (per-profile CNR, from DERIVATION sec. 9), kept
     # neutral so the shape curves read cleanly.
     for xline in (0.7, 1.0):
         ax.axvline(xline, color="#bbbbbb", ls="--", lw=1.0)

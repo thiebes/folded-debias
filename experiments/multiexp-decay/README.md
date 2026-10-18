@@ -43,4 +43,4 @@ single-exponential-specific -- state thresholds in per-frame CNR. Figure:
 
 ## See also
 
-`docs/STATUS.md` (2026-06-14 multi-exponential-decay update).
+`docs/DERIVATION.md` section 11 (decay-law independence).

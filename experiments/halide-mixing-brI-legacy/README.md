@@ -48,4 +48,4 @@ above the floor, so the correction is inactive (naive ~ corrected). Figure:
 
 ## See also
 
-`experiments/halide-mixing-highn/`, `docs/STATUS.md` (2026-06-14 halide bed).
+`experiments/halide-mixing-highn/`.

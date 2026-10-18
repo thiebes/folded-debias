@@ -16,7 +16,7 @@ src/folded_debias/   core library -- imported by everything; never moved
 experiments/          one folder per experiment set (below)
 illustrations/        one folder per hand-built matplotlib schematic (below)
 scripts/              shared tooling + poster assembly (not per-bed; below)
-docs/                 shared docs (STATUS, DERIVATION, VALIDATION_DESIGN, poster/, ...)
+docs/                 shared docs (DERIVATION, VALIDATION_DESIGN, poster/, ...)
 docs/REPO_MAP.md      this index
 docs/EXPERIMENT_CONVENTIONS.md   the rulebook for new experiments/figures
 archive/              superseded / frozen material (not maintained)
@@ -32,12 +32,12 @@ tests/                package tests
 | ------- | ------- | ------- | ------- | ------- |
 | [poc-bias-correction](../experiments/poc-bias-correction/) | `poc_demo.py` | poster P2/P5 / validated | folded-normal mean \|bias-1\| over CNR0 13-90: 0.04-0.06 on Gaussian, Voigt, p = 1.5, p = 4 (CNR0 5-8 depend on the calibration draw) ||bias-1\| 0.12 (G), 0.106 (V), 0.096 (GG) | `poc_demo*.png` |
 | [boundary-diagnostic](../experiments/boundary-diagnostic/) | `diagnose_boundary.py` | framing ref / validated | fit reflects, not clips -> folded-normal route | `boundary_diagnostic*.png` |
-| [dfree-calibration](../experiments/dfree-calibration/) | `validate_d_zero.py`, `dense_calibration_and_test.py` | poster P5 / validated | D-free calibration holds for D >= 0.02 (mean \|bias-1\| 0.05-0.10 per shape at D = 0.02-0.05, 0.01 at D = 0.1); not validated at D = 0.005-0.01 (0.33-0.55); see STATUS 2026-10-17 | `.txt` tables |
+| [dfree-calibration](../experiments/dfree-calibration/) | `validate_d_zero.py`, `dense_calibration_and_test.py` | poster P5 / validated | D-free calibration holds for D >= 0.02 (mean \|bias-1\| 0.05-0.10 per shape at D = 0.02-0.05, 0.01 at D = 0.1); not validated at D = 0.005-0.01 (0.33-0.55) | `.txt` tables |
 | [correction-floor](../experiments/correction-floor/) | `per_profile_floor.py`, `analytical_floor.py`, `per_frame_in_diffusion_experiment.py` | poster P5 inset / validated | reliable per-profile CNR >~ 1, fails < ~0.3 | `.txt` tables |
 | [noise-law](../experiments/noise-law/) | `shot_noise_validation.py`, `read_floor_sweep.py` | poster P2-3 framing / validated | bias is a constant-noise-floor phenomenon; match calibration to the law | `read_floor_sweep.png`, `fftcnr_white_vs_shot.png` |
 | [coverage-interval](../experiments/coverage-interval/) | `coverage_check.py` | paper / validated | covariance CI under-covers; report bootstrap/profile interval | `coverage_check.png` |
 | [estimator-comparison](../experiments/estimator-comparison/) | `moment_estimator_failure.py`, `unbounded_fit_comparison.py` | poster aside/paper / validated | removing the wall does not substitute for the correction | `method_comparison.png`, `unbounded_fit_comparison.png` |
-| [subdiffusive-alpha](../experiments/subdiffusive-alpha/) | `subdiffusive_alpha.py` | poster P6 / validated | corrected exponent tracks the true alpha for CNR0 >= 20; per-cell Monte Carlo SE reported in the table (STATUS 2026-10-17) | `subdiffusive_alpha.png` |
+| [subdiffusive-alpha](../experiments/subdiffusive-alpha/) | `subdiffusive_alpha.py` | poster P6 / validated | corrected exponent tracks the true alpha for CNR0 >= 20; per-cell Monte Carlo SE reported in the table | `subdiffusive_alpha.png` |
 | [multiexp-decay](../experiments/multiexp-decay/) | `multiexp_decay.py` | caveat/paper / validated | correction keys on per-frame CNR, not the decay law | `multiexp_decay.png` |
 | [crlb-precision](../experiments/crlb-precision/) | `crlb.py` (+ `precision_limit.md`) | poster P3/4 / validated | sqrt(CRLB)/D is several x D at low CNR | `poster_panel4_crlb.png` |
 | [closed-form-scaling](../experiments/closed-form-scaling/) | `linearity_test.py` | parked/paper | median bias tracks lambda(-s)/s in a band | `linearity_test.png` |
@@ -86,9 +86,9 @@ and `scripts/build_poster.py` pulls the panels from these folders.
     assembly (renders/builds the poster). See "Poster assembly" below.
   - `legacy/` -- deprecated/superseded exploratory scripts (run with `PYTHONPATH=src`).
 - `docs/` -- shared docs (see [`docs/README.md`](README.md) for the grouped
-  index): `STATUS.md` (source of truth), `PLAN.md`, `DERIVATION.md`,
-  `VALIDATION_DESIGN.md`, `VALIDATION_AUDIT.md`, `PAPER_BRIEF.md`,
-  `prior_art_map.md`, `citations_audit.md`, `email_collaborators.md`,
+  index): `PLAN.md`, `DERIVATION.md`,
+  `VALIDATION_DESIGN.md`, `VALIDATION_AUDIT.md`,
+  `citations_audit.md`, `email_collaborators.md`,
   `marc_briefing.md`, `alpha_fit_weighting_survey.md`, `calibration_runs.md`,
   and `docs/poster/`. Dataset-specific notes moved to their experiment folders
   (`nc_solid_bias_note.md`, `nc_solid_calibration_rerun.md` ->

@@ -48,8 +48,8 @@ Validated domain (`validate_d_zero`, 300-run calibration): corrected
 `mean(D_hat)/D_ref` is 0.99 to 1.09 for `D >= 0.02` at `CNR0 >= 21` and for
 `D >= 0.05` at `CNR0 >= 13`, on Gaussian, Voigt, and p = 1.5 and p = 4. Not
 validated for `D <= 0.01` or at `CNR0 <= 13` for `D = 0.02`. The calibration's
-own Monte Carlo error is not in the printed SE and dominates at small D (see
-`docs/STATUS.md`, 2026-10-18).
+own Monte Carlo error is not in the printed SE and dominates at small D (`docs/DERIVATION.md`
+section 8).
 
 Dense sweep (5000-run calibration), overall mean `|bias-1|`, folded-normal vs
 MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, p = 2 0.155 vs 0.151,
@@ -69,4 +69,4 @@ Voigt, and p = 2.
 
 ## See also
 
-`docs/STATUS.md`, `docs/DERIVATION.md`, `docs/poster/POSTER_PLAN.md` Panel 5.
+`docs/DERIVATION.md`, `docs/poster/POSTER_PLAN.md` Panel 5.

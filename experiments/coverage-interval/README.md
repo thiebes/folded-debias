@@ -44,4 +44,4 @@ Figure: `coverage_check.png`; table `coverage_check.txt`.
 
 ## See also
 
-`docs/STATUS.md` (2026-06-14 coverage update).
+`docs/DERIVATION.md` (the folded-normal correction).

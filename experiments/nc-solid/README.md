@@ -68,5 +68,4 @@ only raises alpha -- it masks subdiffusion, never manufactures it. Figure:
 
 `nc_solid_bias_note.md` (technical note + caption),
 `nc_solid_calibration_rerun.md`, `../../docs/alpha_fit_weighting_survey.md`,
-`docs/VALIDATION_DESIGN.md`, `docs/poster/POSTER_PLAN.md` Panel 6,
-`docs/STATUS.md` (2026-06-15 de-noising update).
+`docs/VALIDATION_DESIGN.md`, `docs/poster/POSTER_PLAN.md` Panel 6.

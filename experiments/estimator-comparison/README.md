@@ -50,4 +50,4 @@ helpers.
 
 ## See also
 
-`docs/STATUS.md` (2026-06-15 unbounded-fit update).
+`docs/DERIVATION.md` section 7.

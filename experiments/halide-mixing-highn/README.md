@@ -150,4 +150,4 @@ the correction has little to do).
 
 ## See also
 
-- `docs/STATUS.md`, the 2026-06-24 section.
+- `experiments/halide-mixing-brI-legacy/` (the legacy 20k-walker bed).
