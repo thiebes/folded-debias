@@ -182,19 +182,31 @@ keyed on per-frame CNR alone and is reused unchanged across any application
 Tested by Monte Carlo at `D ∈ {0.005, 0.01, 0.02, 0.05, 0.1}` on Gaussian,
 Voigt, and generalized-Gaussian p = 1.5 and p = 4 profiles
 (`experiments/dfree-calibration/validate_d_zero.py`, 300-run calibration and
-300 evaluation runs per cell, with each cell's Monte Carlo standard error).
-The corrected ⟨D⟩/D_ref is 0.99 to 1.09 for `D ≥ 0.02` at `CNR₀ ≥ 21` and for
-`D ≥ 0.05` at `CNR₀ ≥ 13`, on all four shapes; most of those cells sit above 1
-(1.02 to 1.09), by one to three of their standard errors. The domain is not
-validated for `D ≤ 0.01` (mean |bias − 1| from 0.10 for p = 4 to 1.7 for the
-Gaussian) or at `CNR₀ ≤ 13` for `D = 0.02`. Two causes contribute at small D.
-First, `D = 0.005` has `L_D ≈ 0.015 FWHM`, so the slope is near the
-precision limit of any estimator at these CNRs (evaluation SE up to 0.4 at
-`CNR₀ = 13`). Second, the calibration's own Monte Carlo error, which the
-reported SE does not include: two calibration draws of the same 300-run
-sweep give 0.849 and 1.065 at `D = 0.02`, `CNR₀ = 34`, a difference of 0.22
-against an evaluation SE of 0.04. A low-CNR application therefore needs a
-larger calibration budget, or a calibration-error term in its uncertainty.
+300 evaluation runs per cell).
+
+The calibration is itself a finite Monte Carlo, and its error is common to
+every measurement corrected with it, so it does not average away over runs.
+`weights.calibration_D_se` propagates it into D through the slope fit's
+linear map (`TruncationModel.var_bias_se` gives each looked-up bias's SE;
+with `D̂ = ½ Σ cᵢ mᵢ` and `Σ cᵢ = 0`, `Var_cal(D) = ¼ Σ cᵢ² sᵢ²`, and the t = 0
+frame's error cancels into the intercept). Checked against independent
+calibration draws applied to one fixed evaluation set: observed scatter 0.214
+D_ref, predicted 0.207 (`tests/test_basic.py`). At these budgets the
+calibration and evaluation terms are comparable, and the calibration term does
+not shrink with more evaluation runs.
+
+With both terms in the cell SE, the corrected ⟨D⟩/D_ref is consistent with 1
+within two combined SE in 136 of 140 cells (four shapes, all five D, CNR₀ 5 to
+90); the other four lie at 2.0 to 3.4 SE, about the number expected by chance.
+No resolved bias remains anywhere in the tested domain. What limits the small-D,
+low-CNR cells is precision: the combined SE is 0.02 to 7.9 (in D/D_ref) at
+`D ≤ 0.01`, 0.02 to 1.05 at `D = 0.02`, and at most 0.03 only for `D ≥ 0.05` at
+`CNR₀ ≥ 34`. `D = 0.005` has `L_D ≈ 0.015 FWHM`, so its slope is near the
+precision limit of any estimator at these CNRs. The same combined SE explains
+the draw-to-draw differences between the earlier committed tables and the
+re-run (RMS standardized difference 1.10 over 70 cells; the largest, 0.849 vs
+1.065 at `D = 0.02`, `CNR₀ = 34`, is 2.9 SE). A low-CNR application should
+report the combined SE, and a tighter claim needs a larger calibration budget.
 
 An experimental joint `var_bias(CNR, σ²)` calibration
 (`folded_debias.calibration.calibrate_cnr_sigma2`) was prototyped for
