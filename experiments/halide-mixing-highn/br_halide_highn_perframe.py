@@ -81,14 +81,21 @@ FONT = 9
 CNR0 = 10.0          # initial CNR for the per-frame panel
 CNR0_TABLE = (8.0, 15.0, 30.0)   # short-window D reported at these CNR_0
 N_SEEDS = 800
+# Joint-lookup key: "perseed" (each frame's own sigma_hat^2, library default)
+# or "smoothed" (a robust line through the measurement; see smoothed_key).
+KEY = os.environ.get("HIGHN_KEY", "perseed")
 FLOOR_CNR = 1.3      # project floor: folded-normal over-subtracts below ~1.3
 CAL_CNR0 = np.geomspace(1.2, 60.0, 30)
 N_RUNS_CAL = 600
 # Joint (CNR, sigma^2) calibration: sigma spans the true widths of the usable
 # band (25 nm at t = 0 to ~125 nm where the CNR reaches the floor) with margin.
 SIGMA_GRID_NM = np.linspace(20.0, 220.0, 26)
-CAL2_CNR = np.geomspace(1.0, 60.0, 30)
-N_RUNS_CAL2 = 600
+# Dense below CNR 3, where the bias and its Monte Carlo noise are largest: a
+# 600-run, 30-point grid left a few-hundred-nm^2 gap between the floor (1.3) and
+# CNR 2 even with an exact sigma^2 key.
+CAL2_CNR = np.concatenate([np.geomspace(1.0, 3.0, 20, endpoint=False),
+                           np.geomspace(3.0, 60.0, 20)])
+N_RUNS_CAL2 = int(os.environ.get("HIGHN_CAL2_RUNS", 4000))
 
 
 def daware_calibration(d_true: float, frac: str, n_frames: int) -> TruncationModel:
@@ -123,7 +130,8 @@ def cnr_sigma2_calibration(pixel_x: np.ndarray) -> TruncationModel:
     inversion in TruncationModel.var_bias, removes the path dependence. The
     grid is independent of D, so one calibration serves every fraction.
     """
-    path = OUTPUT / f"cal_highn_cnrsig2_g{int(G_MAX)}.npz"
+    path = OUTPUT / (f"cal_highn_cnrsig2_g{int(G_MAX)}.npz" if N_RUNS_CAL2 == 600
+                   else f"cal_highn_cnrsig2_g{int(G_MAX)}_n{N_RUNS_CAL2}_dense.npz")
     if path.exists():
         grid = CalibrationGrid.load(path)
         if grid.pixel_x is None or not np.allclose(grid.pixel_x, pixel_x):
@@ -151,8 +159,32 @@ def per_frame_means(case, trunc, cnr0, n_seeds):
         noisy = case.profiles + rng.normal(0.0, ns, case.profiles.shape)
         vh = fit_each_row(case.x, noisy)
         raw[s] = vh
-        cor[s] = corrected_variance("folded_normal", vh, cnrf, trunc)
+        if KEY == "smoothed" and trunc.is_2d:
+            cor[s] = vh - trunc.var_bias(cnrf, smoothed_key(case.t, vh, cnrf))
+        else:
+            cor[s] = corrected_variance("folded_normal", vh, cnrf, trunc)
     return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnrf
+
+
+def smoothed_key(t, vh, cnrf):
+    """Per-measurement sigma^2 key for the joint lookup: a robust line through
+    this measurement's own fitted variances above the floor.
+
+    Keying the joint lookup on each frame's own sigma_hat^2 fails at low CNR:
+    the fit scatters far toward the grid edge, the fixed-point inversion reads a
+    large bias there, and the mean over measurements is over-subtracted (x = 0.5,
+    CNR0 = 10: -1274 nm^2 between the floor and CNR 2, against +815 naive). A
+    straight-line (Theil-Sen) fit of sigma_hat^2 against t uses the whole
+    measurement and brings that band to +264 nm^2. It assumes sigma^2(t) is
+    linear, true for this bed's normal diffusion; it is a trend model, so it is
+    an option here, not the library default.
+    """
+    from scipy.stats import theilslopes
+    use = (cnrf >= FLOOR_CNR) & np.isfinite(vh)
+    if use.sum() < 3:
+        return vh
+    slope, icpt, _, _ = theilslopes(vh[use], t[use])
+    return np.where(cnrf >= FLOOR_CNR, icpt + slope * t, vh)
 
 
 def short_window_D(case, trunc, cnr0, n_seeds):
@@ -174,6 +206,8 @@ def main():
     if mode not in ("cnr_sigma2", "daware"):
         sys.exit("usage: br_halide_highn_perframe.py [cnr_sigma2|daware]")
     tag = "" if mode == "cnr_sigma2" else "_daware"
+    if mode == "cnr_sigma2":
+        tag += f"_n{N_RUNS_CAL2}" + ("_smoothed" if KEY == "smoothed" else "")
     global CNR0
     if len(sys.argv) > 2:
         CNR0 = float(sys.argv[2])
@@ -182,8 +216,10 @@ def main():
     if not cases:
         print("No high-N maps found.")
         return
-    label = ("joint (CNR, sigma^2) D-free calibration" if mode == "cnr_sigma2"
+    label = (f"joint (CNR, sigma^2) D-free calibration, {N_RUNS_CAL2} runs/cell, "
+             f"{KEY} key" if mode == "cnr_sigma2"
              else "1-D D-aware calibration, CNR-only lookup")
+
     lines = ["=" * 76,
              f"High-N Br-I: per-frame residual + short-window D ({label})",
              f"floor CNR = {FLOOR_CNR}; n_seeds = {N_SEEDS}; panel CNR0 = {CNR0:.0f}",
