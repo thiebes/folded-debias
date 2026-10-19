@@ -105,6 +105,28 @@ Tables: `br_halide_highn_perframe_n4000[_smoothed]_cnr0{10,20}.txt` (dense
 grid), `br_halide_highn_perframe_cnrsig2_cnr0{10,20}.txt` (600-run grid),
 `br_halide_highn_perframe_daware_cnr020.txt` (old lookup).
 
+Key sensitivity (`key_sensitivity.py`, 300 seeds per map and CNR0, dense grid;
+table `key_sensitivity.txt`). The fits are shared, so the keys differ only in
+the lookup; D is short-window D / D_ref with an SE from resampling the seeds.
+
+- From CNR0 15 the key barely matters. Perturbing the exact key by +/-20
+  percent moves D by at most 0.004 (|dD/de| <= 0.018), and the smoothed and
+  iterated keys give the same D as the exact key to within 0.003. The
+  per-frame key is the exception: it leaves a resolved low bias even here
+  (0.90 and 0.89 at CNR0 15, 0.96 at 20, for x = 0.5 and 0.75; SE 0.01).
+- The trend keys are not accurate keys. The iterated line reads 8 to 20
+  percent below the true sigma^2 on average, with a 15 to 39 percent scatter
+  per frame and measurement, yet from CNR0 15 that costs at most 0.003 in D.
+- At CNR0 8 to 10 the result depends on the key: dD/de is 0.12 to 0.28,
+  even the exact key gives 1.00 to 1.13, and the smoothed and iterated keys
+  disagree by up to 0.3 (x = 0.5, CNR0 8: smoothed 0.59, iterated 0.89, exact
+  1.00), well beyond their SE of about 0.05. The data do not determine D there
+  once the correction is applied, so this bed's D should be quoted from CNR0
+  15 only.
+- The residual 0.96 to 0.98 of D_ref at CNR0 20 to 30 for x = 0.5 and 0.75
+  appears with every key and with the naive fit at CNR0 30, so it is the shape
+  and emission-to-carrier gap against the carrier reference, not noise.
+
 ## The bed
 
 Marc Melendez's 20k-walker Br-I maps carry Poisson sampling noise that floors the

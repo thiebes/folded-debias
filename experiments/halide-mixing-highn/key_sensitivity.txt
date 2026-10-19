@@ -1,0 +1,217 @@
+==============================================================================
+Joint-lookup key sensitivity -- high-N Br-I, dense joint calibration
+300 seeds per (map, CNR0); floor CNR 1.3; residuals vs noise-free fit (nm^2); D = short-window D / D_ref (SE from 100 resamples)
+==============================================================================
+
+--- x = 0.25, CNR0 = 8: 12 usable frames, CNR down to 1.39
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +44       +365      153     1.125
+  perframe                      -2       -329      124     0.885  0.048
+  exact                         +0       +124       91     1.054  0.050
+  smoothed                      +3        +79       88     1.037  0.048
+  iterated                      +3        +87       90     1.040  0.050
+  exact x (1-0.2)               +6        +68       91     1.034  0.046
+  exact x (1-0.1)               +2       +103       92     1.046  0.054
+  exact x (1+0.1)               -1       +119       95     1.055  0.051
+  exact x (1+0.2)               -2        +95       96     1.046  0.052
+  dD/de = +0.034 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.157, SD 0.348; implied key terms in D/D_ref: systematic 0.005, per measurement 0.012
+
+--- x = 0.25, CNR0 = 10: 15 usable frames, CNR down to 1.34
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +51       +604      238     1.135
+  perframe                      +8       +121       66     1.018  0.037
+  exact                         +7       +316      122     1.074  0.036
+  smoothed                     +10       +320      125     1.073  0.038
+  iterated                     +10       +321      125     1.074  0.035
+  exact x (1-0.2)              +12       +330      129     1.074  0.036
+  exact x (1-0.1)               +9       +334      128     1.078  0.039
+  exact x (1+0.1)               +6       +306      123     1.073  0.035
+  exact x (1+0.2)               +3       +280      118     1.068  0.035
+  dD/de = -0.016 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.155, SD 0.393; implied key terms in D/D_ref: systematic 0.003, per measurement 0.006
+
+--- x = 0.25, CNR0 = 15: 20 usable frames, CNR down to 1.36
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +62       +295      125     1.026
+  perframe                     +12        -47       47     0.990  0.012
+  exact                         +9         +2       42     0.996  0.011
+  smoothed                     +10        -14       46     0.994  0.011
+  iterated                     +10        -13       46     0.994  0.013
+  exact x (1-0.2)              +16         -8       51     0.995  0.012
+  exact x (1-0.1)               +8        -24       49     0.992  0.011
+  exact x (1+0.1)              +10        +10       45     0.997  0.011
+  exact x (1+0.2)               +8         -9       46     0.995  0.013
+  dD/de = +0.005 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.131, SD 0.315; implied key terms in D/D_ref: systematic 0.001, per measurement 0.002
+
+--- x = 0.25, CNR0 = 20: 24 usable frames, CNR down to 1.38
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +48       +375      154     1.018
+  perframe                      +3        +74      112     0.996  0.007
+  exact                         +3        +90      117     0.997  0.007
+  smoothed                      +5        +99      117     0.998  0.007
+  iterated                      +5        +99      117     0.998  0.007
+  exact x (1-0.2)               +3        +83      110     0.996  0.007
+  exact x (1-0.1)               +5       +109      118     0.998  0.007
+  exact x (1+0.1)               -0        +57      113     0.994  0.007
+  exact x (1+0.2)               +2        +35      108     0.993  0.007
+  dD/de = -0.010 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.107, SD 0.279; implied key terms in D/D_ref: systematic 0.001, per measurement 0.003
+
+--- x = 0.25, CNR0 = 30: 30 usable frames, CNR down to 1.36
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +63       +352      144     1.004
+  perframe                     +20        +15       82     0.991  0.004
+  exact                        +26        -23       79     0.991  0.004
+  smoothed                     +23         -7       79     0.991  0.004
+  iterated                     +23        -12       78     0.991  0.004
+  exact x (1-0.2)              +18        +60       86     0.992  0.004
+  exact x (1-0.1)              +22         +6       79     0.991  0.004
+  exact x (1+0.1)              +18        -22       80     0.990  0.004
+  exact x (1+0.2)               +7        +11       82     0.990  0.004
+  dD/de = -0.005 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.081, SD 0.251; implied key terms in D/D_ref: systematic 0.000, per measurement 0.001
+
+--- x = 0.5, CNR0 = 8: 18 usable frames, CNR down to 1.32
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +38       +517      200     1.172
+  perframe                     -20      -2549      871     0.320  0.023
+  exact                         +7        +77       80     1.000  0.045
+  smoothed                      +4      -1103      378     0.593  0.043
+  iterated                      -4       -222       91     0.890  0.055
+  exact x (1-0.2)               +4        -76       82     0.940  0.046
+  exact x (1-0.1)               +6         -8       76     0.964  0.046
+  exact x (1+0.1)               +5       +152       87     1.033  0.058
+  exact x (1+0.2)               +3       +187       91     1.047  0.057
+  dD/de = +0.283 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.194, SD 0.329; implied key terms in D/D_ref: systematic 0.055, per measurement 0.093
+
+--- x = 0.5, CNR0 = 10: 21 usable frames, CNR down to 1.30
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +56       +815      274     1.186
+  perframe                     +17      -1442      433     0.657  0.046
+  exact                        +22       +460      171     1.093  0.049
+  smoothed                     +25       +156       89     1.005  0.055
+  iterated                     +25       +329      138     1.057  0.051
+  exact x (1-0.2)              +26       +304      132     1.049  0.057
+  exact x (1-0.1)              +25       +394      156     1.074  0.050
+  exact x (1+0.1)              +22       +482      172     1.097  0.051
+  exact x (1+0.2)              +22       +497      175     1.099  0.059
+  dD/de = +0.122 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.193, SD 0.217; implied key terms in D/D_ref: systematic 0.024, per measurement 0.027
+
+--- x = 0.5, CNR0 = 15: 26 usable frames, CNR down to 1.37
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +33       +367      112     1.006
+  perframe                      +1       -480      144     0.900  0.012
+  exact                         +3       +131       43     0.973  0.009
+  smoothed                      +5       +103       40     0.970  0.009
+  iterated                      +5       +111       39     0.971  0.011
+  exact x (1-0.2)               +5        +90       35     0.969  0.009
+  exact x (1-0.1)               +5       +120       42     0.972  0.009
+  exact x (1+0.1)               +1       +124       41     0.972  0.009
+  exact x (1+0.2)               -3       +108       38     0.970  0.010
+  dD/de = +0.001 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.151, SD 0.187; implied key terms in D/D_ref: systematic 0.000, per measurement 0.000
+
+--- x = 0.5, CNR0 = 20: 30 usable frames, CNR down to 1.39
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +44       +388      117     0.993
+  perframe                     +14        -92       91     0.957  0.007
+  exact                        +13       +142       63     0.972  0.006
+  smoothed                     +17       +153       70     0.973  0.006
+  iterated                     +17       +154       69     0.973  0.007
+  exact x (1-0.2)              +20       +153       73     0.974  0.006
+  exact x (1-0.1)              +17       +158       70     0.974  0.006
+  exact x (1+0.1)               +9       +112       60     0.969  0.007
+  exact x (1+0.2)               +6        +91       60     0.967  0.006
+  dD/de = -0.018 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.124, SD 0.159; implied key terms in D/D_ref: systematic 0.002, per measurement 0.003
+
+--- x = 0.5, CNR0 = 30: 37 usable frames, CNR down to 1.33
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +22       +429      110     0.975
+  perframe                      -9         +7       55     0.962  0.003
+  exact                        -11       +119       59     0.963  0.003
+  smoothed                     -10       +139       59     0.964  0.003
+  iterated                     -10       +136       59     0.964  0.003
+  exact x (1-0.2)               -7       +157       61     0.965  0.002
+  exact x (1-0.1)              -10       +138       59     0.964  0.003
+  exact x (1+0.1)              -10       +118       57     0.963  0.002
+  exact x (1+0.2)              -10       +132       57     0.964  0.003
+  dD/de = -0.003 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.123, SD 0.154; implied key terms in D/D_ref: systematic 0.000, per measurement 0.000
+
+--- x = 0.75, CNR0 = 8: 19 usable frames, CNR down to 1.36
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +32       +656      231     1.205
+  perframe                     -46      -2409      801     0.341  0.025
+  exact                         -1       +242       90     1.045  0.053
+  smoothed                      -5       -843      288     0.660  0.046
+  iterated                     -19        -72       70     0.929  0.063
+  exact x (1-0.2)               -5       +111       67     0.993  0.052
+  exact x (1-0.1)               -3       +181       76     1.019  0.059
+  exact x (1+0.1)               -2       +297      109     1.069  0.054
+  exact x (1+0.2)               -4       +347      126     1.091  0.056
+  dD/de = +0.245 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.199, SD 0.342; implied key terms in D/D_ref: systematic 0.049, per measurement 0.084
+
+--- x = 0.75, CNR0 = 10: 22 usable frames, CNR down to 1.35
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +47      +1032      317     1.218
+  perframe                      +3      -1173      347     0.698  0.048
+  exact                        +14       +708      216     1.134  0.054
+  smoothed                     +17       +455      147     1.060  0.051
+  iterated                     +17       +615      191     1.108  0.055
+  exact x (1-0.2)              +17       +593      185     1.102  0.060
+  exact x (1-0.1)              +17       +654      201     1.119  0.060
+  exact x (1+0.1)              +12       +746      227     1.144  0.060
+  exact x (1+0.2)              +10       +767      233     1.148  0.066
+  dD/de = +0.117 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.183, SD 0.202; implied key terms in D/D_ref: systematic 0.021, per measurement 0.024
+
+--- x = 0.75, CNR0 = 15: 28 usable frames, CNR down to 1.35
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +50       +463      140     1.017
+  perframe                     +16       -730      177     0.892  0.013
+  exact                        +21       +200       65     0.985  0.009
+  smoothed                     +21       +155       58     0.981  0.011
+  iterated                     +21       +172       61     0.983  0.011
+  exact x (1-0.2)              +20       +144       56     0.980  0.009
+  exact x (1-0.1)              +21       +187       64     0.984  0.011
+  exact x (1+0.1)              +18       +205       65     0.985  0.010
+  exact x (1+0.2)              +15       +195       63     0.984  0.010
+  dD/de = +0.009 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.162, SD 0.174; implied key terms in D/D_ref: systematic 0.001, per measurement 0.002
+
+--- x = 0.75, CNR0 = 20: 33 usable frames, CNR down to 1.34
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +50       +603      171     1.001
+  perframe                     +19       -206      110     0.955  0.008
+  exact                        +19       +333      110     0.982  0.006
+  smoothed                     +23       +325      108     0.983  0.006
+  iterated                     +23       +329      109     0.983  0.006
+  exact x (1-0.2)              +25       +321      108     0.983  0.006
+  exact x (1-0.1)              +23       +331      110     0.983  0.006
+  exact x (1+0.1)              +15       +320      108     0.980  0.005
+  exact x (1+0.2)              +11       +305      105     0.978  0.005
+  dD/de = -0.012 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.147, SD 0.168; implied key terms in D/D_ref: systematic 0.002, per measurement 0.002
+
+--- x = 0.75, CNR0 = 30: 39 usable frames, CNR down to 1.37
+  key                 resid CNR>=2   resid <2  |resid|   D/D_ref     SE
+  naive                        +39       +324       94     0.974
+  perframe                      +6       -276       98     0.962  0.003
+  exact                         +2        +19       66     0.963  0.003
+  smoothed                      +6        +46       66     0.964  0.003
+  iterated                      +6        +42       66     0.964  0.003
+  exact x (1-0.2)               +9        +63       68     0.965  0.003
+  exact x (1-0.1)               +5        +44       66     0.964  0.003
+  exact x (1+0.1)               +3         +5       65     0.963  0.003
+  exact x (1+0.2)               +5         +8       69     0.964  0.003
+  dD/de = -0.003 (D/D_ref per unit relative key error); iterated key error over usable frames: mean -0.134, SD 0.154; implied key terms in D/D_ref: systematic 0.000, per measurement 0.001
+
+Summary: dD/de and the iterated key's error, per (map, CNR0)
+      x  CNR0    dD/de  key err mean  key err SD
+   0.25     8   +0.034        -0.157       0.348
+   0.25    10   -0.016        -0.155       0.393
+   0.25    15   +0.005        -0.131       0.315
+   0.25    20   -0.010        -0.107       0.279
+   0.25    30   -0.005        -0.081       0.251
+    0.5     8   +0.283        -0.194       0.329
+    0.5    10   +0.122        -0.193       0.217
+    0.5    15   +0.001        -0.151       0.187
+    0.5    20   -0.018        -0.124       0.159
+    0.5    30   -0.003        -0.123       0.154
+   0.75     8   +0.245        -0.199       0.342
+   0.75    10   +0.117        -0.183       0.202
+   0.75    15   +0.009        -0.162       0.174
+   0.75    20   -0.012        -0.147       0.168
+   0.75    30   -0.003        -0.134       0.154
