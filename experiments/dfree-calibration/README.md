@@ -44,12 +44,15 @@ committed snapshots are in this folder.
 
 ## Key result + figure
 
-Validated domain (`validate_d_zero`, 300-run calibration): corrected
-`mean(D_hat)/D_ref` is 0.99 to 1.09 for `D >= 0.02` at `CNR0 >= 21` and for
-`D >= 0.05` at `CNR0 >= 13`, on Gaussian, Voigt, and p = 1.5 and p = 4. Not
-validated for `D <= 0.01` or at `CNR0 <= 13` for `D = 0.02`. The calibration's
-own Monte Carlo error is not in the printed SE and dominates at small D (`docs/DERIVATION.md`
-section 8).
+`validate_d_zero` (300-run calibration, 300 evaluation runs per cell) prints
+each cell's evaluation SE, the calibration's own propagated SE
+(`calibration_D_se`), their combination, and |bias - 1| in combined SE. The
+corrected `mean(D_hat)/D_ref` is consistent with 1 within two combined SE in 136
+of 140 cells (Gaussian, Voigt, p = 1.5, p = 4; D 0.005 to 0.1; CNR0 5 to 90),
+with the other four at 2.0 to 3.4 SE, about the number expected by chance: no
+resolved bias. Small D is precision-limited, not biased: combined SE 0.02 to
+7.9 at `D <= 0.01`, 0.02 to 1.05 at `D = 0.02`, at most 0.03 only for
+`D >= 0.05` at `CNR0 >= 34`.
 
 Dense sweep (5000-run calibration), overall mean `|bias-1|`, folded-normal vs
 MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, p = 2 0.155 vs 0.151,
