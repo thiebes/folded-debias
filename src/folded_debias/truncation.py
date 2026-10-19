@@ -292,6 +292,20 @@ class TruncationModel:
         current estimate to refine an estimate of the true variance, and
         re-query. Three or four iterations suffice; the bias used for the
         correction is the lookup at the converged estimate.
+
+        **Choice of key.** ``variance`` is the key that stands in for the
+        unknown true sigma^2, and any array can be passed. Keying on each
+        frame's own sigma_hat^2 (the usual call) under-corrects when sigma^2
+        grows several-fold over the measurement: at low CNR a frame whose fit
+        scatters high reads the lookup near the grid edge, and the mean is
+        over-subtracted. On the high-N Br-I bed (sigma^2 growing ~64x) this
+        left D at 0.89 to 0.96 of the reference at CNR_0 15 to 20, where a
+        measurement-level key (a robust line through the measurement's own
+        sigma_hat^2) matched the exact key to 0.003. That key assumes a form
+        for sigma^2(t), so it is not the default here; see
+        ``experiments/halide-mixing-highn/key_sensitivity.py`` and
+        ``smoothed_key`` in ``br_halide_highn_perframe.py`` for a worked
+        example and its limits (below CNR_0 ~15 no key determined D).
         """
         if variance is None or not self.is_2d:
             return np.interp(cnr, self.cnr_grid, self.varbias_grid,

@@ -229,6 +229,11 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
     lookup will be applied to remaining 1-D spatial profiles measured over
     time.
 
+    The lookup needs a key for the unknown true sigma^2. Keying each frame on
+    its own fitted sigma_hat^2 under-corrects when sigma^2 grows several-fold
+    over the measurement; see :meth:`TruncationModel.var_bias` ("Choice of
+    key") before applying this calibration to fast-spreading data.
+
     Cells are evaluated in parallel via :class:`ProcessPoolExecutor`. Each
     cell's RNG is seeded from a :class:`numpy.random.SeedSequence` spawn so
     the calibration is reproducible irrespective of completion order.
