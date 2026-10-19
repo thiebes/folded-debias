@@ -54,6 +54,7 @@ class FrameStats:
     true_msd: np.ndarray         # ground-truth MSD per frame
     var_bias: np.ndarray         # E[sigma_hat^2] - sigma^2_true per frame
     #                              (the additive variance bias; see DERIVATION.md)
+    var_bias_se: np.ndarray | None = None  # Monte Carlo SE of var_bias per frame
 
 
 def _skew(a: np.ndarray) -> float:
@@ -75,6 +76,7 @@ def frame_stats(ens: Ensemble) -> FrameStats:
     skew = np.full(n_frames, np.nan)
     mean_msd = np.full(n_frames, np.nan)
     var_bias = np.full(n_frames, np.nan)
+    var_bias_se = np.full(n_frames, np.nan)
     true_variance = ens.exp.true_variance
 
     for f in range(n_frames):
@@ -90,12 +92,16 @@ def frame_stats(ens: Ensemble) -> FrameStats:
         vcol = vcol[np.isfinite(vcol)]
         if vcol.size:
             var_bias[f] = float(np.mean(vcol)) - float(true_variance[f])
+        if vcol.size > 1:
+            # The lookup's own Monte Carlo error; propagated into D by
+            # weights.calibration_D_se.
+            var_bias_se[f] = float(np.std(vcol, ddof=1) / np.sqrt(vcol.size))
 
     at_wall_frac = np.nanmean(ens.at_wall.astype(float), axis=0)
     return FrameStats(cnr=ens.cnr_frame, trunc_fraction=trunc,
                       at_wall_fraction=at_wall_frac, rel_variance=rel_var,
                       skew=skew, mean_msd=mean_msd, true_msd=ens.exp.true_msd,
-                      var_bias=var_bias)
+                      var_bias=var_bias, var_bias_se=var_bias_se)
 
 
 def _bilinear(x_grid: np.ndarray, y_grid: np.ndarray, table: np.ndarray,
@@ -134,6 +140,37 @@ def _bilinear(x_grid: np.ndarray, y_grid: np.ndarray, table: np.ndarray,
     return out
 
 
+def _interp_se(x, xp: np.ndarray, sp: np.ndarray) -> np.ndarray:
+    """SE of ``np.interp(x, xp, fp)`` when each ``fp[k]`` has independent SE ``sp[k]``.
+
+    The interpolant is ``(1 - f) fp[k] + f fp[k+1]``, so its SE is
+    ``sqrt((1 - f)^2 sp[k]^2 + f^2 sp[k+1]^2)``; outside the grid it is the
+    edge point's SE, matching np.interp's edge clamping.
+    """
+    xa = np.clip(np.atleast_1d(np.asarray(x, float)), xp[0], xp[-1])
+    k = np.clip(np.searchsorted(xp, xa) - 1, 0, xp.size - 2)
+    f = (xa - xp[k]) / np.maximum(xp[k + 1] - xp[k], 1e-30)
+    out = np.sqrt((1 - f) ** 2 * sp[k] ** 2 + f ** 2 * sp[k + 1] ** 2)
+    return float(out[0]) if np.ndim(x) == 0 else out
+
+
+def _bilinear_se(x_grid: np.ndarray, y_grid: np.ndarray, se_table: np.ndarray,
+                 x, y) -> np.ndarray:
+    """SE of :func:`_bilinear` when each table cell has an independent SE."""
+    xc = np.clip(np.atleast_1d(np.asarray(x, float)), x_grid[0], x_grid[-1])
+    yc = np.clip(np.atleast_1d(np.asarray(y, float)), y_grid[0], y_grid[-1])
+    i = np.clip(np.searchsorted(x_grid, xc) - 1, 0, x_grid.size - 2)
+    j = np.clip(np.searchsorted(y_grid, yc) - 1, 0, y_grid.size - 2)
+    fx = (xc - x_grid[i]) / np.maximum(x_grid[i + 1] - x_grid[i], 1e-30)
+    fy = (yc - y_grid[j]) / np.maximum(y_grid[j + 1] - y_grid[j], 1e-30)
+    var = (((1 - fx) * (1 - fy)) ** 2 * se_table[i, j] ** 2
+           + (fx * (1 - fy)) ** 2 * se_table[i + 1, j] ** 2
+           + ((1 - fx) * fy) ** 2 * se_table[i, j + 1] ** 2
+           + (fx * fy) ** 2 * se_table[i + 1, j + 1] ** 2)
+    out = np.sqrt(var)
+    return float(out[0]) if (np.ndim(x) == 0 and np.ndim(y) == 0) else out
+
+
 @dataclass
 class TruncationModel:
     """Per-frame CNR (+ optional variance) -> (p, rel_variance, var_bias).
@@ -147,6 +184,10 @@ class TruncationModel:
         mean of each row so 1-D queries still work).
     variance_grid, varbias_2d, relvar_2d : the 2-D lookups (``None`` for a
         legacy 1-D calibration).
+    varbias_se_grid, varbias_se_2d : Monte Carlo SE of each var_bias point
+        (``None`` for a model built or saved without it). They give the
+        calibration's own error, which :func:`~folded_debias.weights.calibration_D_se`
+        propagates into D.
     """
 
     cnr_grid: np.ndarray
@@ -157,6 +198,8 @@ class TruncationModel:
     variance_grid: np.ndarray | None = None
     varbias_2d: np.ndarray | None = None
     relvar_2d: np.ndarray | None = None
+    varbias_se_grid: np.ndarray | None = None
+    varbias_se_2d: np.ndarray | None = None
 
     # ------------------------------------------------------------------
     # Constructors
@@ -171,10 +214,14 @@ class TruncationModel:
         good = (np.isfinite(cnr) & np.isfinite(p) & np.isfinite(rv)
                 & np.isfinite(vb) & (cnr > 0))
         order = np.argsort(cnr[good])
+        se = None
+        if all(s.var_bias_se is not None for s in stats_list):
+            se = np.concatenate([s.var_bias_se for s in stats_list])[good][order]
         return cls(cnr_grid=cnr[good][order],
                    p_grid=p[good][order],
                    relvar_grid=rv[good][order],
-                   varbias_grid=vb[good][order])
+                   varbias_grid=vb[good][order],
+                   varbias_se_grid=se)
 
     @classmethod
     def from_calibration(cls, calib) -> "TruncationModel":
@@ -193,6 +240,12 @@ class TruncationModel:
         vb_1d = np.nanmean(vb2, axis=1)
         rv_1d = np.nanmean(rv2, axis=1)
         p_1d = np.zeros_like(cnr)
+        # Per-cell SE of the mean bias from the cell's sample variance. The
+        # bias mean drops fits above the calibration's filter threshold, so
+        # this (unfiltered) spread makes the SE slightly conservative.
+        se2 = np.sqrt(rv2 / max(int(calib.n_runs), 1))
+        n_var = np.sum(np.isfinite(se2), axis=1)
+        se_1d = np.sqrt(np.nansum(se2 ** 2, axis=1)) / np.maximum(n_var, 1)
         order = np.argsort(cnr)
         return cls(
             cnr_grid=cnr[order],
@@ -202,6 +255,8 @@ class TruncationModel:
             variance_grid=var_g,
             varbias_2d=vb2[order, :],
             relvar_2d=rv2[order, :],
+            varbias_se_grid=se_1d[order],
+            varbias_se_2d=se2[order, :],
         )
 
     # ------------------------------------------------------------------
@@ -256,6 +311,33 @@ class TruncationModel:
                              self.varbias_2d, cnr, sigma2_true_clipped)
             sigma2_true = sigma2_obs - bias
         return sigma2_obs - sigma2_true
+
+    def var_bias_se(self, cnr, variance=None, n_iter: int = 4):
+        """Monte Carlo SE of the looked-up :meth:`var_bias`.
+
+        The calibration is a finite Monte Carlo, so every subtracted bias
+        carries an error the measurement's own SE does not see. At low CNR it
+        dominates: two 300-run calibrations of the same sweep differ by 0.22
+        in D/D_ref at D = 0.02 sigma_0^2/tau, CNR_0 = 34, against an
+        evaluation SE of 0.04. The SE is propagated through the same
+        interpolation weights as the lookup (independent cells assumed). With
+        a 2-D model and a ``variance``, it is evaluated at the same
+        fixed-point estimate of sigma^2_true that :meth:`var_bias` uses.
+        Returns NaN when the model carries no SE (older saved calibrations).
+        """
+        cnr_arr = np.asarray(cnr, float)
+        if variance is None or not self.is_2d:
+            if self.varbias_se_grid is None:
+                return np.full(np.shape(cnr_arr), np.nan) if np.ndim(cnr_arr) else np.nan
+            return _interp_se(cnr_arr, self.cnr_grid, self.varbias_se_grid)
+        if self.varbias_se_2d is None:
+            return np.full(np.shape(cnr_arr), np.nan) if np.ndim(cnr_arr) else np.nan
+        sigma2_obs = np.asarray(variance, float)
+        sigma2_true = sigma2_obs - self.var_bias(cnr_arr, sigma2_obs, n_iter)
+        sigma2_true = np.clip(sigma2_true, float(self.variance_grid[0]),
+                              float(self.variance_grid[-1]))
+        return _bilinear_se(self.cnr_grid, self.variance_grid,
+                            self.varbias_se_2d, cnr_arr, sigma2_true)
 
     def rel_variance(self, cnr, variance=None):
         """Interpolated variance of the (fitted-variance) point.

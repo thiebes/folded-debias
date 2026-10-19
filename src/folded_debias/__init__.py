@@ -29,7 +29,8 @@ from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
                      model_from_spec, spec_tag)
 from .montecarlo import Ensemble, run_ensemble
 from .truncation import FrameStats, TruncationModel, frame_stats
-from .weights import SCHEMES, corrected_variance, msd_and_weights
+from .weights import (SCHEMES, calibration_D_se, corrected_variance,
+                      msd_and_weights)
 from .validate import (FrameDiagnostic, SchemeResult, calibrate,
                        calibrate_d_free, evaluate, per_frame_diagnostic,
                        sweep_stats)
@@ -44,7 +45,7 @@ __all__ = [
     "UnboundedGaussianModel", "MODELS", "model_from_spec", "spec_tag",
     "Ensemble", "run_ensemble",
     "FrameStats", "TruncationModel", "frame_stats",
-    "SCHEMES", "msd_and_weights", "corrected_variance",
+    "SCHEMES", "msd_and_weights", "corrected_variance", "calibration_D_se",
     "SchemeResult", "calibrate", "calibrate_d_free", "evaluate", "sweep_stats",
     "FrameDiagnostic", "per_frame_diagnostic",
     "CalibrationGrid", "calibrate_cnr_sigma2",
