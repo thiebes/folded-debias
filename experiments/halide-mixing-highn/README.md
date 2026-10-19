@@ -71,20 +71,39 @@ usable band goes 144 -> 70, 94 -> 61, 170 -> 58 nm^2 with the joint calibration
 (signed +140 -> +36, +94 -> -6, +170 -> +5), against 144 -> 462, 94 -> 56,
 170 -> 211 with the old lookup.
 
-The joint calibration (600 runs per cell) is accurate only above CNR 2. At
-CNR0 = 10, frames with CNR >= 2 go from a signed residual (against the
-noise-free fit) of +37, +52, +49 to +4, +10, +1 nm^2, but frames between the
-floor and CNR 2 are over-subtracted (+456 -> +30, +691 -> -1350,
-+858 -> -1154 nm^2 for x = 0.25 / 0.5 / 0.75), and the short-window D at
-CNR0 = 8 is 0.87 / 0.36 / 0.35 of D_ref (the old lookup gave 0.97 / 1.02 /
-1.03). With this budget, use a floor of CNR 2 with the joint calibration; a
-denser joint calibration at low CNR is the alternative. Until one of those is
-run, the committed figure and its caption remain the earlier D-aware result.
-Tables: `br_halide_highn_perframe_cnrsig2_cnr020.txt`,
-`br_halide_highn_perframe_daware_cnr020.txt`,
-`br_halide_highn_perframe_cnrsig2_cnr010.txt` (these runs predate the script's
-noise-free-fit column; the noise-free comparison above was computed from them
-separately).
+The joint calibration's weak point is its key, not only its budget. Applied
+per measurement at each frame's own noisy sigma_hat^2 (with the fixed-point
+inversion), the lookup reads near the grid edge at low CNR and over-subtracts:
+at x = 0.5, CNR0 = 10, frames between the floor and CNR 2 go from +815 nm^2
+(naive) to -1274 nm^2 (600-run grid), while keying the same grid on the true
+sigma^2 gives +550 and a per-measurement smoothed key gives +264 (residuals
+against the noise-free fit). The smoothed key (`HIGHN_KEY=smoothed`,
+`smoothed_key`) is a robust straight line through the measurement's own
+sigma_hat^2 above the floor; it assumes sigma^2(t) is linear, which holds for
+this bed's normal diffusion, so it is a bed option, not the library default.
+
+With a denser joint grid (40 CNR points, 20 of them below CNR 3, x 26 sigma x
+4000 runs; `cal_highn_cnrsig2_g12_n4000_dense.npz`), mean |residual| against
+the noise-free fit over the usable band, x = 0.25 / 0.5 / 0.75:
+
+| CNR0 | key | naive -> corrected (nm^2) | signed corrected (nm^2) |
+| ------- | ------- | ------- | ------- |
+| 20 | per-frame | 144 -> 65, 94 -> 64, 170 -> 72 | +30, -25, -27 |
+| 20 | smoothed | 144 -> 70, 94 -> 35, 170 -> 93 | +38, +25, +90 |
+| 10 | per-frame | 177 -> 50, 235 -> 453, 270 -> 365 | -19, -431, -338 |
+| 10 | smoothed | 177 -> 65, 235 -> 51, 270 -> 110 | +55, +24, +92 |
+
+Short-window D over the usable band, as D_corr / D_ref at CNR0 8 / 15 / 30:
+per-frame key 0.85 / 0.99 / 0.99 (x = 0.25), 0.32 / 0.90 / 0.96 (0.5),
+0.34 / 0.90 / 0.96 (0.75); smoothed key 1.00 / 0.99 / 0.99, 0.58 / 0.97 / 0.96,
+0.63 / 0.98 / 0.97 (naive 1.08 to 1.21 at CNR0 8). So the dense grid with the
+smoothed key removes the noise bias per frame and recovers D within 0.96 to
+0.99 from CNR0 15; at CNR0 8 the two slower-spreading maps still read low,
+because frames near the floor dominate that short window. The committed figure
+and caption remain the earlier D-aware result until the key is chosen.
+Tables: `br_halide_highn_perframe_n4000[_smoothed]_cnr0{10,20}.txt` (dense
+grid), `br_halide_highn_perframe_cnrsig2_cnr0{10,20}.txt` (600-run grid),
+`br_halide_highn_perframe_daware_cnr020.txt` (old lookup).
 
 ## The bed
 
