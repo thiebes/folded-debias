@@ -22,7 +22,8 @@ from .fit import fit_D
 from .montecarlo import run_ensemble
 from .simulate import Experiment
 from .truncation import TruncationModel, frame_stats
-from .weights import SCHEMES, corrected_variance, msd_and_weights
+from .weights import (SCHEMES, calibration_D_se, corrected_variance,
+                      msd_and_weights)
 
 
 def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
@@ -100,6 +101,10 @@ class SchemeResult:
     mean_bias: np.ndarray     # <D_est> / D_true
     median_bias: np.ndarray   # median(D_est) / D_true
     spread: np.ndarray        # std(D_est / D_true)
+    # Mean calibration SE of D_est / D_true (weights.calibration_D_se): the
+    # lookup's own Monte Carlo error, which ``spread / sqrt(n_runs)`` omits.
+    # NaN for schemes that subtract nothing or a model without SE grids.
+    cal_se: np.ndarray | None = None
 
 
 @dataclass
@@ -209,27 +214,34 @@ def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
     n = cnr0_grid.size
     out = {s: {"mean": np.full(n, np.nan),
                "median": np.full(n, np.nan),
-               "spread": np.full(n, np.nan)} for s in SCHEMES}
+               "spread": np.full(n, np.nan),
+               "cal_se": np.full(n, np.nan)} for s in SCHEMES}
 
     for i, cnr0 in enumerate(cnr0_grid):
         ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed + i,
                            model=profile_model, noise_model=noise_model)
         for scheme in SCHEMES:
-            ratios = []
+            ratios, cal = [], []
             for r in range(ens.n_runs):
                 msd, w = msd_and_weights(scheme, ens.variance[r],
                                          ens.cnr_frame, model)
                 d = fit_D(times, msd, w)
                 if d.ok and np.isfinite(d.D):
                     ratios.append(d.D / exp.D)
+                    if scheme in ("folded_normal", "mas"):
+                        cal.append(calibration_D_se(times, msd, w, ens.cnr_frame,
+                                                    model, ens.variance[r]) / exp.D)
             ratios = np.asarray(ratios, float)
             if ratios.size:
                 out[scheme]["mean"][i] = ratios.mean()
                 out[scheme]["median"][i] = np.median(ratios)
                 out[scheme]["spread"][i] = ratios.std()
+            if cal:
+                out[scheme]["cal_se"][i] = float(np.nanmean(cal))
 
     return {s: SchemeResult(scheme=s, cnr0=cnr0_grid,
                             mean_bias=out[s]["mean"],
                             median_bias=out[s]["median"],
-                            spread=out[s]["spread"])
+                            spread=out[s]["spread"],
+                            cal_se=out[s]["cal_se"])
             for s in SCHEMES}

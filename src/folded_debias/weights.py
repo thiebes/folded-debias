@@ -134,3 +134,46 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     w = np.asarray(w, float).copy()
     w[0] = 0.0   # the t=0 frame carries no slope information
     return msd, w
+
+
+def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
+                     cnr_frame: np.ndarray, model: TruncationModel,
+                     variance_row: np.ndarray | None = None) -> float:
+    """SE of a corrected D from the calibration's own Monte Carlo error.
+
+    :func:`~folded_debias.fit.fit_D` is a weighted straight-line fit, so its
+    slope is a fixed linear combination of the MSD points, ``b = sum c_i m_i``
+    with ``c_i = w_i (S_w t_i - S_wt) / (S_w S_wtt - S_wt^2)``. A calibration
+    error ``e_i`` in frame i's subtracted bias moves ``m_i`` by
+    ``-(e_i - e_0)``. Since ``sum c_i = 0`` over the fitted frames, the frame-0
+    term cancels (the intercept absorbs it), and with independent calibration
+    cells
+
+        Var_cal(D) = (1/4) sum_i c_i^2 s_i^2,   s_i = model.var_bias_se(CNR_i).
+
+    Pass the same ``times``, ``msd``, and ``weights`` given to ``fit_D`` so the
+    frame set matches, and ``variance_row`` (the raw fitted variances) when the
+    model is a joint (CNR, sigma^2) calibration. Combine with the fit's own SE
+    as ``sqrt(D_se**2 + calibration_D_se**2)``. This is exact for
+    ``folded_normal``; for ``mas`` it ignores the gate's dependence on the bias
+    and is approximate. The weights' own dependence on the calibration is
+    second order and not included. Returns NaN when the model has no SE.
+    """
+    t = np.asarray(times, float)
+    m = np.asarray(msd, float)
+    w = np.asarray(weights, float)
+    cnr = np.asarray(cnr_frame, float)
+    good = np.isfinite(t) & np.isfinite(m) & np.isfinite(w) & (w > 0)
+    if good.sum() < 2:
+        return np.nan
+    tg, wg = t[good], w[good]
+    sw, swt, swtt = wg.sum(), (wg * tg).sum(), (wg * tg * tg).sum()
+    denom = sw * swtt - swt ** 2
+    if denom == 0:
+        return np.nan
+    c = wg * (sw * tg - swt) / denom
+    var_row = None if variance_row is None else np.asarray(variance_row, float)[good]
+    s = np.asarray(model.var_bias_se(cnr[good], var_row), float)
+    if not np.all(np.isfinite(s)):
+        return np.nan
+    return float(np.sqrt(np.sum(c ** 2 * s ** 2)) / 2.0)

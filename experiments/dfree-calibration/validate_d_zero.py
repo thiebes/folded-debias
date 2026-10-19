@@ -55,6 +55,7 @@ def main() -> None:
 
     fn_table = np.full((len(D_VALUES), CNR0_GRID.size), np.nan)
     se_table = np.full_like(fn_table, np.nan)
+    cal_table = np.full_like(fn_table, np.nan)
     for k, d_true in enumerate(D_VALUES):
         exp = Experiment(D=d_true)
         t1 = time.time()
@@ -64,6 +65,9 @@ def main() -> None:
         fn_table[k] = fn
         # Monte Carlo standard error of each cell's mean ratio.
         se_table[k] = results["folded_normal"].spread / np.sqrt(N_RUNS)
+        # The calibration's own Monte Carlo error is common to every run in
+        # the cell, so it does not shrink with N_RUNS (calibration_D_se).
+        cal_table[k] = results["folded_normal"].cal_se
         line = f"  {d_true:6.4f}  "
         for v in fn:
             line += f"{v:9.3f}"
@@ -76,11 +80,21 @@ def main() -> None:
     print(f"\nOverall mean |bias-1| across D x CNR: {overall:.3f}")
 
     # The same cells' Monte Carlo standard errors: a cell's deviation from 1
-    # is resolved only where it exceeds about two of these.
-    print("\nMonte Carlo standard error of each cell (spread / sqrt(N_RUNS))")
+    # is resolved only where it exceeds about two of the combined SE.
+    comb = np.sqrt(se_table ** 2 + cal_table ** 2)
+    for label, table in (
+            ("evaluation SE (spread / sqrt(N_RUNS))", se_table),
+            ("calibration SE (propagated lookup error)", cal_table),
+            ("combined SE", comb)):
+        print(f"\nMonte Carlo {label}")
+        print(header.replace("  mean|bias-1|", ""))
+        for k, d_true in enumerate(D_VALUES):
+            print(f"  {d_true:6.4f}  " + "".join(f"{v:9.3f}" for v in table[k]))
+    print("\n|bias - 1| / combined SE")
     print(header.replace("  mean|bias-1|", ""))
     for k, d_true in enumerate(D_VALUES):
-        print(f"  {d_true:6.4f}  " + "".join(f"{v:9.3f}" for v in se_table[k]))
+        z = np.abs(fn_table[k] - 1.0) / comb[k]
+        print(f"  {d_true:6.4f}  " + "".join(f"{v:9.2f}" for v in z))
     print(f"\n[total: {time.time() - t0:.0f} s]")
 
 

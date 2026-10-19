@@ -274,3 +274,56 @@ def test_folded_normal_beats_inverse_variance_at_low_cnr():
     iv = np.nanmean(np.abs(results["inverse_variance"].mean_bias - 1.0))
     fn = np.nanmean(np.abs(results["folded_normal"].mean_bias - 1.0))
     assert fn < iv
+
+
+def test_interp_se_matches_hand_calculation():
+    """The 1-D lookup SE uses the same interpolation weights as the lookup."""
+    from folded_debias.truncation import _interp_se
+    xp = np.array([1.0, 2.0, 4.0])
+    sp = np.array([0.3, 0.4, 0.1])
+    # x = 1.5 sits halfway between points 0 and 1.
+    assert _interp_se(1.5, xp, sp) == pytest.approx(np.sqrt(0.25 * 0.09 + 0.25 * 0.16))
+    # Outside the grid the edge point's SE applies (np.interp clamps).
+    assert _interp_se(10.0, xp, sp) == pytest.approx(0.1)
+
+
+def test_calibration_se_fields_populated_and_absent():
+    """frame_stats -> from_stats carries var_bias SE; a bare model returns NaN."""
+    from folded_debias import TruncationModel, calibrate_d_free
+    trunc = calibrate_d_free(np.array([5.0, 20.0]), n_runs=60, seed=3)
+    assert trunc.varbias_se_grid is not None
+    assert trunc.varbias_se_grid.shape == trunc.varbias_grid.shape
+    assert np.all(trunc.varbias_se_grid[np.isfinite(trunc.varbias_se_grid)] >= 0)
+    bare = TruncationModel(cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
+                           relvar_grid=trunc.relvar_grid,
+                           varbias_grid=trunc.varbias_grid)
+    assert np.isnan(bare.var_bias_se(3.0))
+
+
+def test_calibration_D_se_predicts_draw_to_draw_scatter():
+    """The propagated calibration SE matches the scatter of corrected D across
+    independent calibration draws applied to one fixed evaluation set.
+
+    The calibration error is common to every run evaluated with that
+    calibration, so averaging runs does not remove it; the spread of the
+    run-averaged D across draws isolates it.
+    """
+    from folded_debias import calibrate_d_free, calibration_D_se, msd_and_weights
+    exp = Experiment(D=0.02)
+    ens = run_ensemble(exp, 13.0, n_runs=60, seed=777)
+    means, predicted = [], []
+    for k in range(8):
+        trunc = calibrate_d_free(np.array([6.0, 13.0, 30.0]), n_runs=80, seed=100 + k)
+        ds, ses = [], []
+        for r in range(ens.n_runs):
+            msd, w = msd_and_weights("folded_normal", ens.variance[r],
+                                     ens.cnr_frame, trunc)
+            d = fit_D(exp.times, msd, w)
+            if d.ok:
+                ds.append(d.D)
+                ses.append(calibration_D_se(exp.times, msd, w, ens.cnr_frame, trunc))
+        means.append(np.mean(ds))
+        predicted.append(np.nanmean(ses))
+    observed = np.std(means, ddof=1)
+    ratio = observed / np.mean(predicted)
+    assert 0.5 < ratio < 2.0, (observed, np.mean(predicted))
