@@ -1,8 +1,9 @@
 # Noise-induced bias in the measured transport exponent for disordered nanocrystal-solid diffusion maps
 
 Working technical note for the folded-debias method and the disordered
-perovskite nanocrystal-solid simulations (the maps behind Fig. 5 of Solari et
-al.). It is intended for the collaboration, not for circulation. Numbers and
+perovskite nanocrystal-solid simulations (Marc Meléndez's maps from the Solari
+et al. hopping model, made for this work; not the runs behind the paper's
+Fig. 5). It is intended for the collaboration, not for circulation. Numbers and
 figures are produced by [`scripts/nc_solid_alpha_vs_cnr.py`](../scripts/nc_solid_alpha_vs_cnr.py)
 (1000 noise realisations per cell); figures are written to `output/`.
 

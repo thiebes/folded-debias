@@ -3,8 +3,8 @@ in physical um^2 units.
 
 MoSSe alloy (Enrique's `mixed_tmdc/26_32/250716`, sample "250716_MoSSe_mystery").
 De-parity merged reduction (each interleaved sweep re-zeroed to its own t0),
-converted to um^2 via the sample's pixel->um scale (his sigma(um)^2 / my px fit,
-a well-defined constant here). The message: on real data a measurable ~5% upward
+converted to um^2 with the 0.060 um pixel (``UM_PER_PX``, confirmed by Enrique;
+not the ratio of his sigma(um) to the px fit, which depends on the fit). The message: on real data a measurable ~5% upward
 bias in D, concentrated in the low-CNR late frames that are normally discarded.
 
 Numbers-only (no fit lines): naive sigma^2 (red, open) vs corrected (blue,
@@ -28,7 +28,7 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from realdata_diagnostics import (MEASUREMENTS, FIT_HALF_SIGMA, FLOOR,  # noqa: E402
-    load_measurement, per_frame_cnr, build_or_load_calibration, decide_noise_law)
+    UM_PER_PX, load_measurement, per_frame_cnr, build_or_load_calibration, decide_noise_law)
 from folded_debias.fit import fit_variance, fit_D  # noqa: E402
 
 # Spanish-flag palette (plot_style.md): flag red = the salient/biased series,
@@ -67,8 +67,7 @@ def build():
         s = batch == b
         base_n[s] = var_naive[s][0]; base_c[s] = var_corr[s][0]
     msd_n = var_naive - base_n; msd_c = var_corr - base_c
-    # pixel->um scale (um^2/px^2): his sigma^2 vs my px fit, high-CNR frames
-    scale = float(np.median((sig_um ** 2 / var_naive)[cnr > 5]))
+    scale = UM_PER_PX ** 2             # um^2 per px^2
     # fit + display over the early diffusive window (t <= 2 ns), CNR floor.
     fit_mask = (cnr >= FLOOR) & (t <= T_FIT)
     w = (1.0 / np.maximum(se_naive, 1e-9) ** 2) * fit_mask

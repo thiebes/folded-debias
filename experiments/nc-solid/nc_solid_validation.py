@@ -1,7 +1,8 @@
 """Validate the folded-normal correction on the Solari disordered-NC-solid maps.
 
 This is the poster's headline regime on real model transport: CH3NH3PbBr3
-nanocrystal-solid diffusion maps from Solari et al. (Fig. 5), L_D/FWHM ~ 0.14.
+nanocrystal-solid diffusion maps (Marc Melendez's runs of the Solari et al.
+hopping model, made for this work; see `nc_data`), L_D/FWHM ~ 0.14.
 The maps track position only, so `nc_data` (this folder)
 imposes the population decay `N0 exp(-t/tau)` (paper lifetime tau ~ 7 ns) and
 projects each 2-D frame to a 1-D profile.
