@@ -23,6 +23,12 @@ MAS-vs-folded recommendation).
   calibration then a random log-distributed test, all four schemes (`ols`,
   `inverse_variance`, `folded_normal`, `mas`). The default runs Gaussian,
   Voigt, and p = 2; pass specs to run others. Wall time ~3 h per shape.
+- `calibration_se_check.py generate|analyse` -- tests `calibration_D_se`
+  against 16 independent calibrations on the fft-cnr paper's grid (48 CNR0,
+  1500 runs) applied to one fixed evaluation set; separates the bias and
+  weight terms, checks per-point SE and within-ensemble correlation, and ranks
+  the paper's three seeds. `generate` is about 5 h on 8 cores (cached in
+  `output/calibration-se-check/`).
 - `render_bias_panels.py` -- renders the poster bias panels from this set's
   `dense_calibration_and_test.txt`: Panel 3 (`poster_panel3_bias.png`, the two
   standard fits fail) and Panel 5 (`poster_panel5_corrected_bias.png`, corrected,
@@ -53,6 +59,13 @@ with the other four at 2.0 to 3.4 SE, about the number expected by chance: no
 resolved bias. Small D is precision-limited, not biased: combined SE 0.02 to
 7.9 at `D <= 0.01`, 0.02 to 1.05 at `D = 0.02`, at most 0.03 only for
 `D >= 0.05` at `CNR0 >= 34`.
+
+`calibration_se_check` (`calibration_se_check.txt`): the propagated
+calibration SE is correct. Observed / predicted variance of the cell mean over
+18 draws is 0.98; per-point SE matches to 0.91 to 1.07; the weight term is
+below 0.06 of the prediction from CNR0 5 up. The fft-cnr paper's ratio of 2.0
+comes from an unlucky triple of seeds (top 1.0 % of triples). See
+`docs/STATUS.md` (2026-10-20).
 
 Dense sweep (5000-run calibration), overall mean `|bias-1|`, folded-normal vs
 MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, p = 2 0.155 vs 0.151,
