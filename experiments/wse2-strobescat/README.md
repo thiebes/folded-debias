@@ -75,12 +75,14 @@ and generalized-Gaussian p = 1.5 and p = 4 profiles, D 0.005 to 0.1, CNR_0 5 to
   decision from Joseph.
 - **On the measured scans the effect is small**: only 0.035 of the retained
   frames (18 included stroboSCAT scans) are below CNR 2.
-- **fft-cnr version.** Use fft-cnr at commit 69cd361 or later (the first
-  release after 0.3.1). Earlier versions return occasional runaway
+- **fft-cnr version.** Use fft-cnr 0.3.3 or later, the first PyPI release
+  that carries commit 69cd361 (0.3.2 was tagged but not published). Earlier
+  versions return occasional runaway
   generalized-Gaussian fits on frames below CNR 1 (CNR of tens to thousands;
   about 0.015 of the frames below CNR 0.5); two of the 187 stroboSCAT scans pass
   the triage screen only with the fix, because a runaway frame had made their
-  merged D negative. `uv.lock` pins this commit.
+  merged D negative. `pyproject.toml` requires `fft-cnr>=0.3.3`, and `uv.lock`
+  pins the PyPI release with its hash.
 
 ## Contents
 

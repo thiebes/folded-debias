@@ -18,8 +18,9 @@ frame's width error. Keying the correction on the per-frame estimate is
 therefore reliable only where every fitted frame stays well above the floor
 (CNR_0 about 34 at D = 0.02 sigma_0^2/tau in the reference geometry). See
 ``experiments/wse2-strobescat/README.md`` for the domain and its evidence.
-Use fft-cnr at commit 69cd361 or later, which refuses degenerate
-generalized-Gaussian fits below CNR 1 instead of reporting runaway CNRs.
+Use fft-cnr 0.3.3 or later (the first PyPI release with commit 69cd361), which
+refuses degenerate generalized-Gaussian fits below CNR 1 instead of reporting
+runaway CNRs.
 """
 from __future__ import annotations
 
