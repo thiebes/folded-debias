@@ -62,8 +62,10 @@ with its headline numbers.
 
 ## Caveats
 
-- **px->um scale unresolved** (Enrique's `X(um)` is inconsistent with his
-  `sigmas(um)`): all widths and D in px^2 and px^2/ns.
+- **px->um scale**: 0.060 um per px at the sample for every scan (Enrique,
+  2026-10-20); widths and D are reported in px^2 and px^2/ns (multiply by
+  0.0036 for um^2). Do not take the scale from his `X(um)` array (it steps by
+  0.0036 = 0.060^2) or from his `sigmas(um)`/px-fit ratio (fit-dependent).
 - **Even/odd parity oscillation** is present in the per-frame widths; it is
   shown raw, never smoothed. It adds scatter to single-measurement D.
 - **Below-floor frames over-subtract** -- this is expected and is why the floor

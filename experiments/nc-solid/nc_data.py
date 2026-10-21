@@ -1,8 +1,14 @@
-"""Load the Solari et al. disordered-NC-solid diffusion maps (read-only from P:).
+"""Load Marc Melendez's disordered-NC-solid diffusion maps (read-only from P:).
 
-Source: Solari et al., "Exciton Transport in Disordered Perovskite Nanocrystal
-Solids" (CH3NH3PbBr3 NC films, C8/C12/C16 ligands). Marc Melendez's numerical
-simulations behind Fig. 5 live on the pshare; we read them, never write there.
+Model: the exciton-hopping simulation of Solari et al., "Exciton Transport in
+Disordered Perovskite Nanocrystal Solids" (CH3NH3PbBr3 NC films, C8/C12/C16
+ligands). Marc made these diffmap files for this work (2026-10-21); they are not
+the runs behind the paper's Fig. 5, which used only variance curves, and its
+deposit (doi:10.21950/A0AB3H) has no maps. The small map's 2-D variance grows
+with exponent 0.85, like the deposited C16 run (0.84), but about 25% faster, so
+it is a separate run of the same model. Small / medium / large are the C16 / C12
+/ C8 structures (mean NC radius 3.7 / 5.3 / 7.4 nm). The files live on the
+pshare; we read them, never write there.
 
 Each `diffmap_<tag>.dat` is 20 frames of 250x250 exciton-concentration maps over
 a 1500x1500 nm^2 area (6 nm/pixel), 1 ns/frame. The maps track exciton position
@@ -35,8 +41,8 @@ DT_NS = 1.0
 CASES = ("small", "medium", "large")
 
 # Representative thin-film exciton lifetime (ns), from Solari et al. A single
-# value validates the mechanics; per-sample tau (C16/C12/C8 ~ 6/14/18 ns) is the
-# refinement once small/medium/large are mapped to ligands.
+# value validates the mechanics; per-sample tau (C16/C12/C8 ~ 6/14/18 ns for
+# small/medium/large) is the refinement.
 DEFAULT_TAU_NS = 7.0
 
 

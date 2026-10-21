@@ -22,11 +22,13 @@ What it does for one measurement
 
 Units (important)
 -----------------
-Enrique's ``X(um)`` axis is internally inconsistent with his ``sigmas(um)`` (the
-recorded profile is 100 px wide and his t=0 spot is ~3 px, yet ``sigmas(um)``
-would imply ~47 px on his own axis): the pixel->um scale is unresolved
-(``docs/email_collaborators.md`` Email 9). So everything here is reported in
-**px^2**. His ``sigmas`` are used only through the unit-free ratio
+The pixel is ``UM_PER_PX`` = 0.060 um at the sample for every scan (Enrique,
+2026-10-20). Do not derive the scale from his files: the ``X(um)`` array steps by
+0.0036 = 0.060^2 (the pixel size applied twice when the file was written), and
+the ratio of his fitted ``sigmas(um)`` to our px fit is not a calibration (its
+per-scan median ranges from 0.065 to 0.089 um/px and depends on the fit model
+and window). The diagnostics here report **px^2**; multiply by ``UM_PER_PX**2``
+for um^2. His ``sigmas`` are used only through the unit-free ratio
 ``sigma(t)/sigma(0)``, anchored to a px scale by a direct ``fit_variance`` of his
 t=0 profile -- this tracks his robust per-frame fit (which the generic fitter
 cannot reproduce at the noisy late frames) while staying in consistent px^2.
@@ -111,6 +113,8 @@ MEASUREMENTS = {
     ),
 }
 
+UM_PER_PX = 0.060      # pixel size at the sample (um), every scan; confirmed by
+#                        Enrique 2026-10-20. Not X(um), not sigma(um)/sigma(px).
 FLOOR = 1.3            # per-frame CNR floor: below it var_bias ~ A/CNR^2
 #                        over-subtracts (corrected variance can go negative).
 FIT_HALF_SIGMA = 4.0   # fit window half-width in units of sigma0. A few sigma of
@@ -173,7 +177,7 @@ def load_measurement(folder: str):
 
     Returns a dict with: ``t`` (ns), ``profiles`` (oriented, n_frames x npix),
     ``sigma_um`` / ``errsigma_um`` (his fitted width and its fit error, kept for
-    reference only -- the px->um scale is unresolved), ``npix``, ``center``
+    reference only; the px->um scale is ``UM_PER_PX``), ``npix``, ``center``
     (common spot column), ``analysis_path``.
     """
     analysis_path = _find_canonical(folder)
@@ -385,7 +389,7 @@ def process(name: str):
     # stable. The naive width is this px fit -- the standard bounded Gaussian
     # estimator the correction acts on -- so the calibration estimator and the
     # data estimator match. (His sigmas(um) are kept in the manifest for
-    # reference; the px->um scale is unresolved, so widths are reported in px^2.)
+    # reference; widths are reported in px^2, um^2 = px^2 * UM_PER_PX**2.)
     rough_sigma0 = float(np.sqrt(fit_variance(np.arange(npix, dtype=float),
                                               profiles[0]).variance))
     half = max(6, int(round(FIT_HALF_SIGMA * rough_sigma0)))
@@ -671,8 +675,9 @@ def _update_index(s):
     path = os.path.join(WIP, "index.md")
     header = ("# Real-data truncation-bias diagnostics\n\n"
               "Per-measurement diagnostics of the folded-normal correction on "
-              "Enrique's diffusion scans. Widths in px^2 (the px->um scale is "
-              "unresolved). D in px^2/ns. The naive and corrected D are the "
+              "Enrique's diffusion scans. Widths in px^2 (1 px = 0.060 um at the "
+              "sample, so 1 px^2 = 0.0036 um^2). D in px^2/ns. The naive and "
+              "corrected D are the "
               "inverse-variance fits over the **retained** frames: the MSD is "
               "baselined per sweep (de-parity: each interleaved delay sweep "
               "re-zeroed to its own t0), then frames below the per-frame CNR floor "

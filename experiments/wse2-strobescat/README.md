@@ -136,15 +136,26 @@ CPU contention.
   `figure_candidates/station8_realdata-MoSSe-26_32.png`** (caption beside it) --
   the correction on the clean **MoSSe alloy** `26_32/250716`
   (sample `250716_MoSSe_mystery`, **not WSe2**), de-parity merged, full range, in
-  physical um^2: naive D 0.0057 -> corrected 0.0054 um^2/ns (ratio 0.95) -- a
+  physical um^2 (0.060 um per px): naive D 0.0050 -> corrected 0.0047 um^2/ns
+  (ratio 0.95; earlier quoted as 0.0057 -> 0.0054 with the superseded
+  0.00414 um^2/px^2 scale, rescaled by 0.870) -- a
   measurable ~5% upward bias concentrated in the low-CNR late frames (2-7 ns)
   normally discarded. Rendered by `render_realdata_panel.py`. **Supersedes** the
   WSe2 `0.020` candidates (a batch-offset artifact -- goes negative under correct
   de-parity; do not use).
 - Per-measurement views: `diagnostics/<measurement>/msd_enrique_pipeline.png`,
-  `msd_deparity.png`; summary in `diagnostics/index.md`. Reported in px^2 or the
-  sample um^2 (the px->um scale is well-defined for 26_32 but an open question in
-  general, Enrique Email 9); the unit-free ratio is the headline.
+  `msd_deparity.png`; summary in `diagnostics/index.md`. Reported in px^2 or
+  um^2; the pixel is 0.060 um at the sample for every scan (Enrique,
+  2026-10-20; `UM_PER_PX` in `realdata_diagnostics.py`). Do not take the scale
+  from his `X(um)` array (it steps by 0.0036 = 0.060^2) or from the ratio of his
+  fitted sigma (um) to our px fit (fit-dependent, 0.065 to 0.089 um/px). The
+  unit-free ratio is the headline.
+- Excluded scans: `WSe2/Power_var/250904_skong/5MHz/bad` (spot out of focus;
+  Enrique advises not to use it) appears in `diagnostics/triage.csv` and
+  `triage_deparity.csv` as a screened row only and must not be used. In
+  `WSe2/test/mostly_tests/250603_2` the first delay (2.55 ns, acquired last,
+  so the loaders make it a one-frame sweep of its own) is unusable; drop it
+  before any fit. The triage rows for that scan include it.
 
 ## Depends on
 

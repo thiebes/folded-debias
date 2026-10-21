@@ -20,8 +20,8 @@ This script:
    white D-free calibration at the measurement geometry), then refits with his
    exact recipe.
 
-Everything is in his um^2 units (his pipeline's units; the px->um scale is the
-open question). The headline is the corrected/his ratio, which is unit-free.
+Everything is in his um^2 units (his pipeline's sigma(um), which is not tied to
+the 0.060 um pixel, ``UM_PER_PX``). The headline is the corrected/his ratio, which is unit-free.
 Even a small-but-real, correctable bias on a clean high-CNR measurement is the
 point.
 
