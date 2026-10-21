@@ -263,12 +263,13 @@ def build_or_load_calibration(sigma0_px: float, npix: int, noise_law: str):
     os.makedirs(CALIB_DIR, exist_ok=True)
     tag = f"{noise_law}_npix{npix}_sig0{sigma0_px:.2f}"
     cache = os.path.join(CALIB_DIR, f"calib_{tag}.npz")
-    if os.path.exists(cache):
+    if os.path.exists(cache) and "framevar_grid" in np.load(cache).files:
         z = np.load(cache)
         print(f"  loaded cached calibration {cache}", flush=True)
         return TruncationModel(cnr_grid=z["cnr_grid"], p_grid=z["p_grid"],
                                relvar_grid=z["relvar_grid"],
-                               varbias_grid=z["varbias_grid"])
+                               varbias_grid=z["varbias_grid"],
+                               framevar_grid=z["framevar_grid"])
     half_window = (npix / 2.0) / sigma0_px
     noise_model = None  # white. (Shot would pass folded_debias.noise.ShotNoise.)
     if noise_law == "shot":
@@ -282,6 +283,7 @@ def build_or_load_calibration(sigma0_px: float, npix: int, noise_law: str):
         model=GaussianModel(), noise_model=noise_model)
     np.savez(cache, cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
              relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid,
+             framevar_grid=trunc.framevar_grid,
              sigma0_px=sigma0_px, npix=npix)
     print(f"  built + cached -> {cache}", flush=True)
     return trunc

@@ -101,17 +101,19 @@ N_RUNS_CAL2 = int(os.environ.get("HIGHN_CAL2_RUNS", 4000))
 def daware_calibration(d_true: float, frac: str, n_frames: int) -> TruncationModel:
     """D-aware calibration at this fraction's D and geometry; cached per fraction."""
     path = OUTPUT / f"cal_highn_daware_g{int(G_MAX)}_x{frac}.npz"
-    if path.exists():
+    if path.exists() and "framevar_grid" in np.load(path).files:
         d = np.load(path)
         return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
-                               varbias_grid=d["varbias_grid"])
+                               varbias_grid=d["varbias_grid"],
+                               framevar_grid=d["framevar_grid"])
     exp = Experiment(sigma0=25.0, D=float(d_true), tau=1.0, half_window=60.0,
                      n_pixels=600, n_frames=n_frames, t_max=3.0)
     trunc = calibrate(exp, CAL_CNR0, n_runs=N_RUNS_CAL,
                       model=GaussianModel(max_var=MAX_VAR))
     np.savez(path, cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
-             relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid)
+             relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid,
+             framevar_grid=trunc.framevar_grid)
     return trunc
 
 
