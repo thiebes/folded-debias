@@ -300,6 +300,48 @@ def test_calibration_se_fields_populated_and_absent():
     assert np.isnan(bare.var_bias_se(3.0))
 
 
+def test_frame_variance_weights_do_not_spike_at_calibration_cnr0():
+    """The 1-D weights use per-frame Var(sigma_hat^2), not the MSD-point lookup.
+
+    The MSD-point lookup has a 0 at every calibration CNR_0 (MSD(0) = 0 by
+    construction), so a frame next to one drew a huge weight. The per-frame
+    grid has no zeros, and the weights it gives grow smoothly with CNR.
+    """
+    from dataclasses import replace
+    from folded_debias import calibrate_d_free, msd_and_weights
+    trunc = calibrate_d_free(np.array([5.0, 20.0]), n_runs=60, seed=3)
+    assert trunc.framevar_grid is not None
+    assert trunc.framevar_grid.shape == trunc.cnr_grid.shape
+    assert np.all(trunc.framevar_grid > 0)
+    assert np.any(trunc.relvar_grid == 0)
+    # Frames of a CNR_0 = 20 measurement; one sits next to the CNR_0 = 5 point.
+    cnr = 20.0 * np.exp(-Experiment().times)
+    k = np.argmin(np.abs(cnr - 5.0))
+    cnr[k] = 5.0 * 1.001
+    variance_row = np.ones_like(cnr)
+    _, w_new = msd_and_weights("folded_normal", variance_row, cnr, trunc)
+    _, w_old = msd_and_weights("folded_normal", variance_row, cnr,
+                               replace(trunc, framevar_grid=None))
+    neighbours = w_new[[k - 1, k + 1]]
+    assert neighbours.min() < w_new[k] < neighbours.max()
+    assert w_old[k] > 3 * w_old[[k - 1, k + 1]].max()
+
+
+def test_model_without_frame_variance_keeps_msd_point_weights():
+    """A model saved before framevar_grid existed weights by rel_variance."""
+    from folded_debias import TruncationModel, calibrate_d_free, msd_and_weights
+    trunc = calibrate_d_free(np.array([5.0, 20.0]), n_runs=60, seed=3)
+    bare = TruncationModel(cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
+                           relvar_grid=trunc.relvar_grid,
+                           varbias_grid=trunc.varbias_grid)
+    assert bare.frame_variance(3.0) is None
+    cnr = 12.0 * np.exp(-Experiment().times)
+    _, w = msd_and_weights("inverse_variance", np.ones_like(cnr), cnr, bare)
+    expected = 1.0 / bare.rel_variance(cnr)
+    assert w[0] == 0.0
+    assert np.allclose(w[1:], expected[1:])
+
+
 def test_calibration_D_se_predicts_draw_to_draw_scatter():
     """The propagated calibration SE matches the scatter of corrected D across
     independent calibration draws applied to one fixed evaluation set.

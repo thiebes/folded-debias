@@ -116,17 +116,24 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     msd = corrected - corrected[0]
 
     # --- weights --------------------------------------------------------
-    # The weight is 1 / Var(MSD_i). With the legacy 1-D calibration,
-    # rel_variance returns the MSD-point variance directly (empirically
-    # measured). With the 2-D calibration, rel_variance returns the per-frame
-    # Var(sigma_hat^2); the MSD-point variance is then
-    # Var(sigma_hat_t^2) + Var(sigma_hat_0^2) (the two fits are independent).
+    # The weight is 1 / Var(MSD_i) = 1 / (Var(sigma_hat_i^2) + Var(sigma_hat_0^2)),
+    # the two fits being independent, each term looked up at this measurement's
+    # own frame CNR. The 2-D calibration's rel_variance and the 1-D
+    # frame_variance give the per-frame term. A 1-D model without a
+    # frame_variance grid (built or saved before it existed) falls back to
+    # rel_variance, the MSD-point variance measured inside each calibration
+    # ensemble (see TruncationModel.frame_variance for why that is jagged).
     if scheme == "ols":
         w = np.ones_like(cnr)
     else:
-        rv = model.rel_variance(cnr, variance_row)
         if model.is_2d:
+            rv = model.rel_variance(cnr, variance_row)
             rv = rv + rv[0]
+        elif model.framevar_grid is not None:
+            rv = model.frame_variance(cnr)
+            rv = rv + rv[0]
+        else:
+            rv = model.rel_variance(cnr, variance_row)
         hi = np.nanmax(rv)
         tiny = hi * 1e-12 if np.isfinite(hi) and hi > 0 else 1e-12
         w = 1.0 / np.clip(rv, tiny, None)

@@ -55,6 +55,7 @@ class FrameStats:
     var_bias: np.ndarray         # E[sigma_hat^2] - sigma^2_true per frame
     #                              (the additive variance bias; see DERIVATION.md)
     var_bias_se: np.ndarray | None = None  # Monte Carlo SE of var_bias per frame
+    frame_variance: np.ndarray | None = None  # Var(sigma_hat^2) per frame
 
 
 def _skew(a: np.ndarray) -> float:
@@ -77,6 +78,7 @@ def frame_stats(ens: Ensemble) -> FrameStats:
     mean_msd = np.full(n_frames, np.nan)
     var_bias = np.full(n_frames, np.nan)
     var_bias_se = np.full(n_frames, np.nan)
+    frame_var = np.full(n_frames, np.nan)
     true_variance = ens.exp.true_variance
 
     for f in range(n_frames):
@@ -96,12 +98,17 @@ def frame_stats(ens: Ensemble) -> FrameStats:
             # The lookup's own Monte Carlo error; propagated into D by
             # weights.calibration_D_se.
             var_bias_se[f] = float(np.std(vcol, ddof=1) / np.sqrt(vcol.size))
+            # The width variance of this frame alone, a function of its own
+            # CNR. rel_variance above also carries this ensemble's t = 0 frame,
+            # which belongs to the calibration's CNR_0, not the application's.
+            frame_var[f] = float(np.var(vcol, ddof=1))
 
     at_wall_frac = np.nanmean(ens.at_wall.astype(float), axis=0)
     return FrameStats(cnr=ens.cnr_frame, trunc_fraction=trunc,
                       at_wall_fraction=at_wall_frac, rel_variance=rel_var,
                       skew=skew, mean_msd=mean_msd, true_msd=ens.exp.true_msd,
-                      var_bias=var_bias, var_bias_se=var_bias_se)
+                      var_bias=var_bias, var_bias_se=var_bias_se,
+                      frame_variance=frame_var)
 
 
 def _bilinear(x_grid: np.ndarray, y_grid: np.ndarray, table: np.ndarray,
@@ -188,6 +195,10 @@ class TruncationModel:
         (``None`` for a model built or saved without it). They give the
         calibration's own error, which :func:`~folded_debias.weights.calibration_D_se`
         propagates into D.
+    framevar_grid : per-frame ``Var(sigma_hat^2)`` on ``cnr_grid`` (1-D
+        models from :meth:`from_stats`; ``None`` for models built or saved
+        without it, which keep the older ``relvar_grid`` weights). See
+        :meth:`frame_variance`.
     """
 
     cnr_grid: np.ndarray
@@ -200,6 +211,7 @@ class TruncationModel:
     relvar_2d: np.ndarray | None = None
     varbias_se_grid: np.ndarray | None = None
     varbias_se_2d: np.ndarray | None = None
+    framevar_grid: np.ndarray | None = None
 
     # ------------------------------------------------------------------
     # Constructors
@@ -214,14 +226,17 @@ class TruncationModel:
         good = (np.isfinite(cnr) & np.isfinite(p) & np.isfinite(rv)
                 & np.isfinite(vb) & (cnr > 0))
         order = np.argsort(cnr[good])
-        se = None
+        se = fv = None
         if all(s.var_bias_se is not None for s in stats_list):
             se = np.concatenate([s.var_bias_se for s in stats_list])[good][order]
+        if all(s.frame_variance is not None for s in stats_list):
+            fv = np.concatenate([s.frame_variance for s in stats_list])[good][order]
         return cls(cnr_grid=cnr[good][order],
                    p_grid=p[good][order],
                    relvar_grid=rv[good][order],
                    varbias_grid=vb[good][order],
-                   varbias_se_grid=se)
+                   varbias_se_grid=se,
+                   framevar_grid=fv)
 
     @classmethod
     def from_calibration(cls, calib) -> "TruncationModel":
@@ -355,6 +370,25 @@ class TruncationModel:
                               float(self.variance_grid[-1]))
         return _bilinear_se(self.cnr_grid, self.variance_grid,
                             self.varbias_se_2d, cnr_arr, sigma2_true)
+
+    def frame_variance(self, cnr):
+        """Interpolated per-frame ``Var(sigma_hat^2)`` at the given CNR (1-D).
+
+        The weights need ``Var(MSD_i) = Var(sigma_hat_i^2) + Var(sigma_hat_0^2)``
+        at the *application's* frame-i and t = 0 CNRs. The 1-D ``relvar_grid``
+        stores that sum as measured inside each calibration ensemble, whose
+        t = 0 frame sits at the calibration's CNR_0. Neighbouring grid points
+        come from different ensembles, so the lookup is jagged, and each
+        ensemble's own t = 0 point reads exactly 0: a frame whose CNR lies next
+        to a calibration CNR_0 drew 5 to 50 times its proper weight. This grid
+        holds the single-frame term, so the sum can be formed from the
+        measurement's own frames (see :func:`~folded_debias.weights.msd_and_weights`).
+        Returns ``None`` when the model carries no such grid.
+        """
+        if self.framevar_grid is None:
+            return None
+        return np.interp(cnr, self.cnr_grid, self.framevar_grid,
+                         left=self.framevar_grid[0], right=self.framevar_grid[-1])
 
     def rel_variance(self, cnr, variance=None):
         """Interpolated variance of the (fitted-variance) point.
