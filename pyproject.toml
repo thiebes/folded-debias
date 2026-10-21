@@ -24,13 +24,12 @@ dependencies = [
 # fft-cnr supplies per-frame CNR estimates from single 1-D profiles.
 # Used for real experimental data; the Monte Carlo validation knows true CNR.
 # The real-data pipeline needs fft-cnr's refusal of degenerate
-# generalized-Gaussian fits (commit 69cd361, first released after 0.3.1);
-# raise this bound to that release when it is published. uv.lock pins the
-# commit through [tool.uv.sources] below.
-cnr = ["fft-cnr>=0.3.1,<0.5"]
+# generalized-Gaussian fits (commit 69cd361); 0.3.3 is the first PyPI release
+# that carries it.
+cnr = ["fft-cnr>=0.3.3,<0.5"]
 # curved-text draws the curved data-series label on the poster figure.
 plot = ["matplotlib>=3.7,<4", "curved-text>=0.5,<1"]
-dev = ["pytest>=7.4", "matplotlib>=3.7,<4", "fft-cnr>=0.3.1,<0.5",
+dev = ["pytest>=7.4", "matplotlib>=3.7,<4", "fft-cnr>=0.3.3,<0.5",
        "curved-text>=0.5,<1"]
 
 [tool.setuptools.dynamic]
@@ -48,11 +47,6 @@ constraint-dependencies = [
     "matplotlib==3.10.9",
     "curved-text==0.5.0",
 ]
-
-[tool.uv.sources]
-# Development and the committed lock use the fft-cnr commit with the
-# degenerate-fit refusal; published metadata keeps the PyPI range above.
-fft-cnr = { git = "https://github.com/thiebes/fft-cnr", rev = "69cd3610e677e6d9c9fc78a17d7b0f28e9cdb9b9" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

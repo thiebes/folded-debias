@@ -215,11 +215,15 @@ wheels = [
 
 [[package]]
 name = "fft-cnr"
-version = "0.3.1"
-source = { git = "https://github.com/thiebes/fft-cnr?rev=69cd3610e677e6d9c9fc78a17d7b0f28e9cdb9b9#69cd3610e677e6d9c9fc78a17d7b0f28e9cdb9b9" }
+version = "0.3.3"
+source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "numpy" },
     { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/82/59/6177e3cf053249e0c470256686ca93994fd03411cc73e9e413b13ddf2a7a/fft_cnr-0.3.3.tar.gz", hash = "sha256:1a50ba536d3fc481003b141c31ea8cb8afcaee8dbae44a5cd8a0502a24e89205", size = 758493, upload-time = "2026-10-20T07:02:43.289Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/c4/9b/d961bf1300a76a1aa2d6d6b1e2c81c0da38497959d7616e3fd737ce13b09/fft_cnr-0.3.3-py3-none-any.whl", hash = "sha256:499792e8e8034a4d41afda54f55939b2ecc3c2898f25c47199306d592a8202a8", size = 26642, upload-time = "2026-10-20T07:02:41.848Z" },
 ]
 
 [[package]]
@@ -249,8 +253,8 @@ plot = [
 requires-dist = [
     { name = "curved-text", marker = "extra == 'dev'", specifier = ">=0.5,<1" },
     { name = "curved-text", marker = "extra == 'plot'", specifier = ">=0.5,<1" },
-    { name = "fft-cnr", marker = "extra == 'cnr'", git = "https://github.com/thiebes/fft-cnr?rev=69cd3610e677e6d9c9fc78a17d7b0f28e9cdb9b9" },
-    { name = "fft-cnr", marker = "extra == 'dev'", git = "https://github.com/thiebes/fft-cnr?rev=69cd3610e677e6d9c9fc78a17d7b0f28e9cdb9b9" },
+    { name = "fft-cnr", marker = "extra == 'cnr'", specifier = ">=0.3.3,<0.5" },
+    { name = "fft-cnr", marker = "extra == 'dev'", specifier = ">=0.3.3,<0.5" },
     { name = "matplotlib", marker = "extra == 'dev'", specifier = ">=3.7,<4" },
     { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.7,<4" },
     { name = "numpy", specifier = ">=1.24,<3" },
