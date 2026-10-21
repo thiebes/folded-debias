@@ -139,15 +139,17 @@ def build_or_load_calibration(model, geometry: dict, cal_cnr0: np.ndarray,
     The lookup is built at D = 0, so it is keyed on per-frame CNR alone and is
     independent of both the application's D and its anomalous exponent.
     """
-    if path.exists():
+    if path.exists() and "framevar_grid" in np.load(path).files:
         d = np.load(path)
         return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
-                               varbias_grid=d["varbias_grid"])
+                               varbias_grid=d["varbias_grid"],
+                               framevar_grid=d["framevar_grid"])
     trunc = calibrate_d_free(cal_cnr0, n_runs=n_runs_cal, model=model,
                              **geometry)
     np.savez(path, cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
-             relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid)
+             relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid,
+             framevar_grid=trunc.framevar_grid)
     return trunc
 
 

@@ -113,11 +113,13 @@ def per_frame_cnr_and_width():
 def build_or_load_calibration(sigma0_px, npix):
     if os.path.exists(CALIB_CACHE):
         z = np.load(CALIB_CACHE)
-        if int(z["npix"]) == npix and abs(float(z["sigma0_px"]) - sigma0_px) < 1.5:
+        if (int(z["npix"]) == npix and abs(float(z["sigma0_px"]) - sigma0_px) < 1.5
+                and "framevar_grid" in z.files):
             print(f"  loaded cached calibration {CALIB_CACHE}", flush=True)
             return TruncationModel(cnr_grid=z["cnr_grid"], p_grid=z["p_grid"],
                                    relvar_grid=z["relvar_grid"],
-                                   varbias_grid=z["varbias_grid"])
+                                   varbias_grid=z["varbias_grid"],
+                                   framevar_grid=z["framevar_grid"])
     half_window = (npix / 2.0) / sigma0_px
     trunc = calibrate_d_free(
         CAL_CNR0_GRID, sigma0=1.0, half_window=half_window, n_pixels=npix,
@@ -126,6 +128,7 @@ def build_or_load_calibration(sigma0_px, npix):
     os.makedirs("output", exist_ok=True)
     np.savez(CALIB_CACHE, cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
              relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid,
+             framevar_grid=trunc.framevar_grid,
              sigma0_px=sigma0_px, npix=npix)
     print(f"  built + cached calibration -> {CALIB_CACHE}", flush=True)
     return trunc

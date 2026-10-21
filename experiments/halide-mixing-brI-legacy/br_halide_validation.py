@@ -114,15 +114,17 @@ def fit_msd_powerlaw(t: np.ndarray, var: np.ndarray,
 
 def build_or_load_calibration() -> TruncationModel:
     """Gaussian D-free calibration at the Br-I geometry; cached after first build."""
-    if CAL_PATH.exists():
+    if CAL_PATH.exists() and "framevar_grid" in np.load(CAL_PATH).files:
         d = np.load(CAL_PATH)
         return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
-                               varbias_grid=d["varbias_grid"])
+                               varbias_grid=d["varbias_grid"],
+                               framevar_grid=d["framevar_grid"])
     trunc = calibrate_d_free(CAL_CNR0, n_runs=N_RUNS_CAL, model=GaussianModel(),
                              **CAL_GEOMETRY)
     np.savez(CAL_PATH, cnr_grid=trunc.cnr_grid, p_grid=trunc.p_grid,
-             relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid)
+             relvar_grid=trunc.relvar_grid, varbias_grid=trunc.varbias_grid,
+             framevar_grid=trunc.framevar_grid)
     return trunc
 
 
