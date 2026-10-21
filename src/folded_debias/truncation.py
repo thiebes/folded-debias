@@ -334,7 +334,10 @@ class TruncationModel:
         dominates: two 300-run calibrations of the same sweep differ by 0.22
         in D/D_ref at D = 0.02 sigma_0^2/tau, CNR_0 = 34, against an
         evaluation SE of 0.04. The SE is propagated through the same
-        interpolation weights as the lookup (independent cells assumed). With
+        interpolation weights as the lookup (independent cells assumed; for
+        the D-free 1-D grid each point is its own ensemble frame, the frames of
+        one ensemble are uncorrelated, and the per-point SE matches the spread
+        over 16 independent calibrations). With
         a 2-D model and a ``variance``, it is evaluated at the same
         fixed-point estimate of sigma^2_true that :meth:`var_bias` uses.
         Returns NaN when the model carries no SE (older saved calibrations).
