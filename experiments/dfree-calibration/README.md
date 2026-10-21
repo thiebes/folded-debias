@@ -29,6 +29,10 @@ MAS-vs-folded recommendation).
   weight terms, checks per-point SE and within-ensemble correlation, and ranks
   the paper's three seeds. `generate` is about 5 h on 8 cores (cached in
   `output/calibration-se-check/`).
+- `weights_check.py` -- compares the 1-D slope weights (per-frame variance
+  against the older MSD-point lookup) on the cached draws of
+  `calibration_se_check.py`: mean, spread over realizations, and calibration
+  SE per cell. Minutes once the cache exists.
 - `render_bias_panels.py` -- renders the poster bias panels from this set's
   `dense_calibration_and_test.txt`: Panel 3 (`poster_panel3_bias.png`, the two
   standard fits fail) and Panel 5 (`poster_panel5_corrected_bias.png`, corrected,
@@ -66,6 +70,12 @@ calibration SE is correct. Observed / predicted variance of the cell mean over
 below 0.06 of the prediction from CNR0 5 up. The fft-cnr paper's ratio of 2.0
 comes from an unlucky triple of seeds (top 1.0 % of triples). See
 `docs/STATUS.md` (2026-10-20).
+
+`weights_check` (`weights_check.txt`): the per-frame weights narrow the spread
+of D/D_in over realizations to 0.71 to 0.85 of the former weights at CNR0 21
+and 34 (where a frame sat next to a calibration CNR0), leave it within 0.94 to
+1.02 elsewhere, and move no cell mean by more than 0.97 combined SE. See
+`docs/STATUS.md` (2026-10-21, per-frame slope weights).
 
 Dense sweep (5000-run calibration), overall mean `|bias-1|`, folded-normal vs
 MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, p = 2 0.155 vs 0.151,
