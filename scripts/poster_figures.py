@@ -46,7 +46,7 @@ from render_floor_panel import build as figure_floor  # noqa: E402
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)
 
-# The fft-cnr validation lives in the sibling repo (see POSTER_PLAN); the Panel 4
+# The fft-cnr validation lives in the sibling repo; the Panel 4
 # CNR-recovery figure is restyled from its case-11 sweep. Prefer the dense
 # poster-local sweep (scripts/poster_fftcnr_dense.py) when present, so the ratio
 # curve is smooth; otherwise fall back to the sibling's canonical six-point file.

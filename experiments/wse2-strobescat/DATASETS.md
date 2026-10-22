@@ -28,8 +28,9 @@ Reduction / fit follow Enrique's own pipeline at
 reproduced by `realdata_enrique_pipeline.py`). The `realdata_triage.py` screen
 scans every `analysis_*` folder under `P:\Lab\Enrique\lab\`.
 
-All generated outputs now live in-repo under `diagnostics/` (previously
-`P:\jthiebes\WIP\realdata_bias_diagnostics`, now retired).
+All generated outputs live in-repo under `diagnostics/`. The registry includes
+WSe2 `Power_var\250224\0.020`, which is degenerate (negative D) under per-sweep
+re-zeroing and is not used.
 
 ## Notes
 

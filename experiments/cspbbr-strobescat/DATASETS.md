@@ -22,4 +22,4 @@ pshare.
 
 The noise is white (constant-floor) -- a raster-scanned APD measurement whose
 photon-transfer fit is floor-dominated -- so the gaussian calibration model
-applies. See `docs/calibration_runs.md`.
+applies.

@@ -73,8 +73,8 @@ TAU_SWEEP = (6.0, 14.0, 18.0)   # C16 / C12 / C8 thin-film lifetimes (ns)
 # floor worst case; pure shot (read=0) has clean wings where the width fit takes
 # its leverage, so the truncation bias nearly vanishes; a read floor of a few
 # counts restores it. The label is what appears in the legend / cache key; the
-# colour keys the figure. See docs/poster/NOISE_LAW_REFRAME.md and the fft-cnr
-# paper cases 12/13 (the bias-governing CNR is the peak-local member, which
+# colour keys the figure. See experiments/noise-law/ and the fft-cnr paper
+# cases 12/13 (the bias-governing CNR is the peak-local member, which
 # ShotNoise.cnr_frame returns as peak / sqrt(peak + read^2)).
 NOISE_LAWS = (
     ("white", WhiteNoise(), "#003f7f"),

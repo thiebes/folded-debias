@@ -1,7 +1,6 @@
 """Saha-controlled reaction-diffusion model for excitons and free charges.
 
-Python port of Marc Melendez's reaction-diffusion model (corrected version
-2026-06-08), the spatial extension of the zero-dimensional rate model in:
+Python port of Marc Melendez's reaction-diffusion model, the spatial extension of the zero-dimensional rate model in:
 
   Cutrupi, Melendez Schofield, Utrera-Melero et al., "Determining the
   Free-Carrier Fraction in 2D Perovskites using Power Dependent
@@ -69,10 +68,9 @@ class Parameters:
     # step, omitting t=0; this is the one behavioural deviation from it.
     include_initial: bool = True
 
-    # Power of x on the free-charge emission term. 2 is correct (Marc's
-    # corrected code, 2026-06-08, and paper eq. 9: bimolecular emission scales
-    # as (x n)^2). 1 reproduces the earlier buggy linear-x output, retained
-    # only for before/after comparison.
+    # Power of x on the free-charge emission term. 2 is correct (paper eq. 9:
+    # bimolecular emission scales as (x n)^2). 1 gives the linear-x form, for
+    # comparison.
     free_charge_emission_power: int = 2
 
 
@@ -216,9 +214,8 @@ def simulate(par: Parameters, initial: np.ndarray) -> Result:
         lap_ex = ex[2:] + ex[:-2] - 2.0 * ex[1:-1]
         lap_fr = fr[2:] + fr[:-2] - 2.0 * fr[1:-1]
         # Free-charge recombination is bimolecular and needs BOTH carriers
-        # free, so it scales as (x n)^2 -- the x^2 here, not x. (Marc's
-        # corrected code, 2026-06-08; the earlier linear-x form was a bug that
-        # over-recombined and collapsed the late-time signal.)
+        # free, so it scales as (x n)^2 -- the x^2 here, not x. (A linear-x
+        # form over-recombines and collapses the late-time signal.)
         react = n[1:-1] * (par.nu * (1.0 - x[1:-1])
                            + par.rho * n[1:-1] * x[1:-1] ** 2)
         n[1:-1] = n[1:-1] + ce * lap_ex + cf * lap_fr - par.dt * react

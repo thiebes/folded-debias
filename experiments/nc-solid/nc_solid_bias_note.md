@@ -1,10 +1,9 @@
 # Noise-induced bias in the measured transport exponent for disordered nanocrystal-solid diffusion maps
 
-Working technical note for the folded-debias method and the disordered
-perovskite nanocrystal-solid simulations (Marc Meléndez's maps from the Solari
-et al. hopping model, made for this work; not the runs behind the paper's
-Fig. 5). It is intended for the collaboration, not for circulation. Numbers and
-figures are produced by [`scripts/nc_solid_alpha_vs_cnr.py`](../scripts/nc_solid_alpha_vs_cnr.py)
+Technical note on the folded-debias method applied to the disordered perovskite
+nanocrystal-solid simulations (Marc Meléndez's maps from the Solari et al.
+hopping model, made for this work; not the runs behind the paper's Fig. 5).
+Numbers and figures are produced by [`nc_solid_alpha_vs_cnr.py`](nc_solid_alpha_vs_cnr.py)
 (1000 noise realisations per cell); figures are written to `output/`.
 
 ## Summary
@@ -188,7 +187,7 @@ shape-matched fit or, more cleanly, from a model run at high walker count (the
 re-implemented hopping model in `nc_solid_sim.py` does this without any shape
 assumption).
 
-## Limits, and what would settle it
+## Limits
 
 The threshold quoted here is specific to an assumed noise law and to these
 small-diffusion-length maps. Two measurable quantities would convert it from a
@@ -212,7 +211,7 @@ applying the white-calibrated correction blindly.
 ## Methods
 
 Maps are loaded read-only and processed by
-[`mc_experiments/disordered_nc_solid/nc_data.py`](../mc_experiments/disordered_nc_solid/nc_data.py).
+[`nc_data.py`](nc_data.py).
 Each frame is a histogram of about 50,000 discrete random walkers (the pixel
 values are integer multiples of 1/49984). We fit a Gaussian (centre, width) to
 each noiseless projection and rebuild it with the same integral, then take that
@@ -220,18 +219,18 @@ Gaussian as the bed's truth. The reconstruction conserves the population and
 makes the peak fall as 1/σ with spreading (the raw histogram `max` instead rises,
 biasing the per-frame CNR high). Its second moment is the ground truth σ²(t).
 Each per-frame width is then fit with the bounded Gaussian estimator
-([`folded_debias.fit`](../src/folded_debias/fit.py)); the MSD uses the fitted
+([`folded_debias.fit`](../../src/folded_debias/fit.py)); the MSD uses the fitted
 t = 0 width, MSD = σ̂²(t) − σ̂²(0). The exponent and diffusion coefficient come
 from a nonlinear least-squares fit of MSD = 2D·t^α with α ∈ [0.2, 2]. The bias
 is the exponent of the mean MSD over 1000 noise realisations; the single-shot
 standard deviation is taken across per-realisation exponents. Noise laws are the
-pluggable models in [`folded_debias.noise`](../src/folded_debias/noise.py):
+pluggable models in [`folded_debias.noise`](../../src/folded_debias/noise.py):
 white noise with standard deviation peak₀/CNR₀, and shot noise with Poisson
 counts and an optional read floor, whose per-frame CNR is
 peak / √(peak + read²). CNR₀ is the frame-0 peak CNR and means the same starting
 contrast across noise laws.
 
-## Poster figure caption (`output/nc_solid_poster_figure.png`)
+## Figure caption (`output/nc_solid_poster_figure.png`)
 
 The figure shows the noise bias and its correction over the realistic measurement
 regime: no MSD experiment is run below CNR₀ ≈ 30, the apparent exponent carries a
@@ -240,7 +239,7 @@ folded-normal correction recovers the nominal exponent. An inset extends the swe
 to low contrast, where the naive estimate diverges to the ballistic ceiling. One
 representative sample is shown (C16, the smallest crystals); the others behave the
 same. Produced by
-[`scripts/nc_solid_poster_figure.py`](../scripts/nc_solid_poster_figure.py).
+[`nc_solid_poster_figure.py`](nc_solid_poster_figure.py).
 
 > **A noise bias in the measured transport exponent, and its correction.** Red
 > points are the apparent mean-squared-displacement exponent α from a standard

@@ -9,10 +9,10 @@ does not contain. No estimator, however clever, can beat it.
 
 The bound is the Cramér–Rao lower bound (CRLB). It is a property of the
 measurement model alone — it does not depend on the estimator — so it can be
-computed independently of any derivation of an unbiased estimator, and it tells
-us, once such an estimator exists, how close to optimal it is.
+computed independently of any derivation of an unbiased estimator, and it
+measures how close to optimal an unbiased estimator is.
 
-Computed and validated in `precision_limit/crlb.py`.
+Computed and validated in `crlb.py` (this folder).
 
 ## 1. Fisher information of the measurement
 
@@ -77,14 +77,14 @@ width independently at its own CRLB and then fitting the slope by weighted
 least squares (verified numerically in `crlb.py`: the full-Fisher-matrix bound
 and the per-frame-widths-plus-slope bound agree to 4 significant figures). The
 "fit a width per frame, then fit the slope" architecture loses **no**
-information. Therefore the low-CNR bias is *not* an architectural defect — it
-is purely a defect of the per-frame width *estimator*. Replace the biased width
+information. The low-CNR bias therefore comes entirely from the per-frame
+width *estimator*, and the architecture adds none of it. Replace the biased width
 fit with an unbiased, efficient one and weight the slope by the inverse CRLB,
 and the diffusion estimate attains the fundamental limit.
 
 ## 4. The numbers
 
-For the fresh-eyes test regime — `L_D/FWHM_0 = 0.04`, so `D = 0.00444 σ_0²/τ`,
+For the test regime — `L_D/FWHM_0 = 0.04`, so `D = 0.00444 σ_0²/τ`,
 12 frames over 3 lifetimes — the CRLB gives the smallest standard deviation any
 unbiased single-measurement estimate of D can have:
 
@@ -97,30 +97,34 @@ unbiased single-measurement estimate of D can have:
 | 30 | 2.4 | "" |
 | 80 | 0.9 | a single measurement is finally informative |
 
-Read this plainly: in the regime where nanocrystal-solid measurements sit, the
-*best possible* unbiased estimate of D from one measurement has a standard
-deviation several times larger than D itself. That is not a failure of method —
-it is the information content of the data. Validation: at high CNR, where the
+In the regime where nanocrystal-solid measurements sit, the *best possible*
+unbiased estimate of D from one measurement has a standard deviation several
+times larger than D itself. The limit is set by the information content of the
+data and holds for every method. Validation: at high CNR, where the
 least-squares fit is maximum-likelihood and attains the CRLB, the empirical
 variance of the fitted width matches the bound to within 2–6 % (`crlb.py`).
 
-## 5. What this means for the project
+## 5. Consequences
 
-1. **Bias and variance are separate problems.** The bias is removable — derive
-   an unbiased estimator (the fresh-eyes task). The variance is not — it is the
-   CRLB. Conflating them ("low-CNR data are unreliable") is the field's current
-   error; separating them is a clean, teachable result.
+1. **Bias and variance are separate problems.** The bias is removable: the
+   folded-normal correction (`docs/DERIVATION.md`) removes it. The variance is
+   the CRLB and cannot be removed. Treating both as one problem ("low-CNR data
+   are unreliable") hides that only the variance is fundamental.
 
 2. **An unbiased estimator is what makes replication work.** Because the
    single-shot floor is several × D, a low-CNR diffusion coefficient can only be
    pinned down by averaging many measurements. Averaging only converges to the
    truth if each measurement is unbiased; averaging biased estimates converges
-   to the wrong value. So the unbiased estimator is not a refinement — together
-   with the CRLB it is what makes low-CNR diffusion measurement possible at all.
+   to the wrong value. Together with the CRLB, an unbiased estimator is
+   therefore what makes low-CNR diffusion measurement possible.
    The number of measurements needed scales as (√CRLB/D)² for unit relative
    precision — e.g. of order 200 at CNR₀ = 5.
 
-3. **It is the benchmark for the fresh-eyes estimator.** Once that derivation
-   delivers an unbiased D̂, compare its variance to this CRLB. If it attains the
-   bound, the result is complete: unbiased *and* optimally precise, with the
-   residual imprecision identified as a law rather than a shortcoming.
+3. **The CRLB is the benchmark for the corrected estimator.**
+   `efficiency_check.py` compares the spread of the corrected D̂ with √CRLB on
+   Gaussian, Voigt, and generalized-Gaussian (p = 1.5, p = 4) profiles. A fit of
+   the corrected widths against time, with every frame weighted by
+   1 / Var(σ̂_i²) and the intercept free, reaches 0.98 to 1.08 × √CRLB from
+   CNR₀ 21 with no systematic shift of the mean; the library slope fit uses
+   these weights. The remaining imprecision is the CRLB itself (see
+   `README.md`, this folder).

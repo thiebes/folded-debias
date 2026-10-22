@@ -1,18 +1,15 @@
 # cspbbr-strobescat -- CsPbBr3 single-crystal diffusion, real-data correction example
 
-**Status:** work-in-progress; adjacent-project (Upasana's data, the
-Antonella/Carlos diffusion paper), not the poster's real-data panel -- that is
-`experiments/wse2-strobescat/`. Kept here as an end-to-end real-data application
-of the correction. Data on the pshare; see `DATASETS.md`.
-
 End-to-end application of the truncation-bias correction to a real measurement:
-CsPbBr3 single-crystal transient-PL-microscopy diffusion (Upasana's data; the
-Antonella/Carlos diffusion paper). The late-time MSD inflates as the per-frame
-CNR collapses; the correction removes that bias before the D fit.
+CsPbBr3 single-crystal transient-PL-microscopy diffusion (Upasana's data, from
+the Antonella/Carlos diffusion paper). The late-time MSD inflates as the
+per-frame CNR collapses; the correction removes that bias before the D fit. The
+real-data figure of this repository is in `experiments/wse2-strobescat/`; this
+folder is a second real-data application. Data on the pshare; see `DATASETS.md`.
 
 The noise is white (constant-floor), not shot-limited -- a raster-scanned APD
 measurement whose photon-transfer fit comes out floor-dominated -- so the
-calibration uses the gaussian model. See `../../docs/calibration_runs.md`.
+calibration uses the gaussian model.
 
 ## All fluences at once (recommended)
 
@@ -44,10 +41,11 @@ calibrations are built). The run machine must be able to read the raw data at
    ```
 
 2. **Calibrate** the `(CNR, sigma^2)` bias lookup for this geometry (heavy; run
-   on the multi-core box -- see `cspbbr_calibration_run.md`):
+   on a multi-core Linux or WSL machine; geometry and tunables are documented in
+   the script header):
 
    ```bash
-   PYTHON=.venv-linux/bin/python bash scripts/run_cspbbr_calibration.sh
+   PYTHON=.venv-linux/bin/python bash experiments/cspbbr-strobescat/run_cspbbr_calibration.sh
    ```
 
 3. **Apply** the correction and compare naive vs corrected D:

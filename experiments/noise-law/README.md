@@ -7,11 +7,6 @@ Show that the truncation bias is governed by the contrast against the
 shot part: white noise carries the bias everywhere, pure shot noise nowhere, and
 a read floor of a few counts restores it.
 
-## Status
-
-Validated. Poster-scope framing (Panels 2-3; see
-`docs/poster/NOISE_LAW_REFRAME.md`).
-
 ## Contents
 
 - `shot_noise_validation.py` -- folded-normal correction across white / shot /
@@ -54,4 +49,4 @@ negative). Figures: `read_floor_sweep.png`, `fftcnr_white_vs_shot.png`.
 
 ## See also
 
-`docs/poster/NOISE_LAW_REFRAME.md`.
+`docs/DERIVATION.md` (the folded-normal correction).

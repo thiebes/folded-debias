@@ -7,11 +7,6 @@ A scope/robustness control: apply the folded-normal correction to Zhang et al.
 the result is robust -- the correction barely moves it, because the per-frame CNR
 stays well above the floor. This is a control example, not a correction target.
 
-## Status
-
-Validated. Poster scope/control (Panel 6 candidate as a robustness control, not a
-bias demonstration).
-
 ## Contents
 
 - `zhang_qd_panel.py` -- reduces the published figure CSVs and runs the

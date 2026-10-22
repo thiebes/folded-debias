@@ -79,3 +79,11 @@ floor-dominated), so its preset uses gaussian.
   low-CNR end. Drop to ~2000 for a quick look.
 - Grid sizes (`--n-cnr`, `--n-sigma`): ~100 each is typical; the total fit count
   is `n_cnr * n_sigma * n_runs`.
+
+## Choosing the key
+
+The joint lookup is indexed by the true variance, which a measurement does not
+know. When sigma^2 changes little over the measurement, keying each frame on its
+own fitted variance (the default) is adequate. When it grows several-fold, that
+key under-corrects at low CNR; see "Choice of key" in
+`TruncationModel.var_bias` and `experiments/halide-mixing-highn/key_sensitivity.py`.

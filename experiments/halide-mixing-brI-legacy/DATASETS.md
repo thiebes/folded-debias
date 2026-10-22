@@ -17,6 +17,6 @@ repo; the loader reads the pshare at run time.
 
 ## Note
 
-The high-statistics 400,000-walker re-run (clean Fickian ground truth) and the
+The high-statistics 400,000-walker bed (clean Fickian ground truth) and the
 width-fit upper-bound finding live in the separate
 `experiments/halide-mixing-highn/` set; see its `DATASETS.md`.

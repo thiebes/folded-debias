@@ -1,4 +1,4 @@
-# Caption -- measurement schematic (poster Panel 1)
+# Caption -- measurement schematic
 
 The measurement. Transient-PL / stroboSCAT microscopy tracks a spreading, dimming
 excited-state distribution; the width of each frame gives the mean-squared

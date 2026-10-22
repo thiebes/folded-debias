@@ -48,7 +48,7 @@ The Voigt estimator with a Lorentzian instrument point-spread function is not
 exercised here. It assumes a single Gaussian convolved with a Lorentzian and is
 mismatched to the Saha mixture exactly as the Gaussian estimator is; its
 validation belongs on a dedicated single-population point-spread bed, not on this
-mixture (see `docs/VALIDATION_AUDIT.md`).
+mixture (see `docs/VALIDATION_DESIGN.md`).
 
 Build the 2-D (CNR, sigma^2) calibration first (needed only for the Gaussian +
 folded-normal first-stage diagnostic; the moment path and the gap report need no

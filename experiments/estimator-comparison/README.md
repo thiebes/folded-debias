@@ -6,11 +6,6 @@ Answer "is the correction even needed, or does a different estimator avoid the
 bias?" Compares the folded-normal correction against the non-parametric moment
 estimator and an unbounded (positivity-wall-removed) width fit.
 
-## Status
-
-Validated. Poster aside / paper-scope (the "removing the positivity constraint
-does not substitute for the correction" leg).
-
 ## Contents
 
 - `moment_estimator_failure.py` -- five-way comparison; the `MomentModel`

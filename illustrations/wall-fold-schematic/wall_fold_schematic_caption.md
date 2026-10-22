@@ -1,4 +1,4 @@
-# Caption -- wall-and-fold schematic (poster Panel 2A, the hero figure)
+# Caption -- wall-and-fold schematic
 
 Low contrast bites: a one-directional bias.
 

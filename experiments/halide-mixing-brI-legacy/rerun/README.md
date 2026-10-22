@@ -1,19 +1,20 @@
-# Re-running Marc's Br-I halide simulator at higher statistics
+# Running Marc's Br-I halide simulator at higher statistics
 
 Marc Meléndez's Br-I diffusion maps are histograms of only 20,000 walkers, so
 each frame carries Poisson sampling noise that inflates the per-frame
-contrast-to-noise when read off the peak. Rather than de-noise the noisy maps by
-assuming a profile shape, we re-run the simulator ourselves at much higher
-walker count to get a clean ground truth directly (no shape assumption). This
-folder holds the instructions and helper scripts. **The run itself is a multi-day
-job and must happen on a Linux/WSL machine, not in the analysis environment.**
+contrast-to-noise when read off the peak. Running the simulator at a much higher
+walker count gives a clean ground truth directly, with no profile-shape
+assumption. This folder holds the instructions and helper scripts. The run is a
+multi-day job on a Linux or WSL machine, separate from the analysis environment.
+The averaged 400,000-walker bed it produces is analysed in
+`experiments/halide-mixing-highn/`.
 
-## Feasibility (checked 2026-06-17)
+## Requirements
 
 `landscapeBD.diffmap` is a 64-bit x86-64 ELF executable, dynamically linked
 against only `libc.so.6` and `libm.so.6` (GLIBC ≤ 2.27). It needs no GPU, MPI, or
 GSL. It runs unmodified on WSL2 with Ubuntu 20.04 or later (glibc ≥ 2.31, which
-is backward compatible). The `stderr.log` from Marc's run confirms the binary
+is backward compatible). The `stderr.log` from Marc's run shows that the binary
 generates the crystal structure, neighbour list, and the Gaussian initial
 exciton distribution internally, so the only inputs are the binary, the two
 lattice files, and the parameter file.
@@ -43,34 +44,34 @@ inputs; do not copy them.
 (per-frame particle second moment, the carrier truth), `density.x_<frac>.dat`,
 and `diffmap.x_<frac>.dat` (the 2 GB per-frame-normalised map).
 
-## The runtime reality, and the strategy
+## Runtime and strategy
 
-Marc's 20,000-walker, 3 ns run took about 13 hours on one cluster core. Walkers
+Marc's 20,000-walker, 3 ns run takes about 13 hours on one cluster core. Walkers
 are independent trajectories, so runtime scales linearly with `N`: a single
-2-million-walker run would take roughly 1,300 hours. That is not practical.
+2-million-walker run would take roughly 1,300 hours.
 
-Instead, run many independent instances in parallel and average their outputs.
-Each instance is a fresh random realisation (different halide disorder and
-different initial sampling), so averaging `K` instances of `N_inst` walkers gives
-both `K * N_inst` effective statistics and the disorder-averaged density, which
-is the smooth quantity we want. The sampling noise of the average falls as
-`1 / sqrt(K * N_inst)`.
+The practical approach is to run many independent instances in parallel and
+average their outputs. Each instance is a fresh random realisation (different
+halide disorder and different initial sampling), so averaging `K` instances of
+`N_inst` walkers gives both `K * N_inst` effective statistics and the
+disorder-averaged density, which is the smooth quantity of interest. The
+sampling noise of the average falls as `1 / sqrt(K * N_inst)`.
 
-Pick the total walker count from the contrast you need. The intrinsic 1-D peak
-contrast-to-noise is roughly `sqrt(N_total * f_peak)` with `f_peak ~ 0.006` for
-this geometry, so:
+The total walker count follows from the contrast required. The intrinsic 1-D
+peak contrast-to-noise is roughly `sqrt(N_total * f_peak)` with `f_peak ~ 0.006`
+for this geometry, so:
 
 - `N_total ~ 4e5` (e.g. 20 instances of 20,000) gives intrinsic peak-CNR ~ 50.
 - `N_total ~ 1.6e6` (e.g. 80 instances) gives ~ 100, effectively clean across the
   whole CNR sweep.
 
-At 13 h per 20,000-walker instance, 20 instances on a 20-core machine is one
-night; 80 instances is several nights or a many-core box. Start with ~20 and add
-more if the maps are not clean enough.
+At 13 h per 20,000-walker instance, 20 instances on a 20-core machine take one
+night; 80 instances take several nights or a many-core machine.
 
-Two ways to cut the cost if needed: set `diffmap_nx = diffmap_ny = 250` in the
-parameter file (we project to 1-D anyway, so 250 bins is plenty and quarters the
-2 GB output), and/or shorten `tmax` to the window you actually fit.
+Two parameter changes reduce the cost: set `diffmap_nx = diffmap_ny = 250` in
+the parameter file (the analysis projects to 1-D, so 250 bins suffice, and the
+2 GB output shrinks by a factor of four), and shorten `tmax` to the fitted
+window.
 
 ## Steps
 
@@ -87,21 +88,22 @@ parameter file (we project to 1-D anyway, so 250 bins is plenty and quarters the
    ```
    For the check, first edit the parameter file down to `N 200` and `tmax 0.05`
    so each finishes in seconds. If `diff` reports the files are identical, the
-   binary uses a fixed seed and averaging would do nothing; ask Marc for a seed
-   option before proceeding. If they differ, restore `N` and `tmax` and continue.
+   binary uses a fixed seed and averaging adds no statistics. If they differ,
+   restore `N` and `tmax` and continue.
 4. Run the instances with `run_instances.sh` (see its header for arguments).
 5. Average them with `average_diffmaps.py`, which writes a clean
    `diffmap.x_<frac>.avg.npy` and `variance.x_<frac>.avg.dat`.
-6. Copy the two averaged files back. The clean averaged map needs no de-noising;
-   point an updated loader (the stale `br_data.py` geometry must be refreshed to
-   500 or 250 bins, 1500 nm, 601 frames) at the `.avg.npy`.
+6. Copy the two averaged files back. The averaged map needs no de-noising. The
+   loader must use the run's geometry (bin count, box size, frame count);
+   `br_data.py` carries the legacy 150 nm geometry, and
+   `experiments/halide-mixing-highn/br_highn_data.py` reads the averaged bed.
 
-## Open items to settle on the run machine
+## Checks on the run machine
 
-- **Seed / randomisation** (step 3) is the gating check.
-- **Frame-count reconciliation:** the diffmap appears to hold a few more frame
-  blocks than `variance.dat` has rows (605 vs 601 in the shared file). Confirm
-  the exact frame count from `tmax / tsamp + 1` and whether the diffmap carries
-  any header/trailer before reshaping.
-- **Box-edge clipping:** at 3 ns the spot may approach the 1500 nm box edge;
-  check the last-frame profile stays well inside before trusting late frames.
+- **Seed / randomisation** (step 3) determines whether averaging is valid.
+- **Frame count:** the diffmap can hold a few more frame blocks than
+  `variance.dat` has rows (605 vs 601 in the shared file). Take the frame count
+  from `tmax / tsamp + 1` and check whether the diffmap carries a header or
+  trailer before reshaping.
+- **Box-edge clipping:** at 3 ns the spot can approach the 1500 nm box edge;
+  check that the last-frame profile stays well inside before using late frames.

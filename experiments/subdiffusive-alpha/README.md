@@ -6,10 +6,6 @@ Clean single-population synthetic test that the correction de-biases the
 anomalous exponent alpha, not only D, on the `AnomalousExperiment` bed
 (`sigma^2(t) = sigma0^2 + 2 D t^alpha`).
 
-## Status
-
-Validated. Poster-scope (the alpha-recovery point, Panel 6).
-
 ## Contents
 
 - `subdiffusive_alpha.py [profile_model] [--quick] [--floor F]` -- sweeps true
@@ -49,4 +45,4 @@ alpha = 0.6 the cut alone moves the naive exponent from 2.0 to 0.92 to 1.13). Fi
 
 ## See also
 
-`docs/poster/POSTER_PLAN.md` Panel 6.
+`experiments/nc-solid/` (the same exponent bias on a realistic transport bed).
