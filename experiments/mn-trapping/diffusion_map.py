@@ -1,6 +1,6 @@
 """Reaction-diffusion model for excitons in Mn-doped 2D perovskites.
 
-Refactor of Marc Melendez's `diffusion_map.py` (provided 2026-05-30) to use
+Refactor of Marc Melendez's `diffusion_map.py` to use
 `par.X` everywhere instead of free globals. Mathematical content is unchanged;
 the original is the implementation of the model derived in the SI of:
 

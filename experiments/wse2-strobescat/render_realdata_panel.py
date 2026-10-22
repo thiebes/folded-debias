@@ -1,9 +1,9 @@
-"""Canonical poster real-data panel (station 8): de-parity merged, full-range,
+"""Real-data panel: de-parity merged, full-range,
 in physical um^2 units.
 
 MoSSe alloy (Enrique's `mixed_tmdc/26_32/250716`, sample "250716_MoSSe_mystery").
 De-parity merged reduction (each interleaved sweep re-zeroed to its own t0),
-converted to um^2 with the 0.060 um pixel (``UM_PER_PX``, confirmed by Enrique;
+converted to um^2 with the 0.060 um pixel (``UM_PER_PX``;
 not the ratio of his sigma(um) to the px fit, which depends on the fit). The message: on real data a measurable ~5% upward
 bias in D, concentrated in the low-CNR late frames that are normally discarded.
 
@@ -38,8 +38,8 @@ BLUE = "#0077c8"       # corrected (filled)
 GRAY = "0.6"
 INCH = 1 / 2.54
 T_FIT = 2.0            # early diffusive window (ns) shown and fit
-OUT = os.path.join(os.path.dirname(__file__), "figure_candidates",
-                   "station8_realdata-MoSSe-26_32.png")
+OUT = os.path.join(os.path.dirname(__file__),
+                   "realdata_panel_MoSSe-26_32.png")
 
 
 def build():

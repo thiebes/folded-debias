@@ -8,11 +8,6 @@ author's own `sigma^2(t)` as ground truth -- across three estimators, separating
 the correction residual (vs the noiseless fit) from the shape gap (noiseless fit
 vs true second moment).
 
-## Status
-
-Validated. Paper-scope (Panel 6 realistic-transport result; the carrier-recovery
-path on this multi-population bed is the forward fit, not folded-normal alone).
-
 ## Contents
 
 - `marc_data.py` -- loader for the `.dat` diffmaps (reads `data/`).

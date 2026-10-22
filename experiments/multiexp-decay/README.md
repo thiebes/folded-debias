@@ -5,11 +5,6 @@
 Confirm the correction is not invalidated by multi-exponential decay: it keys on
 the per-frame CNR, which fft-cnr measures directly, not on the decay law.
 
-## Status
-
-Validated. Caveat / paper-scope (the decay-agnostic statement and the
-single-exponential-specific threshold caveat).
-
 ## Contents
 
 - `multiexp_decay.py` -- fixed Fickian diffusion with three decay laws (one
@@ -43,4 +38,4 @@ single-exponential-specific -- state thresholds in per-frame CNR. Figure:
 
 ## See also
 
-`docs/DERIVATION.md` section 11 (decay-law independence).
+`docs/DERIVATION.md` (decay-law independence).

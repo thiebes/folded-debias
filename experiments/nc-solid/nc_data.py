@@ -2,7 +2,7 @@
 
 Model: the exciton-hopping simulation of Solari et al., "Exciton Transport in
 Disordered Perovskite Nanocrystal Solids" (CH3NH3PbBr3 NC films, C8/C12/C16
-ligands). Marc made these diffmap files for this work (2026-10-21); they are not
+ligands). Marc Melendez made these diffmap files for this work; they are not
 the runs behind the paper's Fig. 5, which used only variance curves, and its
 deposit (doi:10.21950/A0AB3H) has no maps. The small map's 2-D variance grows
 with exponent 0.85, like the deposited C16 run (0.84), but about 25% faster, so

@@ -82,16 +82,22 @@ unable to fix the bias, however the weights are chosen.
 1. **Bias-correct each frame.** Subtract the estimation-noise variance:
    `ṽ²_i = σ̂²_i − s_i²`, so `E[ṽ²_i] = σ_i²`. Build the MSD from the corrected
    variances: `MSD_i = ṽ²_i − ṽ²_0`.
-2. **Weight by inverse variance.** `w_i = 1 / (Var[σ̂²_i] + Var[σ̂²_0])` with
-   `Var[σ̂²] = 2s²(2σ² + s²)`. Subtracting a (calibrated, deterministic) bias
-   does not change the variance, so the weight is the ordinary inverse-variance
-   weight; the bias correction is the new ingredient.
+2. **Weight by inverse variance.** `w_i = 1 / Var[σ̂²_i]` on every frame,
+   t = 0 included, with `Var[σ̂²] = 2s²(2σ² + s²)`. The MSD points share
+   `σ̂²_0`, but a constant shift does not change a free-intercept slope, so
+   fitting `MSD_i = σ̃²_i − σ̃²_0` with these weights is the same as fitting the
+   corrected widths against time, whose points are independent. That fit
+   reaches the Cramér–Rao bound on D (0.98 to 1.08 × √CRLB from CNR₀ 21 on four
+   shapes; `experiments/crlb-precision/efficiency_check.py`). Subtracting a
+   calibrated, deterministic bias does not change the variance, so the weight is
+   the ordinary inverse-variance weight; the subtraction is what removes the
+   bias.
 
 In `folded_debias` this is the `folded_normal` scheme. It differs from
 `inverse_variance` *only* by step 1, so comparing the two isolates the effect
 of the bias correction.
 
-## 6. POC implementation
+## 6. Implementation
 
 The per-frame noise variance `s_i²` is obtained by calibration: a Monte Carlo
 CNR sweep gives `E[σ̂²] − σ²_true` as a function of CNR — the `var_bias(CNR)`
@@ -107,7 +113,7 @@ the same calibration is done against simulations matched to the measurement
 `folded_normal` subtracts the *calibrated* `var_bias(CNR)`. When that
 calibration is imperfect — it conflates frames of equal CNR but different true
 width, and the low-CNR mean is heavy-tailed — the hard subtraction can
-overshoot and push `D` below the truth in the deepest noise. Two routes were
+overshoot and push `D` below the reference in the deepest noise. Two routes were
 tested against this.
 
 **MAS-gated subtraction (`mas` scheme).** Following Plaszczynski's Modified
@@ -120,32 +126,30 @@ for all `u ≥ 0` and increasing — the correction **cannot drive the variance
 negative**. The gate is ≈ 1 when the frame is well above the noise (full `s²`
 subtraction, matching `folded_normal`) and → 0 when it is noise dominated (the
 frame is left uncorrected rather than overshot). On the narrow `CNR₀ ∈ [5,90]`
-sweep (`scripts/moment_estimator_failure.py`, the earlier-named
-`compare_methods.py`), `mas` gave the lowest bias of any
-scheme — mean |⟨D⟩/D_true − 1| = 0.089 vs `folded_normal` 0.116 — and
+sweep (`experiments/estimator-comparison/moment_estimator_failure.py`), `mas`
+gave the lowest bias of any
+scheme — mean |⟨D⟩/D_ref − 1| = 0.089 vs `folded_normal` 0.116 — and
 removed the deep-regime overshoot.
 
-**On the wider `CNR₀ ∈ [2,100]` sweep, however, the recommendation flips.**
+**On the wider `CNR₀ ∈ [2,100]` sweep the ranking reverses.**
 At very low CNR₀ (≲ 4) the MAS gate switches the correction off where the
 truncation bias is large, leaving most of the raw inflation in. On
 `experiments/dfree-calibration/dense_calibration_and_test.py`'s 100-point
 sweep (5000 calibration runs per cell, 1000 test runs; the committed
-`dense_calibration_and_test.txt`), the overall mean |⟨D⟩/D_true − 1| is,
+`dense_calibration_and_test.txt`), the overall mean |⟨D⟩/D_ref − 1| is,
 folded-normal vs MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, and the
 p = 2 generalized-Gaussian fit 0.155 vs 0.151 (that row is a Gaussian
 profile); the non-Gaussian rows (`dense_calibration_and_test_genGauss_p1.5_p4.txt`)
 give 0.178 vs 0.815 for p = 1.5 and 0.179 vs 0.509 for p = 4. Folded-normal
 wins clearly where MAS leaves a large deep-CNR inflation in (Gaussian,
 p = 1.5, and p = 4, whose CNR₀ < 4 deciles MAS sends negative); for Voigt and
-the p = 2 fit the two tie. (An earlier
-1000-run calibration gave 0.195 vs 0.497, 0.145 vs 0.237, and 0.152 vs 0.172;
-the 5000-run table supersedes it.) The medians are close (0.02 to 0.07 for
+the p = 2 fit the two tie. The medians are close (0.02 to 0.07 for
 both schemes on every shape), so for typical measurements either scheme works. The case for
 folded-normal is the failure mode, not the mean: it degrades gracefully in
 deep noise (residuals erratic but bounded), while MAS fails with large
 positive residuals that grow with CNR depth when its gate switches the
-correction off. **Folded-normal is the recommended scheme.** MAS remains in
-the codebase for paper-scope comparison.
+correction off. **Folded-normal is the recommended scheme.** MAS is available
+in the package for comparison.
 
 **Non-truncated moment estimator (`MomentModel`).** The alternative is to
 remove the wall entirely: estimate the variance from the discrete second
@@ -202,19 +206,24 @@ No resolved bias remains anywhere in the tested domain. What limits the small-D,
 low-CNR cells is precision: the combined SE is 0.02 to 7.9 (in D/D_ref) at
 `D ≤ 0.01`, 0.02 to 1.05 at `D = 0.02`, and at most 0.03 only for `D ≥ 0.05` at
 `CNR₀ ≥ 34`. `D = 0.005` has `L_D ≈ 0.015 FWHM`, so its slope is near the
-precision limit of any estimator at these CNRs. The same combined SE explains
-the draw-to-draw differences between the earlier committed tables and the
-re-run (RMS standardized difference 1.10 over 70 cells; the largest, 0.849 vs
-1.065 at `D = 0.02`, `CNR₀ = 34`, is 2.9 SE). A low-CNR application should
+precision limit of any estimator at these CNRs. The combined SE also accounts
+for the differences between two independent draws of the whole validation
+(calibration and evaluation): RMS standardized difference 1.10 over 70 cells,
+largest 2.9 SE. A low-CNR application should
 report the combined SE, and a tighter claim needs a larger calibration budget.
 
-An experimental joint `var_bias(CNR, σ²)` calibration
-(`folded_debias.calibration.calibrate_cnr_sigma2`) was prototyped for
-cases of large `σ²` spread (high-`D`, heterogeneous transport). It is not currently
-competitive: the per-cell Monte-Carlo noise at low CNR dominates the lookup,
-and the additional sample budget needed to fix that (≳ 5000 runs/cell plus
-post-hoc smoothing) is not yet justified. See the module docstring for
-status.
+The D = 0 lookup assumes the width changes little over the measurement. When
+it grows several-fold, the bias at a given CNR changes with it, and a joint
+`var_bias(CNR, σ²)` calibration (`folded_debias.calibration.calibrate_cnr_sigma2`)
+is needed. Its lookup requires a stand-in for the unknown true `σ²`. Keying
+each frame on its own fitted `σ̂²` under-corrects at low CNR, because a frame
+whose fit scatters high reads the lookup near the grid edge; a
+measurement-level key (a robust line through the measurement's own `σ̂²`) avoids
+that but assumes the form of `σ²(t)`. On the high-N Br-I bed (`σ²` growing about
+64-fold) the per-frame key leaves D at 0.89 to 0.96 of the reference at CNR₀ 15
+to 20, the measurement-level key matches the exact key to 0.003, and below
+CNR₀ 15 no key determines D (`experiments/halide-mixing-highn/key_sensitivity.py`).
+The joint calibration also needs several thousand runs per cell at low CNR.
 
 ## 9. Where the correction works: the per-profile floor
 
@@ -227,7 +236,7 @@ diffusion, no decay, no frame indexing), apply the calibrated
 `var_bias(CNR)` subtraction, and measure the residual mean with its MC
 standard error.
 
-`scripts/per_profile_floor.py` runs this sweep with 50,000 isolated fits
+`experiments/correction-floor/per_profile_floor.py` runs this sweep with 50,000 isolated fits
 per CNR cell and the dense calibration. For Gaussian profiles at
 `σ²_true = σ_0²`:
 
@@ -235,7 +244,7 @@ per CNR cell and the dense calibration. For Gaussian profiles at
 |---|---|---|
 | ≳ 1 | \|residual\| ≲ 0.01 | correction excellent (≲ 1% of σ²_true) |
 | 0.7 – 1.0 | up to ≈ 0.05 | useful; a few % of σ²_true |
-| 0.5 – 0.7 | 0.1 – 0.3 | unreliable per realisation; mean still toward truth |
+| 0.5 – 0.7 | 0.1 – 0.3 | unreliable per realisation; mean still toward the reference |
 | 0.3 – 0.5 | 0.3 – 0.8 | failing; residuals comparable to σ²_true |
 | < 0.3 | ≳ σ²_true | broken |
 
@@ -253,9 +262,9 @@ first cell whose residual exceeds both 2 SE and 0.01 σ_0²:
 Severity differs more than location. Uncorrected, the Gaussian fit inflates
 the most at deep CNR (E[raw] ≈ 6–8 σ_0² below CNR 0.25), Voigt and p = 1.5
 reach 1.5–2.3 σ_0², and the flat-topped p = 4 fit reads *low* (E[raw] 0.55
-σ_0² at CNR 0.05), so for p = 4 the correction adds to the variance there. (The
-earlier "GenGauss" floor table was p = 2, a Gaussian profile under the
-generalized-Gaussian fitter's tighter bound.)
+σ_0² at CNR 0.05), so for p = 4 the correction adds to the variance there. (The table
+`per_profile_floor_genGauss.txt` is the p = 2 generalized-Gaussian fit, a
+Gaussian profile under that fitter's tighter bound.)
 
 ### Analytical handle on where the model breaks
 
@@ -286,11 +295,9 @@ instead of folding it upward.
 Below the breakdown the calibration still captures the empirical mean, so a
 subtraction can remain unbiased in expectation if the calibration resolves
 that mean, and the per-profile tables show it does not at practical budgets.
-An earlier version of this analysis reported a breakdown at CNR ≈ 0.1 with
-`A ≈ 0.37` σ_0²: its floor loop exited without setting a floor when the
-highest-CNR cell was out of band and fell back to the bottom of the grid,
-and its A came from noise-dominated high-CNR cells with the negative ones
-removed.
+Fitting A directly to the high-CNR calibration cells instead of taking it from
+the spread overestimates it several-fold, because the bias there is below the
+cells' Monte Carlo noise.
 
 ### Design recommendation that follows
 
@@ -307,9 +314,8 @@ dominated by frames inside the working regime.
 
 ## 10. Robust calibration and multiplicative correction
 
-(In development.) Two failure modes of the basic Section-8 calibration and
-Section-5 subtractive scheme, surfaced once the method was applied beyond
-the headline `L_D / FWHM ≤ 0.20` regime:
+Two failure modes of the basic Section-8 calibration and Section-5
+subtractive scheme appear outside the `L_D / FWHM ≤ 0.20` regime:
 
 1. **Calibration-vs-application width mismatch.** The 1-D D-free
    calibration measures `s²(CNR)` at `σ²_true = σ_0²` (the calibration
@@ -433,33 +439,30 @@ Application, per noisy realization:
 4. Form MSD = corrected σ̂²(t) − corrected σ̂²(0) and fit with
    inverse-variance weighting from the calibration's `rel_variance`.
 
-Implemented in `scripts/dense_calibration_and_test_robust.py` (headline-
-regime validation, three profile shapes) and
-`scripts/marc_mn_trapping_plan_a.py` (Marc reaction-diffusion
-application).
+Used in `experiments/mn-trapping/marc_mn_trapping_plan_a.py` (the Mn-doped
+reaction-diffusion bed). In the `L_D / FWHM ≤ 0.20` regime of Section 8 the
+robust variant was inert at the tested CNR₀: it left the result unchanged.
 
-## 11. Open points
+## 11. Scope and limitations
 
-- **Resolved — subdiffusive transport (`MSD ∝ t^α`, α < 1).** The correction
-  de-biases α as well as D: `scripts/subdiffusive_alpha.py` on the
+- **Subdiffusive transport (`MSD ∝ t^α`, α < 1).** The correction
+  de-biases α as well as D: `experiments/subdiffusive-alpha/subdiffusive_alpha.py` on the
   `AnomalousExperiment` bed: the mean corrected |α−α_ref| over CNR₀ 21 to 90 (2000 runs per cell, Monte Carlo SE from resampling the realisations) is 0.030 ± 0.020, 0.018 ± 0.022, 0.046 ± 0.023, and 0.100 ± 0.041 for α = 0.6, 0.8, 1.0, and 1.2, against 0.18 to 0.30 naive. The corrected error is consistent
   with zero for α = 0.6 and 0.8 and about 2 SE for α = 1.0 and 1.2. Below
   CNR₀ 20 the naive fit pins at the ballistic α = 2.0. The exponent is read from the mean trajectory (§4's bias
   carries into the slope's curvature, not only its slope).
-- **Resolved — decay-law independence.** The correction subtracts
+- **Decay law.** The correction subtracts
   `var_bias(per-frame CNR)`, so it depends on the per-frame CNR, not on how the
-  population decays. `scripts/multiexp_decay.py` (the `MultiExpExperiment` bed)
+  population decays. `experiments/multiexp-decay/multiexp_decay.py` (the `MultiExpExperiment` bed)
   confirms the per-frame residual collapses across single- and bi-exponential
   decay for per-frame CNR ≥ 1 (across-law spread ≤ 0.011 σ₀²) and corrected D
   stays within 0.9–1.1. Thresholds quoted in the *initial* CNR₀ (the §9 design
   rule `CNR₀ ≳ exp(t_max/τ)`) are single-exponential-specific; the invariant
   form is the per-frame `CNR ≳ 1` of §9.
-- Voigt and generalized-Gaussian models showed a minor (~5%) clipping pile-up
-  at CNR ≈ 1; a small censored term may be needed there, on top of the
-  folded-normal correction, for the deepest-noise frames.
-- Validation on heterogeneous-transport Monte Carlo from Marc Meléndez
-  (effective `D` from a population with site-dependent mobility) — the test
-  that motivated the D-free calibration in the first place.
-- Validation on trapped-exciton-background data from Marc (pulsed-laser
-  accumulated background; structurally a non-zero `B(x)` added to each
-  frame).
+- **Wall pile-up at CNR ≈ 1.** The Voigt and generalized-Gaussian p = 1.5 fits
+  pile up at the lower bound in 0.05 to 0.06 of fits at CNR ≈ 1; a small
+  censored term on top of the folded-normal correction may be needed for the
+  deepest-noise frames.
+- **Not tested:** heterogeneous transport with site-dependent mobility (an
+  effective `D` from a mixed population), and a trapped-exciton background
+  (a non-zero `B(x)` added to each frame).

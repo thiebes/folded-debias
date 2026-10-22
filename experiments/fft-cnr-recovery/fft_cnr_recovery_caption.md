@@ -1,4 +1,4 @@
-# Caption -- fft-cnr recovery (poster Panel 4, the pivot)
+# Caption -- fft-cnr recovery
 
 You can measure the input. The correction's only data input is the per-frame
 contrast-to-noise ratio, so the scheme rests on that ratio being recoverable from

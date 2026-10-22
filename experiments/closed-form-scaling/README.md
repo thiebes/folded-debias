@@ -3,13 +3,8 @@
 ## Purpose
 
 Test the dimensional/CRLB scaling claim that the folded-normal bias `bias/sigma^2`
-is a function of `s = CNR*sqrt(sigma/dx)` alone, not CNR alone -- the empirical
-handle on the parked closed-form derivation.
-
-## Status
-
-Parked / paper-scope. The closed-form derivation is not poster-blocking; this is
-its empirical check.
+is a function of `s = CNR*sqrt(sigma/dx)` alone, not CNR alone. The test is
+the empirical check on the closed-form scaling argument.
 
 ## Contents
 
@@ -41,4 +36,4 @@ band, but the mean is corrupted by broken-fit saturation outliers. Figure:
 
 ## See also
 
-`docs/DERIVATION.md` section 10 (parked closed-form scaling).
+`docs/DERIVATION.md` section 10 (closed-form scaling).

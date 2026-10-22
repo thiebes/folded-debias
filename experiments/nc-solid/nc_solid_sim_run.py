@@ -10,7 +10,7 @@ peak.
 The energetic disorder is set by ``kt_mev`` (lower = stronger). With the
 figure-read size distributions the achievable exponent floors near 0.64; matching
 the paper's 0.42-0.70 needs the SI Fig. S2 size distributions and the temperature
-(see `nc_solid_sim.py` and Email 9). This run uses the best-achievable strong-
+(see `nc_solid_sim.py`). This run uses the best-achievable strong-
 disorder setting to demonstrate a clean subdiffusive map end to end.
 
 Run from the repository root::

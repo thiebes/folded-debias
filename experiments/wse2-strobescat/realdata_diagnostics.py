@@ -1,10 +1,8 @@
 """Per-measurement truncation-bias diagnostics for Enrique's diffusion scans.
 
-This generalises ``scripts/wse2_realdata_panel.py`` from a single locked panel
-to a review tool that processes one diffusion time-series end to end and writes
+A review tool that processes one diffusion time-series end to end and writes
 a complete diagnostic set (manifest, naive/corrected MSD plots, an all-frame
-overlay montage, and per-frame overlays for the noisiest frames). It is a
-worked example of the real-data diagnostics.
+overlay montage, and per-frame overlays for the noisiest frames).
 
 What it does for one measurement
 --------------------------------
@@ -22,8 +20,7 @@ What it does for one measurement
 
 Units (important)
 -----------------
-The pixel is ``UM_PER_PX`` = 0.060 um at the sample for every scan (Enrique,
-2026-10-20). Do not derive the scale from his files: the ``X(um)`` array steps by
+The pixel is ``UM_PER_PX`` = 0.060 um at the sample for every scan. Do not derive the scale from his files: the ``X(um)`` array steps by
 0.0036 = 0.060^2 (the pixel size applied twice when the file was written), and
 the ratio of his fitted ``sigmas(um)`` to our px fit is not a calibration (its
 per-scan median ranges from 0.065 to 0.089 um/px and depends on the fit model
@@ -113,8 +110,8 @@ MEASUREMENTS = {
     ),
 }
 
-UM_PER_PX = 0.060      # pixel size at the sample (um), every scan; confirmed by
-#                        Enrique 2026-10-20. Not X(um), not sigma(um)/sigma(px).
+UM_PER_PX = 0.060      # pixel size at the sample (um), every scan.
+#                        Not X(um), not sigma(um)/sigma(px).
 FLOOR = 1.3            # per-frame CNR floor: below it var_bias ~ A/CNR^2
 #                        over-subtracts (corrected variance can go negative).
 FIT_HALF_SIGMA = 4.0   # fit window half-width in units of sigma0. A few sigma of

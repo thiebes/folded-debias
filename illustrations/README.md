@@ -26,10 +26,10 @@ into its own folder (not `output/`), so the illustration regenerates in place.
 
 ## Contents
 
-| Figure | Folder | Poster panel | Build |
-| ------- | ------- | ------- | ------- |
-| Measurement schematic -- spreading, dimming population; CNR falls frame by frame | [measurement-schematic](measurement-schematic/) | Panel 1 | `build_measurement_schematic.py` |
-| Wall-and-fold schematic -- wall at zero, reflected tail, tilted MSD slope | [wall-fold-schematic](wall-fold-schematic/) | Panel 2A (hero) | `build_wall_fold_schematic.py` |
+| Figure | Folder | Build |
+| ------- | ------- | ------- |
+| Measurement schematic -- spreading, dimming population; CNR falls frame by frame | [measurement-schematic](measurement-schematic/) | `build_measurement_schematic.py` |
+| Wall-and-fold schematic -- wall at zero, reflected tail, tilted MSD slope | [wall-fold-schematic](wall-fold-schematic/) | `build_wall_fold_schematic.py` |
 
 ## Run
 
@@ -38,13 +38,6 @@ into its own folder (not `output/`), so the illustration regenerates in place.
 .venv/Scripts/python.exe illustrations/wall-fold-schematic/build_wall_fold_schematic.py
 ```
 
-The wall-fold figure needs the sibling `curved-text` package
-(`pip install -e ../curved-text`) for its on-curve labels.
-
-## Notes
-
-These two are the matplotlib **drafts** of the poster's hand schematics (Joseph to
-redraw by hand for the final poster); a hand-drawn replacement goes in the same
-folder. The poster assembly (`scripts/build_poster.py`) pulls each schematic from
-its folder here; `scripts/poster_figures.py` imports the build functions so there is
-a single source of truth.
+The wall-fold figure needs the `curved-text` package (the `plot` extra) for its
+on-curve labels. `scripts/poster_figures.py` imports the build functions, so each
+schematic has a single source.

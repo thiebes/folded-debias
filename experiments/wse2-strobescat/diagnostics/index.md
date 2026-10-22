@@ -1,7 +1,6 @@
 # Real-data truncation-bias diagnostics
 
 Per-measurement diagnostics of the folded-normal correction on Enrique's diffusion scans. Widths in px^2 (1 px = 0.060 um at the sample, so 1 px^2 = 0.0036 um^2). D in px^2/ns. The naive and corrected D are the inverse-variance fits over the **retained** frames: the MSD is baselined per sweep (de-parity: each interleaved delay sweep re-zeroed to its own t0), then frames below the per-frame CNR floor are dropped, then the late tail is truncated where the corrected MSD sustainedly departs the trend (k=3 robust, majority-outlier tail; early scale, so isolated early blips do not trigger it). Frames (kept/retained) reports both cuts.
-
 | Measurement | Noise law | Frames (kept/ret) | CNR range | cut at | D naive (ret) | D corrected (ret) | ratio | Folder |
 | ------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- | ------- |
 | WSe2_Better_power_5MHz_0p022 | white | 32/30/22 | 0.8-25.3 | 4.0 ns | 22.216 | 22.195 | 1.00 | [WSe2_Better_power_5MHz_0p022](WSe2_Better_power_5MHz_0p022/) |

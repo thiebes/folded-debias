@@ -6,10 +6,6 @@ Characterise where the correction works: the per-profile CNR floor below which
 the calibrated subtraction stops recovering the true variance, both in isolation
 and inside a full diffusion experiment.
 
-## Status
-
-Validated. Poster-scope (source for the Panel 5 floor inset).
-
 ## Contents
 
 - `per_profile_floor.py [profile_model]` -- isolated single-profile sweep
@@ -19,7 +15,7 @@ Validated. Poster-scope (source for the Panel 5 floor inset).
   CNR, against the binned calibration, and reports where it breaks.
 - `per_frame_in_diffusion_experiment.py [profile_model]` -- the per-frame
   folded-normal / MAS corrections inside a 12-frame diffusion experiment.
-- `render_floor_panel.py` -- renders the poster floor panel
+- `render_floor_panel.py` -- renders the floor figure
   (`poster_panel5_floor.png`) from this set's `per_profile_floor_*.txt`; uses
   `scripts/poster_style.py`.
 
@@ -44,17 +40,16 @@ Per-profile floor (50,000 fits per cell; deepest CNR before the first cell
 whose residual exceeds both 2 SE and 0.01 sigma_0^2): Gaussian 1.16, Voigt 1.5
 (within 0.01 sigma_0^2 again from 1.16 down to 0.53), p = 1.5 0.89, p = 4 0.69
 (within 0.013 down to 0.11). The p = 4 fit reads low, not high, at deep CNR.
-The script's floor readout used significance alone, which at 50,000 fits flags
-1e-4 calibration offsets and reported the top of the grid; it now also
-requires |residual| > 0.01 sigma_0^2. The folded-normal model
+The floor readout requires |residual| > 0.01 sigma_0^2 in addition to
+significance, because at 50,000 fits significance alone flags 1e-4 calibration
+offsets and reports the top of the grid. The folded-normal model
 breaks at about the same place: `A` = 0.058 (Gaussian), 0.082 (Voigt), 0.10
 (p = 1.5), 0.019 (p = 4) sigma_0^2; resolved departure at CNR ~0.85 for
 Gaussian and p = 1.5, none above 0.28 for Voigt, and a negative low-CNR bias
-for p = 4 (departure at CNR ~0.36). The earlier "breakdown at CNR ~0.1, A ~0.37"
-came from a floor-loop bug and a noise-biased A. Design rule: keep every frame's
+for p = 4 (departure at CNR ~0.36). Design rule: keep every frame's
 per-profile CNR above ~1.
-Result tables: `per_profile_floor_<model>.txt` (`genGauss` is the older p = 2 run;
-`genGauss_p1.5`, `genGauss_p4`), `analytical_floor.txt`,
+Result tables: `per_profile_floor_<model>.txt` (`genGauss` is a p = 2 run kept for
+reference; `genGauss_p1.5`, `genGauss_p4`), `analytical_floor.txt`,
 `per_frame_in_diffusion_experiment.txt`.
 
 ## Depends on
@@ -63,4 +58,4 @@ Result tables: `per_profile_floor_<model>.txt` (`genGauss` is the older p = 2 ru
 
 ## See also
 
-`docs/DERIVATION.md` section 9, `docs/poster/POSTER_PLAN.md` Panel 5.
+`docs/DERIVATION.md` section 9.

@@ -32,7 +32,7 @@ calibration (runs are in MC steps; the absolute time scale needs calibrating, bu
 the exponent alpha is scale-free, so the C16 < C12 < C8 ordering is a faithful
 test of the model).
 
-Validation and the calibration gap (2026-06-17). The subdiffusion strength is set
+Validation and the calibration gap. The subdiffusion strength is set
 by the ratio of site-energy disorder to thermal energy, sigma_E / kT. With the
 figure-read size distributions (sigma_E ~ 10-17 meV) and room temperature
 (kT ~ 26 meV) the ratio is ~0.65: the population thermalises in a few steps and
@@ -66,7 +66,7 @@ SIGMA_E_MEV = 1.96  # meV, Eq 3 bandgap-energy uncertainty
 KT_MEV = 25.85      # meV, k_B T at 300 K (T not stated in the SI)
 
 # --- Per-sample disk-generation inputs (FIGURE-READ, approximate) -----------
-# small/medium/large = C16/C12/C8 (Marc, 2026-06-15). Mean diameter, fractional
+# small/medium/large = C16/C12/C8. Mean diameter, fractional
 # polydispersity (std/mean), and center-to-center spacing read off the paper's
 # Fig. 1d/f; the exact distributions are in SI Fig. S2 (unavailable). Tune these
 # against Marc's variance(t) once the SI numbers arrive.

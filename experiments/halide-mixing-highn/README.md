@@ -1,26 +1,26 @@
-# High-N Br-I bed and the width-fit upper-bound finding
+# High-N Br-I bed and the width-fit upper-bound result
 
 A self-contained study folder for two coupled results:
 
 1. A clean, high-statistics Br-I halide-mixing test bed (400,000-walker average),
    and
-2. the finding that the per-frame width fit's **upper bound** -- not the
+2. the result that the per-frame width fit's **upper bound** -- not the
    contrast-to-noise alone -- governs how large the truncation bias appears.
 
-## The finding
+## The upper bound
 
-The per-frame Gaussian width fit historically bounded the fitted variance to
-`[~1 pixel^2, span^2]`, where `span` is the full analysis window. When the output
-window is sized far wider than the spot -- here a 3000 nm box around a 25 nm spot
--- that `span^2` ceiling lets a low-contrast fit wander out toward the window
-scale on noise. Two consequences:
+A per-frame Gaussian width fit that bounds the fitted variance to
+`[~1 pixel^2, span^2]`, where `span` is the full analysis window, misbehaves
+when the output window is sized far wider than the spot -- here a 3000 nm box
+around a 25 nm spot. The `span^2` ceiling lets a low-contrast fit wander out
+toward the window scale on noise. Two consequences:
 
 - the **naive** D is inflated 3-5x at low CNR (most of the apparent bias is the
   loose bound, not the truncation), and
 - the bias **calibration** built from the same fit explodes (`var_bias` ~ 1e5
   nm^2 at CNR ~1-2), so the correction over-subtracts catastrophically.
 
-The fix is a physical cap `var_max = (G * sigma0)^2`, with `G` the maximum
+The remedy is a physical cap `var_max = (G * sigma0)^2`, with `G` the maximum
 credible width growth `sigma_max / sigma0`. For this bed `G = 12` caps sigma at
 300 nm, clearing the real ~196 nm late-frame spot with margin while bounding the
 noise-wander. The bound must be **identical** in the calibration and the
@@ -37,17 +37,17 @@ fraction, the recovered D ratios:
 | 0.5         | 1.19             | 0.96            |
 | 0.75        | 1.22             | 1.06            |
 
-The legacy 20k-walker maps did not expose this because their narrow 150 nm window
-already bounded the wander. DICE is unaffected: it sizes its field of view
+The legacy 20k-walker maps do not show this effect because their narrow 150 nm
+window already bounds the wander. DICE is unaffected: it sizes its field of view
 relative to the FWHM, so its effective width bound already scales with the spot.
 The problem is specific to analysing fixed wide-window simulation maps with
 `span^2`.
 
 ## Per-frame residual: the CNR-only lookup and the reference offset
 
-An earlier per-frame table at CNR0 = 20 showed the mean |residual| over the
-usable band rising after correction (132 -> 525, 89 -> 155, 142 -> 260 nm^2 for
-x = 0.25 / 0.5 / 0.75). Two separate effects produced it.
+With the 1-D D-aware lookup, the per-frame table at CNR0 = 20 shows the mean
+|residual| over the usable band rising after correction (132 -> 525, 89 -> 155,
+142 -> 260 nm^2 for x = 0.25 / 0.5 / 0.75). Two separate effects produce it.
 
 1. **The 1-D lookup mixes widths.** The D-aware calibration is keyed on CNR
    alone, but here sigma^2 grows ~64x over the usable band and var_bias scales
@@ -55,9 +55,9 @@ x = 0.25 / 0.5 / 0.75). Two separate effects produced it.
    while the data's CNR also falls as the spot spreads, so one CNR value pools
    calibration frames from sigma^2 = 625 to ~38,000 nm^2, and `np.interp`
    through those unsmoothed points is erratic (2031, 7773, and 529 nm^2 at CNR
-   1.71, 1.56, and 1.48 for x = 0.25). The script now defaults to a joint
+   1.71, 1.56, and 1.48 for x = 0.25). The script defaults to a joint
    (CNR, sigma^2) D-free calibration on the data's pixel grid
-   (`cnr_sigma2_calibration`); `daware` reproduces the old table.
+   (`cnr_sigma2_calibration`); `daware` reproduces the D-aware table.
 2. **The carrier reference is not the noise-free fit.** At CNR 3 to 10, where
    the noise bias is negligible, the naive residual against `var_true` is
    already -50 to -170 nm^2: the Gaussian fit of the noise-free profile sits
@@ -69,15 +69,15 @@ x = 0.25 / 0.5 / 0.75). Two separate effects produced it.
 Against the noise-free fit at CNR0 = 20 (800 seeds), mean |residual| over the
 usable band goes 144 -> 70, 94 -> 61, 170 -> 58 nm^2 with the joint calibration
 (signed +140 -> +36, +94 -> -6, +170 -> +5), against 144 -> 462, 94 -> 56,
-170 -> 211 with the old lookup.
+170 -> 211 with the D-aware lookup.
 
-The joint calibration's weak point is its key, not only its budget. Applied
-per measurement at each frame's own noisy sigma_hat^2 (with the fixed-point
-inversion), the lookup reads near the grid edge at low CNR and over-subtracts:
-at x = 0.5, CNR0 = 10, frames between the floor and CNR 2 go from +815 nm^2
-(naive) to -1274 nm^2 (600-run grid), while keying the same grid on the true
-sigma^2 gives +550 and a per-measurement smoothed key gives +264 (residuals
-against the noise-free fit). The smoothed key (`HIGHN_KEY=smoothed`,
+The joint calibration is sensitive to its key as well as to its Monte Carlo
+budget. Applied per measurement at each frame's own noisy sigma_hat^2 (with the
+fixed-point inversion), the lookup reads near the grid edge at low CNR and
+over-subtracts: at x = 0.5, CNR0 = 10, frames between the floor and CNR 2 go
+from +815 nm^2 (naive) to -1274 nm^2 (600-run grid), while keying the same grid
+on the true sigma^2 gives +550 and a per-measurement smoothed key gives +264
+(residuals against the noise-free fit). The smoothed key (`HIGHN_KEY=smoothed`,
 `smoothed_key`) is a robust straight line through the measurement's own
 sigma_hat^2 above the floor; it assumes sigma^2(t) is linear, which holds for
 this bed's normal diffusion, so it is a bed option, not the library default.
@@ -99,11 +99,15 @@ per-frame key 0.85 / 0.99 / 0.99 (x = 0.25), 0.32 / 0.90 / 0.96 (0.5),
 0.63 / 0.98 / 0.97 (naive 1.08 to 1.21 at CNR0 8). So the dense grid with the
 smoothed key removes the noise bias per frame and recovers D within 0.96 to
 0.99 from CNR0 15; at CNR0 8 the two slower-spreading maps still read low,
-because frames near the floor dominate that short window. The committed figure
-and caption remain the earlier D-aware result until the key is chosen.
+because frames near the floor dominate that short window.
+
+The committed per-frame figure and its caption are made with the 1-D D-aware
+lookup. The joint (CNR, sigma^2) calibration with a measurement-level key is the
+method that removes the noise bias on this bed, and D is determined from
+CNR0 15 upward (see the key sensitivity below).
 Tables: `br_halide_highn_perframe_n4000[_smoothed]_cnr0{10,20}.txt` (dense
 grid), `br_halide_highn_perframe_cnrsig2_cnr0{10,20}.txt` (600-run grid),
-`br_halide_highn_perframe_daware_cnr020.txt` (old lookup).
+`br_halide_highn_perframe_daware_cnr020.txt` (D-aware lookup).
 
 Key sensitivity (`key_sensitivity.py`, 300 seeds per map and CNR0, dense grid;
 table `key_sensitivity.txt`). The fits are shared, so the keys differ only in
@@ -130,18 +134,19 @@ the lookup; D is short-window D / D_ref with an SE from resampling the seeds.
 ## The bed
 
 Marc Melendez's 20k-walker Br-I maps carry Poisson sampling noise that floors the
-intrinsic peak CNR ~30. Re-running his C Brownian-dynamics simulator at 400,000
+intrinsic peak CNR ~30. Running his C Brownian-dynamics simulator at 400,000
 walkers (16 instances of 25,000, averaged) gives a clean ground truth (intrinsic
-peak CNR ~50). The 2-D averaged map was collapsed to 1-D on the run machine
+peak CNR ~50). The 2-D averaged map is collapsed to 1-D on the run machine
 (`P:/jthiebes/WIP/BrI_halide_highN/x_<frac>/collapsed_1d.x_<frac>.npz`); the
 multi-GB maps stay on the desktop, and only the small collapsed file is read here.
+The run procedure is in `experiments/halide-mixing-brI-legacy/rerun/README.md`.
 
 Geometry: 600 bins over a 3000 nm window (5 nm/bin), 601 frames at 5 ps to 3.0 ns,
 initial 1-D sigma ~25 nm. The carrier (transport) truth is the particle second
 moment `variance.avg.dat / 2`. It is **Fickian** -- alpha 0.997 / 0.993 / 0.990
 for x = 0.25 / 0.5 / 0.75, with D = 6265 / 2650 / 2352 nm^2/ns -- D falling with
 Br fraction confirms that mixing inhibits transport. (The legacy maps' apparent
-subdiffusion was a short-window / narrow-box artifact, not real transport.)
+subdiffusion is a short-window / narrow-box artifact, not real transport.)
 
 Over the 3 ns window the peak drops ~147x, so most late frames fall below CNR 1
 and are excluded by the floor; the correction is tested on the usable band (a
@@ -154,12 +159,16 @@ shorter effective window, which is the fair test).
 - `br_halide_highn_validation.py` -- the CNR0 sweep at this geometry; naive vs
   corrected alpha/D. Uses the 1-D D=0 calibration, which **under**-corrects here
   because the width grows 26-61x (the 2-D (CNR, sigma^2) D-free calibration is the
-  deployable path; paper scope).
+  deployable path).
 - `br_halide_highn_perframe.py [cnr_sigma2|daware] [CNR0]` -- the per-frame
-  residual (with a signed per-frame table) and short-window D, and the poster
-  figure. Default calibration is the joint (CNR, sigma^2) one; `daware` is the
-  earlier 1-D lookup that made the committed figure.
-- `br_halide_highn_perframe.png` -- the poster figure (CNR0 = 10).
+  residual (with a signed per-frame table), short-window D, and the figure.
+  Default calibration is the joint (CNR, sigma^2) one; `daware` is the 1-D
+  D-aware lookup, which made the committed figure.
+- `render_perframe_figure.py` -- re-renders the committed figure from the cached
+  D-aware calibrations without a Monte Carlo pool.
+- `key_sensitivity.py` -- the key-sensitivity comparison (`key_sensitivity.txt`).
+- `br_halide_highn_perframe.png` -- the figure (CNR0 = 10); caption in
+  `br_halide_highn_perframe_caption.md`.
 
 ## Depends on (in the library, not here)
 
@@ -167,7 +176,7 @@ The `max_var` bound lives in the shared fit so calibration and application use o
 implementation:
 
 - `src/folded_debias/fit.py` -- `fit_variance(x, y, max_var=None)`; default
-  `None` keeps the historical `span^2`.
+  `None` keeps the `span^2` bound.
 - `src/folded_debias/models.py` -- `GaussianModel(max_var=...)` forwards it.
 
 The scripts also reuse two pure helpers (`fit_msd_powerlaw`, `fit_each_row`) from
@@ -184,8 +193,8 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 FOLDED_DEBIAS_WORKERS
 ```
 
 Outputs (figure, report, cached calibrations) are written to the repo's `output/`
-(gitignored); the figure here is a committed snapshot. Set the panel contrast with
-the `CNR0` constant in `br_halide_highn_perframe.py` (10 shows the correction
+(gitignored); the figure here is a committed snapshot. Set the figure's contrast
+with the `CNR0` constant in `br_halide_highn_perframe.py` (10 shows the correction
 working; >= 15 is the regime where the floored naive fit is already unbiased and
 the correction has little to do).
 

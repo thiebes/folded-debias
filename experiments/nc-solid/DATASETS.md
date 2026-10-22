@@ -13,8 +13,8 @@ P:/Marc/shared_data/disordered_perovskite_nanocrystals_solids
 
 These are the disordered CH3NH3PbBr3 nanocrystal-solid exciton-hopping maps
 (small / medium / large; C16 / C12 / C8 ligands, mean NC radius 3.7 / 5.3 /
-7.4 nm), runs of the Solari et al. hopping model that Marc made for this work
-(2026-10-21). They are not the paper's Fig. 5 runs (the paper used only variance
+7.4 nm), runs of the Solari et al. hopping model that Marc made for this work.
+They are not the paper's Fig. 5 runs (the paper used only variance
 curves; its deposit, doi:10.21950/A0AB3H, has no maps). The maps are
 ~50,000-walker histograms tracking position only; the loader imposes decay
 `N0*exp(-t/tau)` and (with `denoise=True`) reconstructs the smooth Gaussian per

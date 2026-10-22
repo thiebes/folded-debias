@@ -1,6 +1,6 @@
 """Test the scaling form of the folded-normal bias.
 
-The dimensional / CRLB analysis (Thiebes, 2026-05-31) gives:
+The dimensional / CRLB analysis gives:
 
   Std(sigma_hat^2) ~ sigma^{3/2} * sqrt(dx) / CNR   [CRLB, Fisher info for sigma^2]
   alpha = sigma^2 / Std(sigma_hat^2) = CNR * sqrt(sigma/dx) / 1.226

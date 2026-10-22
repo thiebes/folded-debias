@@ -1,7 +1,7 @@
-# Validation design: recovering the carrier distribution, truth, and the two workflows
+# Validation design: recovering the carrier distribution, the reference, and the two workflows
 
-This note fixes the goal of the pipeline, what "truth" means, how truth is
-obtained, and how to choose the width estimator. It applies to every test bed in
+This note fixes the goal of the pipeline, what the reference quantity is, how it
+is obtained, and how to choose the width estimator. It applies to every test bed in
 the repository (the analytic profiles, the Saha reaction-diffusion model, the
 Mn-doped and nanocrystal-solid maps) and to real measurements.
 
@@ -51,25 +51,25 @@ equals the carrier width, and distortion 3 vanishes. There the first stage alone
 transport. The forward-model stage is needed only when emission is nonlinear in
 n (multiple populations, bimolecular emission), which is the perovskite case.
 
-## Truth and the two workflows
+## The reference and the two workflows
 
-Truth is the **carrier distribution**: its second central moment at each time,
+The reference is the **carrier distribution**: its second central moment at each time,
 and the anomalous exponent α or coefficient D from the moment's growth. It is
 not the recorded profile's moment.
 
-**Validation (simulation).** Truth is known a priori. The carrier distribution
+**Validation (simulation).** The reference is known a priori. The carrier distribution
 is generated from the forward model with known inputs, so its second moment is
 an exact, computed quantity, derived from the inputs. The recorded emission
 profile's moment is an intermediate the pipeline must map back through; it equals
 the carrier moment only when emission is linear in n. Validate the full pipeline
 -- noise debias, point-spread function, emission inversion -- against the
-carrier-distribution truth.
+carrier-distribution reference.
 
-**Experimental.** Truth is not available. The carrier distribution is recovered
+**Experimental.** The reference is not available. The carrier distribution is recovered
 by fitting the forward model (carrier transport, the emission expression, the
 point-spread function, and a noise model) to the data, or by an analytical
 relationship if one is derived. The sample second moment of the recorded profile
-is an estimator here, not truth, and a distorted one when emission is nonlinear;
+is an estimator here, not the reference, and a distorted one when emission is nonlinear;
 it cannot adjudicate.
 
 ## The width-extraction stage: estimator selection and the noise correction
@@ -99,7 +99,7 @@ floor put the measurement back in the bias regime. Both terms are measurable fro
 the data with no repeated frames: fft-cnr's photon-transfer fit
 (`estimate_noise_model=True`) returns `gain` and `read`. The calibration must be
 built with the matching model -- `scripts/build_calibration.py --noise poisson
---gain G --read-noise R --background B` reproduces it (the older white-noise
+--gain G --read-noise R --background B` reproduces it (a white-noise
 calibration over-corrects shot-dominated data and can drive D negative). Estimate
 `gain` and `read` once from a bright, high-dynamic-range frame (the photon-transfer
 fit is skipped below ~3 sigma of signal range); take `background` from the profile
@@ -134,7 +134,7 @@ avoid. The folded-normal correction's scope is distortion 1 only.
 
 ## Computing the second moment
 
-- Distinguish the carrier moment (the truth) from the recorded-profile moment
+- Distinguish the carrier moment (the reference) from the recorded-profile moment
   (the width-extraction target). They coincide only for linear emission.
 - Take it on the underlying profile, before any instrument point-spread
   function. A Lorentzian point-spread function has a divergent second moment, so
@@ -166,4 +166,4 @@ avoid. The folded-normal correction's scope is distortion 1 only.
 - Per-frame and MSD-to-D fits, and the validation sweep: `fit.py`, `validate.py`.
 - Forward models (the emission-to-carrier mapping, for both simulation and the
   experimental inversion): `simulate.py` and the per-bed models under
-  `mc_experiments/`, including `mc_experiments/saha_reaction_diffusion/`.
+  `experiments/`, including `experiments/saha-reaction-diffusion/`.

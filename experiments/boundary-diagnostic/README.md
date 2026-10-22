@@ -6,11 +6,6 @@ Decide which boundary model the width fit obeys at the wall at zero: does the
 fitted variance **clip** (Tobit-style pile-up at the bound) or **reflect** (fold
 into a right-skewed tail)? This decision selects the correction route.
 
-## Status
-
-Validated. Framing reference (cited in `docs/DERIVATION.md` section 2); not a
-standalone poster panel, but underpins Panel 2.
-
 ## Contents
 
 - `diagnose_boundary.py [profile_model]` -- one run per profile model; reports
@@ -41,8 +36,8 @@ every row from CNR 1.5 up is reflection-like. The flat-topped p = 4 shows no
 pile-up; its mean fitted variance is slightly low at CNR 1 (0.98 sigma_0^2).
 Tables: `diagnose_boundary_genGauss_p1.5.txt`, `diagnose_boundary_genGauss_p4.txt`.
 Figures: `boundary_diagnostic.png`, `boundary_diagnostic_voigt.png`, and
-`boundary_diagnostic_generalized_gaussian.png` (an older p = 2 run, a Gaussian
-profile with the generalized-Gaussian fitter's bounds).
+`boundary_diagnostic_generalized_gaussian.png` (a p = 2 run, which is a Gaussian
+profile with the generalized-Gaussian fitter's bounds, kept for reference).
 
 ## Depends on
 

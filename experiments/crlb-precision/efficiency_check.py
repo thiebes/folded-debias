@@ -31,14 +31,15 @@ divided by sqrt(CRLB), for three arms:
   independent although they share sigma_hat^2(0) and leaves the best-measured
   frame out of the slope. A constant shift does not change a free-intercept
   slope, so this arm equals the MSD fit with weights 1 / v_i on every frame.
-  The library adopted these weights after this check (2026-10-22), so the
-  ``library`` and ``width`` arms now coincide; the committed table records
-  the former library weights.
+  The library uses these weights, so the ``library`` and ``width`` arms
+  coincide with the current package; the committed table's ``library`` arm
+  records the MSD-point weights (1 / (v_i + v_0), frame 0 at weight 0) for
+  comparison.
 
 Each arm is computed with every frame and with frames below per-frame CNR 1
 dropped (the floor the paper uses). A ratio of 1 is efficient. The bound holds
 for unbiased estimators, and the corrected D is unbiased within its SE across
-this grid (``docs/STATUS.md`` 2026-10-18, item 3), so the comparison is fair.
+this grid (``docs/DERIVATION.md`` section 8), so the comparison is fair.
 
 ``generate`` caches the calibrations and evaluation ensembles under
 ``output/crlb-efficiency/`` (the Gaussian calibration is draw 0 of

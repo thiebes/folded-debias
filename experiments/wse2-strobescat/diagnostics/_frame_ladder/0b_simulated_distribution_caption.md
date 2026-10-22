@@ -1,6 +1,6 @@
 # Caption: distribution of fitted width (benefit and limitation)
 
-The honest ensemble picture over 5000 simulated CNR = 1.5 frames of a known
+The ensemble picture over 5000 simulated CNR = 1.5 frames of a known
 Gaussian (true sigma^2 = 9). The naive fitted-width distribution (red) is
 right-skewed and biased high *in the mean* (mean 15.4 = 1.7x true; the median is
 actually below true -- the bias lives in a heavy right tail plus a pile-up at the

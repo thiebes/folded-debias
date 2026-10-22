@@ -2,13 +2,9 @@
 
 ## Purpose
 
-Does the reported confidence interval on D cover D_true at the nominal rate, not
-just the mean? Compares the covariance-based CI, a parametric bootstrap, and an
+Test whether the reported confidence interval on D covers D_true at the nominal
+rate, in addition to the mean being unbiased. Compares the covariance-based CI, a parametric bootstrap, and an
 analytical attribution for the de-biased folded-normal estimator.
-
-## Status
-
-Validated. Paper-scope (not a poster panel).
 
 ## Contents
 
@@ -35,7 +31,7 @@ The shared sigma_hat^2_0 is common-mode (shifts the intercept, not the slope), s
 it is not the cause of under-coverage (inflation 0.91-0.93 < 1). The covariance
 CI under-covers erratically (0.74-0.79) because the D-free calibration
 mis-estimates the absolute per-point variance; the bootstrap covers ~0.94.
-Recommendation: report a bootstrap/profile interval, not the covariance CI.
+Report a bootstrap or profile interval for D; the covariance CI under-covers.
 Figure: `coverage_check.png`; table `coverage_check.txt`.
 
 ## Depends on

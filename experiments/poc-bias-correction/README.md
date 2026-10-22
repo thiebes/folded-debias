@@ -7,10 +7,6 @@ diffusion coefficient D, and that the folded-normal correction removes it. One
 two-panel figure per profile model (truncation diagnostic; bias curves
 `mean(D_hat)/D_true` vs CNR0 for OLS, inverse-variance, and folded-normal).
 
-## Status
-
-Validated. Poster-scope (source for Panels 2 and 5).
-
 ## Contents
 
 - `poc_demo.py [profile_model]` -- runs the two-panel proof-of-concept for a
@@ -50,9 +46,9 @@ reads low, not high, at CNR_0 <= 8.
 
 Tables: `poc_demo_gaussian.txt`, `poc_demo_voigt.txt`,
 `poc_demo_generalized_gaussian_p1.5.txt`, `poc_demo_generalized_gaussian_p4.txt`.
-`poc_demo_generalized_gaussian.txt` and its figure are an older p = 2 run (a
-Gaussian profile with the generalized-Gaussian fitter's tighter `var_max`), kept
-for reference. Figures: `poc_demo*.png`.
+`poc_demo_generalized_gaussian.txt` and its figure are a p = 2 run (a Gaussian
+profile with the generalized-Gaussian fitter's tighter `var_max`), included for
+reference. Figures: `poc_demo*.png`.
 
 ## Depends on
 
@@ -61,5 +57,4 @@ for reference. Figures: `poc_demo*.png`.
 
 ## See also
 
-`docs/DERIVATION.md` (folded-normal derivation),
-`docs/poster/POSTER_PLAN.md` Panels 2 and 5.
+`docs/DERIVATION.md` (folded-normal derivation).

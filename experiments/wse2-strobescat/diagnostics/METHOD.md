@@ -33,7 +33,7 @@ with its headline numbers.
    +/- 4 sigma0 window. This is the standard estimator the correction acts on,
    and matches the estimator the calibration models. (Enrique's `sigmas(um)` are
    kept in the manifest for reference but not used for the width: the px->um
-   scale is internally inconsistent, so all widths are reported in px^2.) The
+   scale they imply is fit-dependent, so all widths are reported in px^2.) The
    per-point SE uses his scale-free relative fit error.
 
 5. **Correction.** A D-free `var_bias(CNR)` calibration is built at the
@@ -62,16 +62,16 @@ with its headline numbers.
 
 ## Caveats
 
-- **px->um scale**: 0.060 um per px at the sample for every scan (Enrique,
-  2026-10-20); widths and D are reported in px^2 and px^2/ns (multiply by
+- **px->um scale**: 0.060 um per px at the sample for every scan (Enrique
+  Arévalo Rodríguez); widths and D are reported in px^2 and px^2/ns (multiply by
   0.0036 for um^2). Do not take the scale from his `X(um)` array (it steps by
   0.0036 = 0.060^2) or from his `sigmas(um)`/px-fit ratio (fit-dependent).
 - **Even/odd parity oscillation** is present in the per-frame widths; it is
   shown raw, never smoothed. It adds scatter to single-measurement D.
 - **Below-floor frames over-subtract** -- this is expected and is why the floor
   exists; the bias lives in exactly these noisy late frames.
-- **var_bias MC error** is not yet propagated into the corrected SE (it is
+- **var_bias MC error** is not propagated into the corrected SE (it is
   sub-dominant to the per-frame fit SE at the calibration budget used); the
-  corrected SE currently equals the naive fit SE.
-- **Shot-noise calibration** is not yet parameterised to a measurement's fitted
+  corrected SE equals the naive fit SE.
+- **Shot-noise calibration** is not parameterised to a measurement's fitted
   read/gain; only white-noise (stroboSCAT) measurements are correct as-is.
