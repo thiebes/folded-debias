@@ -26,16 +26,21 @@ credible width growth `sigma_max / sigma0`. For this bed `G = 12` caps sigma at
 noise-wander. The bound must be **identical** in the calibration and the
 application fit, or the subtraction is mismatched.
 
-With the bound, the genuine residual bias is modest -- the naive D is inflated
-10-20% at low contrast -- and the folded-normal correction removes it cleanly.
-The figure below (`br_halide_highn_perframe.png`, at CNR0 = 10) shows, per Br
-fraction, the recovered D ratios:
+With the bound, the residual noise bias is modest. The figure
+(`br_halide_highn_perframe.png`, CNR0 = 15, 800 realizations; table
+`br_halide_highn_perframe.txt`) plots each frame's mean fitted variance minus
+the Gaussian fit of the noise-free profile, which isolates the noise bias. The
+short-window D, with standard errors of 0.006 to 0.007:
 
-| Br fraction | D_naive / D_true | D_corr / D_true |
-| ----------- | ---------------- | --------------- |
-| 0.25        | 1.13             | 1.03            |
-| 0.5         | 1.19             | 0.96            |
-| 0.75        | 1.22             | 1.06            |
+| Br fraction | naive / D of noise-free fit | corrected / D of noise-free fit | corrected / D_ref |
+| ------- | ------- | ------- | ------- |
+| 0.25 | 1.034 | 1.002 | 0.993 |
+| 0.5 | 1.049 | 1.013 | 0.971 |
+| 0.75 | 1.060 | 1.025 | 0.984 |
+
+The correction uses the dense joint calibration with the iterated
+measurement-level key. The x = 0.75 remainder of 0.025 is resolved. The
+difference between the last two columns is the carrier gap.
 
 The legacy 20k-walker maps do not show this effect because their narrow 150 nm
 window already bounds the wander. DICE is unaffected: it sizes its field of view
@@ -101,10 +106,10 @@ smoothed key removes the noise bias per frame and recovers D within 0.96 to
 0.99 from CNR0 15; at CNR0 8 the two slower-spreading maps still read low,
 because frames near the floor dominate that short window.
 
-The committed per-frame figure and its caption are made with the 1-D D-aware
-lookup. The joint (CNR, sigma^2) calibration with a measurement-level key is the
-method that removes the noise bias on this bed, and D is determined from
-CNR0 15 upward (see the key sensitivity below).
+The figure uses the dense joint calibration with the iterated key
+(`iterated_key_correction`: the straight line refitted to the corrected values
+until it stops changing) at CNR0 15, the lowest initial CNR at which D does not
+depend on the key.
 Tables: `br_halide_highn_perframe_n4000[_smoothed]_cnr0{10,20}.txt` (dense
 grid), `br_halide_highn_perframe_cnrsig2_cnr0{10,20}.txt` (600-run grid),
 `br_halide_highn_perframe_daware_cnr020.txt` (D-aware lookup).
@@ -135,14 +140,14 @@ the lookup; D is short-window D / D_ref with an SE from resampling the seeds.
 
 Marc Melendez's 20k-walker Br-I maps carry Poisson sampling noise that floors the
 intrinsic peak CNR ~30. Running his C Brownian-dynamics simulator at 400,000
-walkers (16 instances of 25,000, averaged) gives a clean ground truth (intrinsic
+walkers (16 instances of 25,000, averaged) gives a clean reference (intrinsic
 peak CNR ~50). The 2-D averaged map is collapsed to 1-D on the run machine
 (`P:/jthiebes/WIP/BrI_halide_highN/x_<frac>/collapsed_1d.x_<frac>.npz`); the
 multi-GB maps stay on the desktop, and only the small collapsed file is read here.
 The run procedure is in `experiments/halide-mixing-brI-legacy/rerun/README.md`.
 
 Geometry: 600 bins over a 3000 nm window (5 nm/bin), 601 frames at 5 ps to 3.0 ns,
-initial 1-D sigma ~25 nm. The carrier (transport) truth is the particle second
+initial 1-D sigma ~25 nm. The carrier (transport) reference is the particle second
 moment `variance.avg.dat / 2`. It is **Fickian** -- alpha 0.997 / 0.993 / 0.990
 for x = 0.25 / 0.5 / 0.75, with D = 6265 / 2650 / 2352 nm^2/ns -- D falling with
 Br fraction confirms that mixing inhibits transport. (The legacy maps' apparent
@@ -154,7 +159,7 @@ shorter effective window, which is the fair test).
 
 ## Contents
 
-- `br_highn_data.py` -- loads the collapsed 1-D profiles, truth from
+- `br_highn_data.py` -- loads the collapsed 1-D profiles, the reference from
   `variance.avg.dat / 2`, imposes the tau ~ 1 ns decay envelope.
 - `br_halide_highn_validation.py` -- the CNR0 sweep at this geometry; naive vs
   corrected alpha/D. Uses the 1-D D=0 calibration, which **under**-corrects here
@@ -163,11 +168,13 @@ shorter effective window, which is the fair test).
 - `br_halide_highn_perframe.py [cnr_sigma2|daware] [CNR0]` -- the per-frame
   residual (with a signed per-frame table), short-window D, and the figure.
   Default calibration is the joint (CNR, sigma^2) one; `daware` is the 1-D
-  D-aware lookup, which made the committed figure.
-- `render_perframe_figure.py` -- re-renders the committed figure from the cached
-  D-aware calibrations without a Monte Carlo pool.
+  D-aware lookup. `HIGHN_KEY` selects the key: `perseed`, `smoothed`, or
+  `iterated`.
+- `render_perframe_figure.py` -- renders the figure and writes
+  `br_halide_highn_perframe.txt` (CNR0 = 15, dense joint calibration, iterated
+  key, 800 realizations).
 - `key_sensitivity.py` -- the key-sensitivity comparison (`key_sensitivity.txt`).
-- `br_halide_highn_perframe.png` -- the figure (CNR0 = 10); caption in
+- `br_halide_highn_perframe.png` -- the figure (CNR0 = 15); caption in
   `br_halide_highn_perframe_caption.md`.
 
 ## Depends on (in the library, not here)
@@ -192,11 +199,9 @@ OPENBLAS_NUM_THREADS=1 OMP_NUM_THREADS=1 MKL_NUM_THREADS=1 FOLDED_DEBIAS_WORKERS
   .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py
 ```
 
-Outputs (figure, report, cached calibrations) are written to the repo's `output/`
-(gitignored); the figure here is a committed snapshot. Set the figure's contrast
-with the `CNR0` constant in `br_halide_highn_perframe.py` (10 shows the correction
-working; >= 15 is the regime where the floored naive fit is already unbiased and
-the correction has little to do).
+`br_halide_highn_perframe.py` writes its report, figure, and cached
+calibrations to the repo's `output/` (not tracked); `render_perframe_figure.py`
+writes the committed figure and table into this folder.
 
 ## See also
 
