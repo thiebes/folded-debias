@@ -62,3 +62,5 @@ Per-profile floor sweep (gaussian)
   >>> Per-profile floor (deepest CNR where |z| <= 2): CNR ~ 100.000
 
 [total 97.7 min]
+
+  >>> Re-scored from this table with the current rule (|z| > 2 and |residual| > 0.01 sigma_0^2): per-profile floor CNR ~ 1.161

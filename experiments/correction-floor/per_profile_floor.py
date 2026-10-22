@@ -42,6 +42,7 @@ import time
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
 import numpy as np
+from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
@@ -206,7 +207,43 @@ def report(model_name, results):
           f"|z| > 2 and |residual| > {RESID_TOL} sigma_0^2): CNR ~ {floor_cnr:.3f}")
 
 
+def rescore(path: str) -> None:
+    """Append the floor under the current rule to a committed table.
+
+    Tables written before the floor rule required |residual| > RESID_TOL
+    print a significance-only readout. This re-reads the table's rows (the
+    residuals and SEs are unchanged) and appends the floor the current rule
+    gives, labelled as re-scored, so no multi-hour sweep has to be repeated.
+    """
+    import re
+    text = Path(path).read_text(encoding="utf-8")
+    rows = []
+    for line in text.splitlines():
+        parts = line.split()
+        if (len(parts) >= 7 and re.match(r"^\d+\.\d+$", parts[0])
+                and parts[1].isdigit()):
+            cnr, n, raw, corr, res, se = (float(parts[0]), int(parts[1]),
+                                          float(parts[2]), float(parts[3]),
+                                          float(parts[4]), float(parts[5]))
+            rows.append((cnr, raw, corr, res, se, n, 0.0))
+    floor = None
+    for cnr, _, _, res, se, _, _ in sorted(rows)[::-1]:
+        z = abs(res / se) if se > 0 else np.inf
+        if z > 2 and abs(res) > RESID_TOL:
+            break
+        floor = cnr
+    note = (f"\n  >>> Re-scored from this table with the current rule (|z| > 2 and "
+            f"|residual| > {RESID_TOL} sigma_0^2): per-profile floor CNR ~ {floor:.3f}\n")
+    if "Re-scored from this table" not in text:
+        Path(path).write_text(text.rstrip("\n") + "\n" + note, encoding="utf-8")
+    print(path, note.strip())
+
+
 def main() -> None:
+    if len(sys.argv) > 2 and sys.argv[1] == "--rescore":
+        for path in sys.argv[2:]:
+            rescore(path)
+        return
     # model_name is a spec: "generalized_gaussian:<p>" sets the shape, and the
     # bare "generalized_gaussian" is p = 2 (a Gaussian profile).
     model_name = sys.argv[1] if len(sys.argv) > 1 else "gaussian"

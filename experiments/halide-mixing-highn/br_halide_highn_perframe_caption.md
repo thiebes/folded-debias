@@ -25,7 +25,7 @@ corrected values are 0.993, 0.971, and 0.984, the difference being the
 carrier gap.
 
 CNR₀ = 15 is the lowest initial contrast at which the corrected D does not
-depend on the choice of key: a key error of 0.2 of σ² moves D by at most 0.004
+depend on the choice of key: a key error of 0.2 of σ² moves D by at most 0.005
 there, while at CNR₀ 8 to 10 it can move D by up to 0.3
 (`key_sensitivity.py`). The straight-line key assumes the variance grows
 linearly in time, which holds for these maps (exponent 0.990 to 0.997).

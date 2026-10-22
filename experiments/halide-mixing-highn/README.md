@@ -118,8 +118,8 @@ Key sensitivity (`key_sensitivity.py`, 300 seeds per map and CNR0, dense grid;
 table `key_sensitivity.txt`). The fits are shared, so the keys differ only in
 the lookup; D is short-window D / D_ref with an SE from resampling the seeds.
 
-- From CNR0 15 the key barely matters. Perturbing the exact key by +/-20
-  percent moves D by at most 0.004 (|dD/de| <= 0.018), and the smoothed and
+- From CNR0 15 the key barely matters. Perturbing the exact key by a factor
+  of 0.8 or 1.2 moves D by at most 0.005 (|dD/de| <= 0.018), and the smoothed and
   iterated keys give the same D as the exact key to within 0.003. The
   per-frame key is the exception: it leaves a resolved low bias even here
   (0.90 and 0.89 at CNR0 15, 0.96 at 20, for x = 0.5 and 0.75; SE 0.01).
