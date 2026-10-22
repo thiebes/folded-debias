@@ -39,7 +39,7 @@ tests/                package tests
 | [estimator-comparison](../experiments/estimator-comparison/) | `moment_estimator_failure.py`, `unbounded_fit_comparison.py` | poster aside/paper / validated | removing the wall does not substitute for the correction | `method_comparison.png`, `unbounded_fit_comparison.png` |
 | [subdiffusive-alpha](../experiments/subdiffusive-alpha/) | `subdiffusive_alpha.py` | poster P6 / validated | corrected exponent tracks the true alpha for CNR0 >= 20; per-cell Monte Carlo SE reported in the table | `subdiffusive_alpha.png` |
 | [multiexp-decay](../experiments/multiexp-decay/) | `multiexp_decay.py` | caveat/paper / validated | correction keys on per-frame CNR, not the decay law | `multiexp_decay.png` |
-| [crlb-precision](../experiments/crlb-precision/) | `crlb.py` (+ `precision_limit.md`) | poster P3/4 / validated | sqrt(CRLB)/D is several x D at low CNR | `poster_panel4_crlb.png` |
+| [crlb-precision](../experiments/crlb-precision/) | `crlb.py` (+ `precision_limit.md`), `efficiency_check.py` | poster P3/4 / validated | sqrt(CRLB)/D is several x D at low CNR; corrected D spread is 1.30-1.43 x sqrt(CRLB) at high CNR (MSD slope fit), 0.98-1.08 with a direct width fit (not adopted) | `poster_panel4_crlb.png` |
 | [closed-form-scaling](../experiments/closed-form-scaling/) | `linearity_test.py` | parked/paper | median bias tracks lambda(-s)/s in a band | `linearity_test.png` |
 
 ### Collaborator transport beds (Marc Meléndez; data on pshare -- see each `DATASETS.md`)
