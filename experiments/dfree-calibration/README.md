@@ -33,6 +33,11 @@ MAS-vs-folded recommendation).
   against the older MSD-point lookup) on the cached draws of
   `calibration_se_check.py`: mean, spread over realizations, and calibration
   SE per cell. Minutes once the cache exists.
+- `slope_fit_check.py` -- compares the current slope weights (every frame,
+  t = 0 included, by 1 / Var(sigma_hat_i^2)) with the former ones (frame 0 at
+  weight 0) on the cached draws and on the four-shape evaluation sets of
+  `crlb-precision/efficiency_check.py`: calibration SE, bias in combined SE,
+  spread, and interval coverage.
 - `render_bias_panels.py` -- renders the poster bias panels from this set's
   `dense_calibration_and_test.txt`: Panel 3 (`poster_panel3_bias.png`, the two
   standard fits fail) and Panel 5 (`poster_panel5_corrected_bias.png`, corrected,
@@ -76,6 +81,16 @@ of D/D_in over realizations to 0.71 to 0.85 of the former weights at CNR0 21
 and 34 (where a frame sat next to a calibration CNR0), leave it within 0.94 to
 1.02 elsewhere, and move no cell mean by more than 0.97 combined SE. See
 `docs/STATUS.md` (2026-10-21, per-frame slope weights).
+
+`slope_fit_check` (`slope_fit_check.txt`): weighting frame 0 narrows the
+spread of D/D_in to 0.50 to 0.77 of the former weights on every shape; 4 of 96
+cells lie beyond 2 combined SE (6 before, 4.4 expected by chance); the
+calibration SE still holds (observed / predicted 0.89). See `docs/STATUS.md`
+(2026-10-22, slope fit on the corrected widths).
+
+The `calibration_se_check.txt` and `weights_check.txt` tables were recorded
+with the slope weights of their time (frame 0 at weight 0); re-running those
+scripts now gives the current weights' numbers.
 
 Dense sweep (5000-run calibration), overall mean `|bias-1|`, folded-normal vs
 MAS: Gaussian 0.119 vs 0.438, Voigt 0.175 vs 0.167, p = 2 0.155 vs 0.151,

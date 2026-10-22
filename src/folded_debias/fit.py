@@ -118,10 +118,17 @@ def fit_D(times: np.ndarray, msd: np.ndarray, weights: np.ndarray) -> DFit:
 
     ``D_se`` is the textbook weighted-least-squares standard error of the slope,
     halved (D = slope / 2): ``Var(slope) = Sw / (Sw*Swtt - Swt^2)``. It is exact
-    only when the weights are the true inverse point-variances *and the points
-    are independent* -- the latter fails for the MSD, whose points share the
-    fitted ``sigma_hat^2(0)``, so this SE is the (too-narrow) covariance interval
-    whose coverage ``scripts/coverage_check.py`` probes. For OLS-style unit
+    when the weights are the true inverse point-variances *and the points are
+    independent*. The MSD points share the fitted ``sigma_hat^2(0)``, but with
+    frame 0 weighted (as :func:`~folded_debias.weights.msd_and_weights` does
+    for the weighted schemes) the slope equals that of the independent widths,
+    so the SE applies. With frame 0 at weight 0 the shared offset makes it too
+    narrow (the interval ``experiments/coverage-interval/coverage_check.py``
+    probes). The D-free calibration's per-frame variances are measured at
+    sigma_0^2, so they understate the later frames' variance when D is large;
+    combined with the calibration SE the 95 % interval covered 0.93 to 0.96 of
+    runs for D <= 0.02 sigma_0^2/tau and 0.89 to 0.94 at D = 0.1
+    (``experiments/dfree-calibration/slope_fit_check.py``). For OLS-style unit
     weights it omits the residual-variance scaling and is not a calibrated SE.
     """
     t = np.asarray(times, float)

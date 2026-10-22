@@ -105,8 +105,21 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     ``mas`` subtracts the same bias through a smooth gate that switches the
     correction off in deep noise (so the corrected variance never crosses
     zero). ``ols`` and ``inverse_variance`` leave the variances uncorrected.
-    The t=0 frame defines the MSD origin and is given zero weight in every
-    scheme.
+
+    The weighted schemes weight every frame, t = 0 included, by
+    ``1 / Var(sigma_hat_i^2)``. The MSD points all share ``sigma_hat^2(0)``,
+    so they are not independent; but a constant shift does not change a
+    free-intercept slope, so fitting ``msd = corrected - corrected[0]`` with
+    these weights is the same as fitting the corrected widths against time,
+    whose points are independent. That fit reaches the Cramer-Rao bound on D
+    (0.98 to 1.08 x sqrt(CRLB) from CNR_0 21 on four shapes;
+    ``experiments/crlb-precision/efficiency_check.py``), and ``fit_D``'s
+    covariance SE is then the right one. The former weights,
+    ``1 / (Var_i + Var_0)`` with frame 0 at weight 0, treated the points as
+    independent and left the best-measured frame out of the slope: 1.30 to
+    1.43 x sqrt(CRLB). ``ols`` keeps unit weights on the MSD points with frame
+    0 at weight 0, and a 1-D model saved without a ``framevar_grid`` keeps its
+    former weights (no per-frame variance to weight by).
     """
     variance_row = np.asarray(variance_row, float)
     cnr = np.asarray(cnr_frame, float)
@@ -116,22 +129,20 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     msd = corrected - corrected[0]
 
     # --- weights --------------------------------------------------------
-    # The weight is 1 / Var(MSD_i) = 1 / (Var(sigma_hat_i^2) + Var(sigma_hat_0^2)),
-    # the two fits being independent, each term looked up at this measurement's
-    # own frame CNR. The 2-D calibration's rel_variance and the 1-D
-    # frame_variance give the per-frame term. A 1-D model without a
-    # frame_variance grid (built or saved before it existed) falls back to
-    # rel_variance, the MSD-point variance measured inside each calibration
-    # ensemble (see TruncationModel.frame_variance for why that is jagged).
+    # 1 / Var(sigma_hat_i^2), looked up at this measurement's own frame CNR:
+    # the 2-D calibration's rel_variance or the 1-D frame_variance. A 1-D
+    # model without a frame_variance grid falls back to rel_variance, the
+    # MSD-point variance measured inside each calibration ensemble (jagged in
+    # CNR; see TruncationModel.frame_variance), with frame 0 at weight 0.
     if scheme == "ols":
         w = np.ones_like(cnr)
+        per_frame = False
     else:
+        per_frame = model.is_2d or model.framevar_grid is not None
         if model.is_2d:
             rv = model.rel_variance(cnr, variance_row)
-            rv = rv + rv[0]
-        elif model.framevar_grid is not None:
+        elif per_frame:
             rv = model.frame_variance(cnr)
-            rv = rv + rv[0]
         else:
             rv = model.rel_variance(cnr, variance_row)
         hi = np.nanmax(rv)
@@ -139,7 +150,8 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
         w = 1.0 / np.clip(rv, tiny, None)
 
     w = np.asarray(w, float).copy()
-    w[0] = 0.0   # the t=0 frame carries no slope information
+    if not per_frame:
+        w[0] = 0.0   # the MSD origin, which these weights cannot place
     return msd, w
 
 
@@ -152,9 +164,10 @@ def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
     slope is a fixed linear combination of the MSD points, ``b = sum c_i m_i``
     with ``c_i = w_i (S_w t_i - S_wt) / (S_w S_wtt - S_wt^2)``. A calibration
     error ``e_i`` in frame i's subtracted bias moves ``m_i`` by
-    ``-(e_i - e_0)``. Since ``sum c_i = 0`` over the fitted frames, the frame-0
-    term cancels (the intercept absorbs it), and with independent calibration
-    cells
+    ``-(e_i - e_0)``. Since ``sum c_i = 0`` over the fitted frames, the common
+    ``e_0`` shift cancels (the intercept absorbs it), and frame 0's own error
+    enters through ``c_0`` when frame 0 is fitted. With independent
+    calibration cells, summing over the fitted frames,
 
         Var_cal(D) = (1/4) sum_i c_i^2 s_i^2,   s_i = model.var_bias_se(CNR_i).
 
@@ -165,10 +178,12 @@ def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
     ``folded_normal``; for ``mas`` it ignores the gate's dependence on the bias
     and is approximate. The weights' own dependence on the calibration is
     second order and not included. Sixteen independent calibrations on the
-    fft-cnr paper's grid confirm the prediction (observed / predicted variance
-    0.98 over 18 draws; ``experiments/dfree-calibration/calibration_se_check.py``);
-    the weight term is below 0.06 of it from CNR_0 5 up and about 0.3 of it at
-    CNR_0 3. Returns NaN when the model has no SE.
+    fft-cnr paper's grid confirm the prediction: observed / predicted variance
+    0.98 over 18 draws with the MSD-point weights
+    (``experiments/dfree-calibration/calibration_se_check.py``, where the
+    weight term is below 0.06 of it from CNR_0 5 up and about 0.3 of it at
+    CNR_0 3), and 0.89 over 16 draws with frame 0 weighted
+    (``slope_fit_check.py``). Returns NaN when the model has no SE.
     """
     t = np.asarray(times, float)
     m = np.asarray(msd, float)

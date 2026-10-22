@@ -374,16 +374,16 @@ class TruncationModel:
     def frame_variance(self, cnr):
         """Interpolated per-frame ``Var(sigma_hat^2)`` at the given CNR (1-D).
 
-        The weights need ``Var(MSD_i) = Var(sigma_hat_i^2) + Var(sigma_hat_0^2)``
-        at the *application's* frame-i and t = 0 CNRs. The 1-D ``relvar_grid``
-        stores that sum as measured inside each calibration ensemble, whose
-        t = 0 frame sits at the calibration's CNR_0. Neighbouring grid points
-        come from different ensembles, so the lookup is jagged, and each
-        ensemble's own t = 0 point reads exactly 0: a frame whose CNR lies next
-        to a calibration CNR_0 drew 5 to 50 times its proper weight. This grid
-        holds the single-frame term, so the sum can be formed from the
-        measurement's own frames (see :func:`~folded_debias.weights.msd_and_weights`).
-        Returns ``None`` when the model carries no such grid.
+        The slope weights are ``1 / Var(sigma_hat_i^2)`` at the application's
+        own frame CNR, frame 0 included (see
+        :func:`~folded_debias.weights.msd_and_weights`). The 1-D
+        ``relvar_grid`` holds a different quantity, the MSD-point variance
+        ``Var(sigma_hat_i^2) + Var(sigma_hat_0^2)`` measured inside each
+        calibration ensemble, whose t = 0 frame sits at the calibration's
+        CNR_0. Neighbouring grid points come from different ensembles, so that
+        lookup is jagged, and each ensemble's own t = 0 point reads exactly 0:
+        a frame whose CNR lay next to a calibration CNR_0 drew 5 to 50 times
+        its proper weight. Returns ``None`` when the model carries no such grid.
         """
         if self.framevar_grid is None:
             return None
@@ -395,9 +395,8 @@ class TruncationModel:
 
         With a 1-D calibration this is the MSD-point variance
         ``Var(sigma_hat^2(t) - sigma_hat^2(0))`` empirically measured per CNR.
-        With a 2-D calibration this is the per-frame ``Var(sigma_hat^2)``; the
-        MSD-point variance is formed in :mod:`folded_debias.weights` by
-        adding the t=0 frame's contribution.
+        With a 2-D calibration this is the per-frame ``Var(sigma_hat^2)``, which
+        :mod:`folded_debias.weights` uses directly as each frame's weight.
         """
         if variance is None or not self.is_2d:
             return np.interp(cnr, self.cnr_grid, self.relvar_grid,
