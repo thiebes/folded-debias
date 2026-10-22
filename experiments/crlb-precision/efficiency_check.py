@@ -31,6 +31,9 @@ divided by sqrt(CRLB), for three arms:
   independent although they share sigma_hat^2(0) and leaves the best-measured
   frame out of the slope. A constant shift does not change a free-intercept
   slope, so this arm equals the MSD fit with weights 1 / v_i on every frame.
+  The library adopted these weights after this check (2026-10-22), so the
+  ``library`` and ``width`` arms now coincide; the committed table records
+  the former library weights.
 
 Each arm is computed with every frame and with frames below per-frame CNR 1
 dropped (the floor the paper uses). A ratio of 1 is efficient. The bound holds

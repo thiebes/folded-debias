@@ -342,6 +342,27 @@ def test_model_without_frame_variance_keeps_msd_point_weights():
     assert np.allclose(w[1:], expected[1:])
 
 
+def test_weighted_msd_fit_equals_width_fit():
+    """With frame 0 weighted, the MSD slope is the slope of the corrected widths.
+
+    A constant shift (sigma_hat^2(0)) does not change a free-intercept slope,
+    so fit_D on the MSD returns the same D and covariance SE as a weighted fit
+    of the independent corrected widths against time.
+    """
+    from folded_debias import calibrate_d_free, corrected_variance, msd_and_weights
+    trunc = calibrate_d_free(np.array([5.0, 20.0]), n_runs=60, seed=3)
+    exp = Experiment(D=0.02)
+    ens = run_ensemble(exp, 12.0, n_runs=5, seed=11)
+    for row in ens.variance:
+        msd, w = msd_and_weights("folded_normal", row, ens.cnr_frame, trunc)
+        assert w[0] > 0
+        assert np.allclose(w, 1.0 / trunc.frame_variance(ens.cnr_frame))
+        widths = corrected_variance("folded_normal", row, ens.cnr_frame, trunc)
+        a, b = fit_D(exp.times, msd, w), fit_D(exp.times, widths, w)
+        assert a.D == pytest.approx(b.D, rel=1e-10)
+        assert a.D_se == pytest.approx(b.D_se, rel=1e-12)
+
+
 def test_calibration_D_se_predicts_draw_to_draw_scatter():
     """The propagated calibration SE matches the scatter of corrected D across
     independent calibration draws applied to one fixed evaluation set.

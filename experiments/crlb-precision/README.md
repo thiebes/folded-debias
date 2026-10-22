@@ -50,8 +50,10 @@ information. Inverse-CRLB weights do not help; the loss is the MSD slope fit,
 which treats the points as independent although they share sigma_hat^2(0) and
 gives frame 0 no weight. Fitting the corrected widths against time directly
 (every frame weighted by 1 / Var(sigma_hat^2_i), intercept free) reaches 0.98
-to 1.08 x sqrt(CRLB) from CNR0 21 with no systematic shift of the mean. Not
-adopted; see `docs/STATUS.md` (2026-10-22).
+to 1.08 x sqrt(CRLB) from CNR0 21 with no systematic shift of the mean. The
+library adopted it the same day (`docs/STATUS.md`, 2026-10-22), so
+`efficiency_check.txt` records the former library weights; re-running the
+script now gives a library arm equal to the width-fit arm.
 
 ## Depends on
 
