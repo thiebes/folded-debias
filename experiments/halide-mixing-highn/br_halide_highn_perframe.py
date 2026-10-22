@@ -6,7 +6,7 @@ The honest test is the project's actual metric -- the per-frame mean residual
 ``E[corrected] - var_true`` over many seeds -- restricted to the *usable window*
 (frames whose per-frame CNR stays above the floor). Over that band we ask: does
 the correction reduce the upward bias the naive fit carries, and does the
-short-window D move toward the truth?
+short-window D move toward the reference?
 
 The correction is keyed on (CNR, sigma^2) through a joint D-free calibration
 on the data's pixel grid (``cnr_sigma2``, the default). An earlier version used
@@ -81,8 +81,9 @@ FONT = 9
 CNR0 = 10.0          # initial CNR for the per-frame panel
 CNR0_TABLE = (8.0, 15.0, 30.0)   # short-window D reported at these CNR_0
 N_SEEDS = 800
-# Joint-lookup key: "perseed" (each frame's own sigma_hat^2, library default)
-# or "smoothed" (a robust line through the measurement; see smoothed_key).
+# Joint-lookup key: "perseed" (each frame's own sigma_hat^2, library default),
+# "smoothed" (a robust line through the measurement; see smoothed_key), or
+# "iterated" (that line refitted to the corrected values; the figure's key).
 KEY = os.environ.get("HIGHN_KEY", "perseed")
 FLOOR_CNR = 1.3      # project floor: folded-normal over-subtracts below ~1.3
 CAL_CNR0 = np.geomspace(1.2, 60.0, 30)
@@ -163,9 +164,38 @@ def per_frame_means(case, trunc, cnr0, n_seeds):
         raw[s] = vh
         if KEY == "smoothed" and trunc.is_2d:
             cor[s] = vh - trunc.var_bias(cnrf, smoothed_key(case.t, vh, cnrf))
+        elif KEY == "iterated" and trunc.is_2d:
+            cor[s] = iterated_key_correction(case.t, vh, cnrf, trunc)
         else:
             cor[s] = corrected_variance("folded_normal", vh, cnrf, trunc)
     return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnrf
+
+
+def iterated_key_correction(t, vh, cnrf, trunc, n_iter=8):
+    """Corrected variances with a measurement-level key refitted to the corrected values.
+
+    Starts from the smoothed key (a robust line through the raw sigma_hat^2),
+    then refits the line to ``vh - bias(key)`` and repeats until it stops
+    changing, so the key estimates the true sigma^2(t) rather than the inflated
+    raw one. The final bias is read directly at the key, with no further
+    inversion. ``key_sensitivity.py`` compares this key with the exact one.
+    """
+    from folded_debias.truncation import _bilinear
+    use = (cnrf >= FLOOR_CNR) & np.isfinite(vh)
+
+    def bias_at(key):
+        k = np.clip(key, trunc.variance_grid[0], trunc.variance_grid[-1])
+        return _bilinear(trunc.cnr_grid, trunc.variance_grid, trunc.varbias_2d,
+                         cnrf, k)
+
+    key = smoothed_key(t, vh, cnrf)
+    for _ in range(n_iter):
+        new = smoothed_key(t, vh - bias_at(key), cnrf)
+        done = np.allclose(new[use], key[use], rtol=1e-4)
+        key = new
+        if done:
+            break
+    return vh - bias_at(key)
 
 
 def smoothed_key(t, vh, cnrf):
@@ -209,7 +239,7 @@ def main():
         sys.exit("usage: br_halide_highn_perframe.py [cnr_sigma2|daware]")
     tag = "" if mode == "cnr_sigma2" else "_daware"
     if mode == "cnr_sigma2":
-        tag += f"_n{N_RUNS_CAL2}" + ("_smoothed" if KEY == "smoothed" else "")
+        tag += f"_n{N_RUNS_CAL2}" + ("" if KEY == "perseed" else f"_{KEY}")
     global CNR0
     if len(sys.argv) > 2:
         CNR0 = float(sys.argv[2])
@@ -246,7 +276,7 @@ def main():
         panels.append((case, cnrf, mraw, mcor, use, d_true, d_n, d_c))
 
         lines.append("-" * 76)
-        lines.append(f"=== {case.name} ===  truth D={d_true:.4g} nm^2/ns, alpha={a_true:.3f}")
+        lines.append(f"=== {case.name} ===  reference D={d_true:.4g} nm^2/ns, alpha={a_true:.3f}")
         lines.append(f"  usable window at CNR0={CNR0:.0f}: {use.sum()} frames, "
                      f"t<= {case.t[use].max():.2f} ns, CNR down to {cnrf[use].min():.2f}")
         lines.append(f"  mean |residual| over usable band: naive "
@@ -271,7 +301,7 @@ def main():
             lines.append(f"    {case.t[i]:5.2f} | {cnrf[i]:5.2f} | "
                          f"{case.var_true[i]:7.0f} | {resid_naive[i]:+7.0f} | "
                          f"{resid_corr[i]:+7.0f} | {nf[i] - case.var_true[i]:+7.0f}")
-        lines.append("  short-window D (usable band):  CNR0 | D naive/corr (ratio to truth) "
+        lines.append("  short-window D (usable band):  CNR0 | D naive/corr (ratio to reference) "
                      "| alpha naive/corr")
         for c0 in CNR0_TABLE:
             r = short_window_D(case, trunc, c0, N_SEEDS)
@@ -289,21 +319,18 @@ def main():
 
 
 def make_figure(panels, path):
-    """Poster figure: per-frame fitted variance vs time, naive vs corrected.
+    """Per-frame fitted variance vs time, naive vs corrected (report figure).
 
-    Spanish-flag palette (venue-appropriate, plot_style.md): blue = corrected
-    (the reference the fit should recover), red = naive (the salient bias),
-    black line = carrier truth. The shaded band marks frames below the CNR floor
-    that are excluded from the slope fit. The time axis is focused on the usable
-    window plus the bias onset; the deep-noise tail is dropped.
+    Spanish-flag set: blue = corrected, red = naive, indigo = carrier
+    reference. The shaded band marks frames below the CNR floor, which the
+    slope fit excludes. The committed figure in this folder is the residual
+    figure from ``render_perframe_figure.py``.
     """
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from matplotlib.ticker import MultipleLocator
 
-    # Spanish-flag palette (plot_style.md): blue = corrected (recovered
-    # reference), red = naive (the salient bias), indigo = carrier truth.
     truth_indigo = "#540d6e"
     naive_red = "#c60b1e"
     corr_blue = "#0077c8"
