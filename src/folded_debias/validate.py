@@ -92,6 +92,42 @@ def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
                      noise_model=noise_model)
 
 
+def calibrate_fisher(cnr_grid: np.ndarray | None = None, *, sigma0: float = 1.0,
+                     half_window: float = 6.0, n_pixels: int = 241,
+                     model=None, n_runs: int | np.ndarray = 300, seed: int = 1,
+                     width_scaling: bool = False, knee_cnr: float = 6.0,
+                     workers: int | None = None) -> TruncationModel:
+    """Fisher-anchored D-free calibration: exact leading term, smoothed residual.
+
+    Like :func:`calibrate_d_free`, this calibrates at sigma^2 = sigma_0^2 and
+    never uses the application's D. The leading-order bias, the width's Fisher
+    variance, comes from the profile model and pixel grid with no Monte Carlo
+    error; single-frame Monte Carlo cells over ``cnr_grid`` (default 84
+    log-spaced points over CNR 0.25 to 90) supply only the higher-order
+    residual, smoothed across all cells (:meth:`TruncationModel.from_cells`).
+    ``width_scaling`` adds a width table so that a variance key rescales the
+    lookup to each frame's width; it is off by default, so the model's
+    behaviour matches the D-free lookup's interface exactly. The geometry
+    arguments must match the data, as for :func:`calibrate_d_free`.
+    """
+    from .calibration import calibrate_cells
+    from .fisher import leading_order_terms
+    from .models import GaussianModel
+
+    if model is None:
+        model = GaussianModel()
+    if cnr_grid is None:
+        cnr_grid = np.geomspace(0.25, 90.0, 84)
+    pixel_x = Experiment(sigma0=sigma0, half_window=half_window, n_pixels=n_pixels).x
+    variance_cal = sigma0 ** 2
+    cells = calibrate_cells(cnr_grid, model=model, pixel_x=pixel_x,
+                            variance_cal=variance_cal, n_runs=n_runs, seed=seed,
+                            workers=workers)
+    variance_grid = variance_cal * np.geomspace(0.25, 16.0, 41) if width_scaling else None
+    terms = leading_order_terms(model, pixel_x, variance_cal, variance_grid)
+    return TruncationModel.from_cells(cells, terms, knee_cnr=knee_cnr)
+
+
 @dataclass
 class SchemeResult:
     """Bias curve for one weighting scheme across the CNR_0 sweep."""

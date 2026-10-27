@@ -47,7 +47,8 @@ SCHEMES = ("ols", "inverse_variance", "folded_normal", "mas")
 
 def corrected_variance(scheme: str, variance_row: np.ndarray,
                        cnr_frame: np.ndarray,
-                       model: TruncationModel) -> np.ndarray:
+                       model: TruncationModel,
+                       key_variance: np.ndarray | None = None) -> np.ndarray:
     """Apply a scheme's per-frame bias correction to the fitted variances.
 
     Returns the corrected per-frame variances sigma_tilde^2(t). For ``ols``
@@ -63,20 +64,26 @@ def corrected_variance(scheme: str, variance_row: np.ndarray,
     corrected variances and the weights are deterministic in CNR, the
     per-frame residual ``E[sigma_tilde^2] - sigma^2_true`` fully determines
     the bias in the final D (see ``docs/DERIVATION.md``).
+
+    ``key_variance`` is the width at which a width-aware model (2-D, or 1-D
+    with a width table) reads the bias; by default each frame's own fitted
+    variance, refined by the lookup's fixed-point iteration. A model with no
+    width dependence ignores it.
     """
     variance_row = np.asarray(variance_row, float)
     cnr = np.asarray(cnr_frame, float)
+    key = variance_row if key_variance is None else np.asarray(key_variance, float)
     if scheme in ("ols", "inverse_variance"):
         return variance_row
     if scheme == "folded_normal":
-        return variance_row - model.var_bias(cnr, variance_row)
+        return variance_row - model.var_bias(cnr, key)
     if scheme == "mas":
         # Plaszczynski-MAS-style gated subtraction. The gate (1 - exp(-u)),
         # u = sigma_hat^2 / s^2, is ~1 when the frame is well above the noise
         # (full s^2 subtraction, matching folded_normal) and ~0 when it is
         # noise dominated (no subtraction). corrected = s^2 * (u - 1 + e^-u)
         # is >= 0 for all u >= 0 -- the correction can never overshoot.
-        s2 = model.var_bias(cnr, variance_row)
+        s2 = model.var_bias(cnr, key)
         hi = np.nanmax(s2)
         floor = hi * 1e-6 if np.isfinite(hi) and hi > 0 else 1e-12
         s2 = np.clip(s2, floor, None)
@@ -86,7 +93,8 @@ def corrected_variance(scheme: str, variance_row: np.ndarray,
 
 
 def msd_and_weights(scheme: str, variance_row: np.ndarray,
-                    cnr_frame: np.ndarray, model: TruncationModel):
+                    cnr_frame: np.ndarray, model: TruncationModel,
+                    key_variance: np.ndarray | None = None):
     """Return ``(msd, weights)`` for one realisation's MSD-vs-t fit.
 
     Parameters
@@ -121,12 +129,19 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     1.43 x sqrt(CRLB). ``ols`` keeps unit weights on the MSD points with frame
     0 at weight 0, and a 1-D model saved without a ``framevar_grid`` keeps its
     former weights (no per-frame variance to weight by).
+
+    ``key_variance`` (a measurement-level estimate of each frame's true width)
+    keys both the bias and, for a 1-D model with a width table, the weights.
+    Without it the bias is keyed on each frame's own fitted variance and the
+    weights are not width-scaled: a weight that depends on its own point's
+    noise would bias the slope at O(1/CNR^2), the order being corrected,
+    whereas a bias keyed that way errs only at O(1/CNR^4).
     """
     variance_row = np.asarray(variance_row, float)
     cnr = np.asarray(cnr_frame, float)
 
     # --- bias correction ------------------------------------------------
-    corrected = corrected_variance(scheme, variance_row, cnr, model)
+    corrected = corrected_variance(scheme, variance_row, cnr, model, key_variance)
     msd = corrected - corrected[0]
 
     # --- weights --------------------------------------------------------
@@ -143,7 +158,7 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
         if model.is_2d:
             rv = model.rel_variance(cnr, variance_row)
         elif per_frame:
-            rv = model.frame_variance(cnr)
+            rv = model.frame_variance(cnr, key_variance)
         else:
             rv = model.rel_variance(cnr, variance_row)
         hi = np.nanmax(rv)
@@ -158,7 +173,8 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
 
 def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
                      cnr_frame: np.ndarray, model: TruncationModel,
-                     variance_row: np.ndarray | None = None) -> float:
+                     variance_row: np.ndarray | None = None,
+                     key_variance: np.ndarray | None = None) -> float:
     """SE of a corrected D from the calibration's own Monte Carlo error.
 
     :func:`~folded_debias.fit.fit_D` is a weighted straight-line fit, so its
@@ -185,6 +201,12 @@ def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
     weight term is below 0.06 of it from CNR_0 5 up and about 0.3 of it at
     CNR_0 3), and 0.89 over 16 draws with frame 0 weighted
     (``slope_fit_check.py``). Returns NaN when the model has no SE.
+
+    A smoothed model (:meth:`~folded_debias.truncation.TruncationModel.from_cells`)
+    correlates the biases of neighbouring frames, so the sum uses the full
+    covariance, ``Var_cal(D) = (1/4) c^T M M^T c`` with M from
+    :meth:`~folded_debias.truncation.TruncationModel.var_bias_factor`.
+    ``key_variance`` is the width key passed to ``msd_and_weights``, if any.
     """
     t = np.asarray(times, float)
     m = np.asarray(msd, float)
@@ -199,8 +221,13 @@ def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
     if denom == 0:
         return np.nan
     c = wg * (sw * tg - swt) / denom
-    var_row = None if variance_row is None else np.asarray(variance_row, float)[good]
-    s = np.asarray(model.var_bias_se(cnr[good], var_row), float)
+    key = variance_row if key_variance is None else key_variance
+    key = None if key is None else np.asarray(key, float)[good]
+    if model.varbias_cov_factor is not None:
+        # Smoothed lookups are correlated: Var_cal(D) = (1/4) c^T M M^T c.
+        rows = model.var_bias_factor(cnr[good], key)
+        return float(np.linalg.norm(c @ rows) / 2.0)
+    s = np.asarray(model.var_bias_se(cnr[good], key), float)
     if not np.all(np.isfinite(s)):
         return np.nan
     return float(np.sqrt(np.sum(c ** 2 * s ** 2)) / 2.0)

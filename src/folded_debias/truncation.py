@@ -38,7 +38,7 @@ The selection between the two is automatic: pass a ``variance`` argument to
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 
 import numpy as np
 
@@ -165,6 +165,33 @@ def _interp_se(x, xp: np.ndarray, sp: np.ndarray) -> np.ndarray:
     return float(out[0]) if np.ndim(x) == 0 else out
 
 
+def _interp_matrix(x: np.ndarray, xp: np.ndarray) -> np.ndarray:
+    """Weights W with ``W @ fp == np.interp(x, xp, fp)``, edges clamped as np.interp does."""
+    xa = np.clip(np.atleast_1d(np.asarray(x, float)), xp[0], xp[-1])
+    k = np.clip(np.searchsorted(xp, xa) - 1, 0, xp.size - 2)
+    f = (xa - xp[k]) / np.maximum(xp[k + 1] - xp[k], 1e-30)
+    weights = np.zeros((xa.size, xp.size))
+    rows = np.arange(xa.size)
+    weights[rows, k] = 1.0 - f
+    weights[rows, k + 1] = f
+    return weights
+
+
+def _fixed_point_bias(sigma2_obs: np.ndarray, bias_at, var_lo: float,
+                      var_hi: float, n_iter: int):
+    """Bias read at the true variance implied by the observed one, v = v_obs - b(v).
+
+    The lookup is calibrated against the true variance but only the biased
+    observed one is known, so a few fixed-point steps refine the key. The
+    iterate is clipped to the calibrated range each step (no extrapolation).
+    """
+    sigma2_true = sigma2_obs.copy()
+    for _ in range(int(n_iter)):
+        bias = bias_at(np.clip(sigma2_true, var_lo, var_hi))
+        sigma2_true = sigma2_obs - bias
+    return sigma2_obs - sigma2_true
+
+
 def _bilinear_se(x_grid: np.ndarray, y_grid: np.ndarray, se_table: np.ndarray,
                  x, y) -> np.ndarray:
     """SE of :func:`_bilinear` when each table cell has an independent SE."""
@@ -203,6 +230,18 @@ class TruncationModel:
         models from :meth:`from_stats`; ``None`` for models built or saved
         without it, which keep the older ``relvar_grid`` weights). See
         :meth:`frame_variance`.
+    varbias_cov_factor : (n_grid, p) factor F of the covariance F F^T of the
+        smoothed ``varbias_grid`` (models from :meth:`from_cells`). Smoothed
+        values are correlated, so the calibration SE of D needs the full
+        covariance, not per-point SEs.
+    width_variance_grid, width_scale_grid, calibration_variance : the
+        leading-order bias at a true variance over its value at
+        ``calibration_variance`` and equal CNR (:meth:`from_cells` with a width
+        table). When present, a variance passed to :meth:`var_bias` rescales
+        the lookup to that width; see :meth:`_width_lookup_point`.
+    cnr_floor : the lowest calibrated CNR; lookups below it are clamped.
+    pixel_x, model_spec : the calibration's pixel grid and profile model, for
+        provenance; an application must match both.
     """
 
     cnr_grid: np.ndarray
@@ -216,6 +255,14 @@ class TruncationModel:
     varbias_se_grid: np.ndarray | None = None
     varbias_se_2d: np.ndarray | None = None
     framevar_grid: np.ndarray | None = None
+    # Optional Fisher-anchored extensions, set by from_cells().
+    varbias_cov_factor: np.ndarray | None = None
+    width_variance_grid: np.ndarray | None = None
+    width_scale_grid: np.ndarray | None = None
+    calibration_variance: float | None = None
+    cnr_floor: float | None = None
+    pixel_x: np.ndarray | None = None
+    model_spec: str | None = None
 
     # ------------------------------------------------------------------
     # Constructors
@@ -278,12 +325,96 @@ class TruncationModel:
             varbias_se_2d=se2[order, :],
         )
 
+    @classmethod
+    def from_cells(cls, cells, terms, *, knee_cnr: float = 6.0,
+                   asymptote: float | None = 1.0, n_grid: int = 256,
+                   cnr_max: float = 1e3) -> "TruncationModel":
+        """Fisher-anchored, smoothed 1-D calibration from single-frame cells.
+
+        ``cells`` is a :class:`~folded_debias.calibration.CalibrationCells`;
+        ``terms`` the :class:`~folded_debias.fisher.LeadingOrderTerms` of the
+        same model and pixel grid. The bias is written var_bias = L(CNR)
+        rho(CNR): L = ``terms.bias_coef`` / CNR^2 is the leading-order bias (the
+        width's Fisher variance), and rho, the ratio of the Monte Carlo bias to
+        L, is smoothed over every cell with a P-spline that equals
+        ``asymptote`` above ``knee_cnr``.
+
+        The asymptote is fixed (1 by default) because the Monte Carlo cannot
+        pin it: at high CNR the mean bias is only about 0.06/CNR of one fit's
+        spread, so an affordable budget leaves the high-CNR ratio uncertain by
+        more than its own size. 1 is the exact leading order for scale families
+        (Gaussian, generalized-Gaussian); the second-order bias of the Voigt fit
+        is 0.91 of the Fisher variance, a difference the free spline absorbs
+        below the knee and that is below 2e-4 sigma_0^2 above it.
+        ``asymptote=None`` fits it instead. Pooling replaces one cell's Monte
+        Carlo error with the error of a curve fitted to all cells; that error is
+        correlated along the grid, so its covariance factor is stored for
+        :func:`~folded_debias.weights.calibration_D_se`. Lookups below the lowest
+        cell clamp to it (``cnr_floor``); nothing is extrapolated.
+        """
+        from .smoothing import pspline_fit
+
+        if cells.noise_model != "gaussian":
+            raise NotImplementedError("the Fisher leading term is implemented for "
+                                      "white noise only")
+        good = (np.isfinite(cells.mean_bias) & np.isfinite(cells.bias_sd)
+                & (cells.n_finite > 1))
+        cnr = cells.cnr[good]
+        u = np.log(cnr)
+        n_fits = cells.n_finite[good]
+        knee = float(np.log(knee_cnr))
+        leading = terms.bias_coef / cnr ** 2
+
+        fit_asymptote = asymptote is None
+        offset = 0.0 if fit_asymptote else float(asymptote)
+
+        # Deep-CNR spreads are heavy-tailed; a pilot smooth keeps one wild cell
+        # from dominating the inverse-variance weights of the ratio fit.
+        pilot = pspline_fit(u, np.log(cells.bias_sd[good]), np.ones_like(u))
+        ratio_se = np.exp(pilot.evaluate(u)) / (leading * np.sqrt(n_fits))
+        ratio_fit = pspline_fit(u, cells.mean_bias[good] / leading - offset,
+                                ratio_se, knee=knee, intercept=fit_asymptote)
+        # The weights need Var(sigma_hat^2) only to leading accuracy: smooth its
+        # log ratio to the Fisher value (which the fit attains at high CNR, so
+        # the log asymptote is 0), with the normal-theory SE of a log sample
+        # variance.
+        framevar_ratio = cells.bias_sd[good] ** 2 / (terms.framevar_coef / cnr ** 2)
+        framevar_fit = pspline_fit(u, np.log(framevar_ratio),
+                                   np.sqrt(2.0 / (n_fits - 1)), knee=knee,
+                                   intercept=fit_asymptote)
+
+        grid = np.geomspace(cnr.min(), cnr_max, n_grid)
+        grid_u = np.log(grid)
+        grid_leading = terms.bias_coef / grid ** 2
+        design = ratio_fit.design(grid_u)
+        eigval, eigvec = np.linalg.eigh(ratio_fit.coef_cov)
+        factor = grid_leading[:, None] * (design @ (eigvec * np.sqrt(np.clip(eigval, 0.0, None))))
+        framevar = terms.framevar_coef / grid ** 2 * np.exp(framevar_fit.evaluate(grid_u))
+        return cls(cnr_grid=grid, p_grid=np.zeros_like(grid),
+                   relvar_grid=framevar,
+                   varbias_grid=grid_leading * (offset + design @ ratio_fit.coef),
+                   varbias_se_grid=np.linalg.norm(factor, axis=1),
+                   framevar_grid=framevar,
+                   varbias_cov_factor=factor,
+                   width_variance_grid=terms.variance_grid,
+                   width_scale_grid=terms.bias_scale,
+                   calibration_variance=terms.variance_cal,
+                   cnr_floor=float(cnr.min()),
+                   pixel_x=cells.pixel_x,
+                   model_spec=cells.model_spec)
+
     # ------------------------------------------------------------------
     # Lookups
     # ------------------------------------------------------------------
     @property
     def is_2d(self) -> bool:
         return self.variance_grid is not None and self.varbias_2d is not None
+
+    @property
+    def is_width_scaled(self) -> bool:
+        return (self.width_scale_grid is not None
+                and self.width_variance_grid is not None
+                and self.calibration_variance is not None)
 
     def p(self, cnr) -> np.ndarray:
         """Interpolated truncation fraction at the given per-frame CNR."""
@@ -326,25 +457,71 @@ class TruncationModel:
         ``experiments/halide-mixing-highn/key_sensitivity.py`` and
         ``smoothed_key`` in ``br_halide_highn_perframe.py`` for a worked
         example and its limits (below CNR_0 ~15 no key determined D).
+
+        With a width table (:meth:`from_cells`) and a ``variance``, the 1-D
+        lookup is rescaled to the key's width (:meth:`_width_lookup_point`),
+        with the same fixed-point iteration. Because the leading bias scales as
+        sigma, not sigma^2, a key error moves it about half as much as in the
+        2-D lookup. A model with neither ignores ``variance``.
         """
-        if variance is None or not self.is_2d:
+        if variance is None or not (self.is_2d or self.is_width_scaled):
             return np.interp(cnr, self.cnr_grid, self.varbias_grid,
                              left=self.varbias_grid[0],
                              right=self.varbias_grid[-1])
-        sigma2_obs = np.asarray(variance, float)
-        sigma2_true = sigma2_obs.copy()
-        # Clip the iterate to the calibration's variance range to keep the
-        # bilinear interpolation in bounds. The clip is per-iteration; a
-        # frame whose observed variance lies outside the calibration domain
-        # still gets the boundary lookup value (no extrapolation).
-        var_lo = float(self.variance_grid[0])
-        var_hi = float(self.variance_grid[-1])
-        for _ in range(int(n_iter)):
-            sigma2_true_clipped = np.clip(sigma2_true, var_lo, var_hi)
-            bias = _bilinear(self.cnr_grid, self.variance_grid,
-                             self.varbias_2d, cnr, sigma2_true_clipped)
-            sigma2_true = sigma2_obs - bias
-        return sigma2_obs - sigma2_true
+        if self.is_2d:
+            def bias_at(sigma2):
+                return _bilinear(self.cnr_grid, self.variance_grid,
+                                 self.varbias_2d, cnr, sigma2)
+            var_lo, var_hi = self.variance_grid[0], self.variance_grid[-1]
+        else:
+            def bias_at(sigma2):
+                scale, cnr_eq = self._width_lookup_point(cnr, sigma2)
+                return scale * np.interp(cnr_eq, self.cnr_grid, self.varbias_grid)
+            var_lo, var_hi = self.width_variance_grid[0], self.width_variance_grid[-1]
+        return _fixed_point_bias(np.asarray(variance, float), bias_at,
+                                 float(var_lo), float(var_hi), n_iter)
+
+    def _width_lookup_point(self, cnr, variance):
+        """Scale q and equivalent CNR at which the calibration curve is read.
+
+        The leading bias at true variance v is r(v) A_cal / CNR^2, with r the
+        width table. Reading the calibrated curve at c_eq = CNR sqrt(q / r),
+        q = v / v_cal, and multiplying by q reproduces that exactly, and puts
+        the higher-order residual at the CNR of equal relative width precision,
+        Var(sigma_hat) / sigma^2, which is what it depends on in the continuum
+        limit. ``variance`` is clipped to the table.
+        """
+        variance = np.clip(np.asarray(variance, float), self.width_variance_grid[0],
+                           self.width_variance_grid[-1])
+        ratio = np.interp(variance, self.width_variance_grid, self.width_scale_grid)
+        scale = variance / self.calibration_variance
+        return scale, np.asarray(cnr, float) * np.sqrt(scale / ratio)
+
+    def var_bias_factor(self, cnr, variance=None, n_iter: int = 4) -> np.ndarray:
+        """Rows M with Cov(looked-up var_bias) = M M^T (needs ``varbias_cov_factor``).
+
+        The interpolation weights of the lookup applied to the grid's
+        covariance factor, rescaled by the width table when one is used.
+        """
+        cnr_arr = np.atleast_1d(np.asarray(cnr, float))
+        if variance is None or not self.is_width_scaled:
+            return _interp_matrix(cnr_arr, self.cnr_grid) @ self.varbias_cov_factor
+        sigma2_obs = np.atleast_1d(np.asarray(variance, float))
+        sigma2_true = sigma2_obs - self.var_bias(cnr_arr, sigma2_obs, n_iter)
+        scale, cnr_eq = self._width_lookup_point(cnr_arr, sigma2_true)
+        return scale[:, None] * (_interp_matrix(cnr_eq, self.cnr_grid)
+                                 @ self.varbias_cov_factor)
+
+    def var_bias_cov(self, cnr, variance=None, n_iter: int = 4) -> np.ndarray:
+        """Covariance of the looked-up biases at several frames.
+
+        Smoothed calibrations correlate neighbouring lookups; a raw per-cell
+        lookup does not, so without a covariance factor this is diagonal.
+        """
+        if self.varbias_cov_factor is None:
+            return np.diag(np.atleast_1d(self.var_bias_se(cnr, variance, n_iter)) ** 2)
+        rows = self.var_bias_factor(cnr, variance, n_iter)
+        return rows @ rows.T
 
     def var_bias_se(self, cnr, variance=None, n_iter: int = 4):
         """Monte Carlo SE of the looked-up :meth:`var_bias`.
@@ -360,9 +537,14 @@ class TruncationModel:
         over 16 independent calibrations). With
         a 2-D model and a ``variance``, it is evaluated at the same
         fixed-point estimate of sigma^2_true that :meth:`var_bias` uses.
+        A smoothed model (:meth:`from_cells`) takes the SE from its covariance
+        factor, which also covers the correlation between grid neighbours.
         Returns NaN when the model carries no SE (older saved calibrations).
         """
         cnr_arr = np.asarray(cnr, float)
+        if self.varbias_cov_factor is not None:
+            se = np.linalg.norm(self.var_bias_factor(cnr_arr, variance, n_iter), axis=1)
+            return float(se[0]) if np.ndim(cnr_arr) == 0 else se
         if variance is None or not self.is_2d:
             if self.varbias_se_grid is None:
                 return np.full(np.shape(cnr_arr), np.nan) if np.ndim(cnr_arr) else np.nan
@@ -376,8 +558,14 @@ class TruncationModel:
         return _bilinear_se(self.cnr_grid, self.variance_grid,
                             self.varbias_se_2d, cnr_arr, sigma2_true)
 
-    def frame_variance(self, cnr):
+    def frame_variance(self, cnr, variance=None):
         """Interpolated per-frame ``Var(sigma_hat^2)`` at the given CNR (1-D).
+
+        With a width table and an explicit ``variance`` key, the lookup is
+        rescaled to that width (Var(sigma_hat^2) = 4 v Var(sigma_hat) to leading
+        order, so the same table serves). Pass a measurement-level key, not each
+        frame's own fitted variance: a weight that depends on its own point's
+        noise biases the slope at the order being corrected.
 
         The slope weights are ``1 / Var(sigma_hat_i^2)`` at the application's
         own frame CNR, frame 0 included (see
@@ -392,8 +580,11 @@ class TruncationModel:
         """
         if self.framevar_grid is None:
             return None
-        return np.interp(cnr, self.cnr_grid, self.framevar_grid,
-                         left=self.framevar_grid[0], right=self.framevar_grid[-1])
+        if variance is None or not self.is_width_scaled:
+            return np.interp(cnr, self.cnr_grid, self.framevar_grid,
+                             left=self.framevar_grid[0], right=self.framevar_grid[-1])
+        scale, cnr_eq = self._width_lookup_point(cnr, variance)
+        return scale ** 2 * np.interp(cnr_eq, self.cnr_grid, self.framevar_grid)
 
     def rel_variance(self, cnr, variance=None):
         """Interpolated variance of the (fitted-variance) point.
@@ -409,3 +600,26 @@ class TruncationModel:
                              right=self.relvar_grid[-1])
         return _bilinear(self.cnr_grid, self.variance_grid, self.relvar_2d,
                          cnr, variance)
+
+    # ------------------------------------------------------------------
+    # Persistence
+    # ------------------------------------------------------------------
+    def save(self, path) -> None:
+        """Save every field that is set to one ``.npz`` archive.
+
+        Unset fields are omitted rather than written empty: an empty
+        ``variance_grid`` would read back as a 2-D model, and scripts that pass
+        an archive's keys straight to the constructor keep working.
+        """
+        np.savez_compressed(str(path), **{
+            f.name: np.asarray(getattr(self, f.name)) for f in fields(self)
+            if getattr(self, f.name) is not None})
+
+    @classmethod
+    def load(cls, path) -> "TruncationModel":
+        """Load a model saved with :meth:`save` (or any archive of its fields)."""
+        archive = np.load(str(path))
+        known = {f.name for f in fields(cls)}
+        return cls(**{name: (archive[name].item() if archive[name].ndim == 0
+                             else archive[name])
+                      for name in archive.files if name in known})

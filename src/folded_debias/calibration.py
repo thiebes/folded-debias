@@ -132,6 +132,41 @@ def _single_frame_profile(model, pixel_x: np.ndarray, variance: float,
     return model.noise_free_series(exp)[0]
 
 
+def _cell_fits(model, pixel_x: np.ndarray, cnr: float, variance: float,
+               amplitude: float, n_runs: int, seed, noise_model: str,
+               background: float, read_noise: float, gain: float) -> np.ndarray:
+    """Fitted variances of ``n_runs`` noisy single-frame profiles at one cell.
+
+    The noise models are described in :func:`_cell_worker`. Every fit is kept,
+    including a failed fit's fallback value, as the application keeps it.
+    """
+    rng = np.random.default_rng(seed)
+    fits = np.empty(n_runs)
+    if noise_model == "poisson":
+        b = float(background)
+        rn = float(read_noise)
+        g = float(gain)
+        base_noise = np.sqrt(g * b + rn * rn)   # shot(gain*signal) + read floor
+        peak = float(cnr) * base_noise          # CNR = peak / baseline noise
+        clean = _single_frame_profile(model, pixel_x, variance, peak)
+        edge = max(3, pixel_x.size // 8)
+        for k in range(n_runs):
+            noisy = g * rng.poisson((clean + b) / g).astype(float)  # var = g*signal
+            if rn > 0:
+                noisy += rng.normal(0.0, rn, size=clean.shape)
+            base = np.median(np.concatenate([noisy[:edge], noisy[-edge:]]))
+            ff = model.fit_variance(pixel_x, noisy - base)
+            fits[k] = ff.variance
+    else:
+        clean = _single_frame_profile(model, pixel_x, variance, amplitude)
+        noise_sigma = float(amplitude) / float(cnr)
+        for r in range(n_runs):
+            noise = rng.normal(0.0, noise_sigma, size=clean.shape)
+            ff = model.fit_variance(pixel_x, clean + noise)
+            fits[r] = ff.variance
+    return fits
+
+
 def _cell_worker(args):
     """Top-level worker (picklable) for a single (CNR, variance) cell.
 
@@ -166,30 +201,8 @@ def _cell_worker(args):
      model_name, model_kwargs, filter_threshold, noise_model, background,
      read_noise, gain) = args
     model = MODELS[model_name](**(model_kwargs or {}))
-    rng = np.random.default_rng(seed)
-    fits = np.empty(n_runs)
-    if noise_model == "poisson":
-        b = float(background)
-        rn = float(read_noise)
-        g = float(gain)
-        base_noise = np.sqrt(g * b + rn * rn)   # shot(gain*signal) + read floor
-        peak = float(cnr) * base_noise          # CNR = peak / baseline noise
-        clean = _single_frame_profile(model, pixel_x, variance, peak)
-        edge = max(3, pixel_x.size // 8)
-        for k in range(n_runs):
-            noisy = g * rng.poisson((clean + b) / g).astype(float)  # var = g*signal
-            if rn > 0:
-                noisy += rng.normal(0.0, rn, size=clean.shape)
-            base = np.median(np.concatenate([noisy[:edge], noisy[-edge:]]))
-            ff = model.fit_variance(pixel_x, noisy - base)
-            fits[k] = ff.variance
-    else:
-        clean = _single_frame_profile(model, pixel_x, variance, amplitude)
-        noise_sigma = float(amplitude) / float(cnr)
-        for r in range(n_runs):
-            noise = rng.normal(0.0, noise_sigma, size=clean.shape)
-            ff = model.fit_variance(pixel_x, clean + noise)
-            fits[r] = ff.variance
+    fits = _cell_fits(model, pixel_x, cnr, variance, amplitude, n_runs, seed,
+                      noise_model, background, read_noise, gain)
     good = np.isfinite(fits)
     if good.sum() > 1:
         # rel_variance uses ALL finite fits (broken fits should drive this up).
@@ -357,6 +370,115 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
         noise_model=str(noise_model), background=float(background),
         read_noise=float(read_noise), gain=float(gain),
     )
+
+
+@dataclass
+class CalibrationCells:
+    """Single-frame Monte Carlo cells at one true width, over per-frame CNR.
+
+    Built by :func:`calibrate_cells`. ``mean_bias[k]`` is the unfiltered
+    ``E[sigma_hat^2] - variance_cal`` over the finite fits of cell k and
+    ``bias_sd[k]`` their standard deviation, so ``bias_sd**2`` is the frame's
+    ``Var(sigma_hat^2)``. The cells are the raw material that
+    :meth:`~folded_debias.truncation.TruncationModel.from_cells` smooths.
+    """
+
+    cnr: np.ndarray
+    mean_bias: np.ndarray
+    bias_sd: np.ndarray
+    n_finite: np.ndarray
+    n_runs: np.ndarray
+    variance_cal: float
+    pixel_x: np.ndarray
+    model_spec: str
+    noise_model: str = "gaussian"
+    seed: int = 0
+
+    def save(self, path: str | os.PathLike) -> None:
+        """Save the cells to a single ``.npz`` archive."""
+        np.savez_compressed(
+            str(path), cnr=self.cnr, mean_bias=self.mean_bias,
+            bias_sd=self.bias_sd, n_finite=self.n_finite, n_runs=self.n_runs,
+            variance_cal=np.array([self.variance_cal]), pixel_x=self.pixel_x,
+            model_spec=np.array([self.model_spec]),
+            noise_model=np.array([self.noise_model]),
+            seed=np.array([self.seed]))
+
+    @classmethod
+    def load(cls, path: str | os.PathLike) -> "CalibrationCells":
+        """Load cells previously saved with :meth:`save`."""
+        z = np.load(str(path))
+        return cls(cnr=z["cnr"], mean_bias=z["mean_bias"], bias_sd=z["bias_sd"],
+                   n_finite=z["n_finite"], n_runs=z["n_runs"],
+                   variance_cal=float(z["variance_cal"][0]),
+                   pixel_x=z["pixel_x"], model_spec=str(z["model_spec"][0]),
+                   noise_model=str(z["noise_model"][0]), seed=int(z["seed"][0]))
+
+
+def _describe_model(model) -> str:
+    """Model class and settings, recorded because the deep-CNR bias depends on them."""
+    return f"{type(model).__name__}({vars(model)})"
+
+
+def _cells_worker(args):
+    """Top-level worker (picklable): reduce one cell's fits to its moments."""
+    k, model, pixel_x, cnr, variance, n_runs, seed = args
+    fits = _cell_fits(model, pixel_x, cnr, variance, 1.0, n_runs, seed,
+                      "gaussian", 0.0, 0.0, 1.0)
+    good = fits[np.isfinite(fits)]
+    if good.size < 2:
+        return k, float("nan"), float("nan"), int(good.size)
+    return k, float(good.mean() - variance), float(good.std(ddof=1)), int(good.size)
+
+
+def calibrate_cells(cnr_grid: np.ndarray, *, model=None,
+                    pixel_x: np.ndarray | None = None,
+                    variance_cal: float = 1.0,
+                    n_runs: int | np.ndarray = 300, seed: int = 0,
+                    workers: int | None = None,
+                    verbose: bool = False) -> CalibrationCells:
+    """Single-frame Monte Carlo of the fitted-variance bias over per-frame CNR.
+
+    Each cell fits ``n_runs`` (a scalar, or one count per cell to spend more
+    runs where the bias is noisiest) white-noise profiles at the true variance
+    ``variance_cal`` and peak CNR ``cnr_grid[k]``. Unlike
+    :func:`calibrate_cnr_sigma2`, no outlier filter is applied: the mean is the
+    raw mean the application's subtraction must match, as in
+    :func:`~folded_debias.validate.calibrate_d_free`. Cells are seeded from one
+    :class:`numpy.random.SeedSequence`, so the result depends only on
+    ``(seed, n_runs)``; ``workers`` follows ``FOLDED_DEBIAS_WORKERS`` like
+    :func:`~folded_debias.montecarlo.run_ensemble`.
+    """
+    from .montecarlo import _resolve_workers
+
+    if model is None:
+        model = GaussianModel()
+    if pixel_x is None:
+        pixel_x = Experiment().x
+    pixel_x = np.asarray(pixel_x, float)
+    cnr_grid = np.asarray(cnr_grid, float)
+    runs_per_cell = np.broadcast_to(np.asarray(n_runs, int), cnr_grid.shape).copy()
+    child_seeds = np.random.SeedSequence(seed).spawn(cnr_grid.size)
+    tasks = [(k, model, pixel_x, float(c), float(variance_cal),
+              int(runs_per_cell[k]), child_seeds[k])
+             for k, c in enumerate(cnr_grid)]
+
+    n_workers = _resolve_workers(workers, len(tasks))
+    t0 = time.time()
+    if n_workers == 1:
+        results = [_cells_worker(task) for task in tasks]
+    else:
+        with ProcessPoolExecutor(max_workers=n_workers) as pool:
+            results = list(pool.map(_cells_worker, tasks))
+    if verbose:
+        print(f"    [calibrate_cells] {len(tasks)} cells, {int(runs_per_cell.sum())} "
+              f"fits in {time.time() - t0:.0f}s ({n_workers} workers)", flush=True)
+
+    _, mean_bias, bias_sd, n_finite = (np.array(column) for column in zip(*results))
+    return CalibrationCells(cnr=cnr_grid, mean_bias=mean_bias, bias_sd=bias_sd,
+                            n_finite=n_finite, n_runs=runs_per_cell,
+                            variance_cal=float(variance_cal), pixel_x=pixel_x,
+                            model_spec=_describe_model(model), seed=int(seed))
 
 
 def _progress(done: int, total: int, t0: float) -> None:

@@ -20,6 +20,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   generalized-Gaussian shape exponent.
 - `TruncationModel.frame_variance` (with `framevar_grid` in cached 1-D
   calibrations) gives the per-frame width variance used for the slope weights.
+- `folded_debias.fisher` computes the leading-order bias of the fitted variance,
+  the width's Fisher-information variance, from the profile model and pixel
+  grid alone (`leading_order_terms`, `var_of_fitted_variance` with Cramer-Rao
+  or least-squares-sandwich forms). The whole-sequence Fisher matrix and
+  `crlb_D` move here from `experiments/crlb-precision`.
+- `calibrate_fisher` builds a D-free 1-D calibration from that exact leading
+  term and a P-spline smooth of the higher-order residual over single-frame
+  Monte Carlo cells (`calibrate_cells`, `CalibrationCells`,
+  `TruncationModel.from_cells`). The smoothed lookup carries its covariance
+  factor (`TruncationModel.var_bias_factor`, `var_bias_cov`), and
+  `calibration_D_se` uses it. With `width_scaling=True` a width table rescales
+  the bias to each frame's width (it grows as sigma at a fixed pixel grid and
+  peak CNR). It is not yet the recommended path.
+- `msd_and_weights`, `corrected_variance`, and `calibration_D_se` take an
+  optional `key_variance`, a measurement-level width key; the weights are
+  width-scaled only with such a key.
+- `TruncationModel.save` and `TruncationModel.load`.
 
 ### Changed
 

@@ -7,8 +7,9 @@ This script measures how far the actual folded-normal estimator is from it, on
 the four validation shapes (Gaussian, Voigt, generalized-Gaussian p = 1.5 and
 p = 4).
 
-The Fisher matrix for a non-Gaussian shape is built numerically from the
-model's own ``noise_free_series`` (central differences in each frame's
+The Fisher matrix for a non-Gaussian shape is built numerically
+(``folded_debias.fisher``) from the model's own ``noise_free_series``
+(central differences in each frame's
 variance and centre; the amplitude enters linearly). The parameters are those
 the width fits estimate: sigma_0^2 and D, plus a per-frame peak amplitude and
 centre as nuisances; no baseline. For the Gaussian the numerical matrix is
@@ -56,7 +57,6 @@ import os
 import sys
 import time
 from pathlib import Path
-from types import SimpleNamespace
 
 import numpy as np
 
@@ -65,6 +65,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 from folded_debias import (Experiment, TruncationModel, calibrate_d_free,  # noqa: E402
                            model_from_spec, spec_tag)
+from folded_debias.fisher import (crlb_D, per_frame_crlb,  # noqa: E402
+                                  sequence_fisher_information as fisher_information)
 from folded_debias.montecarlo import run_ensemble  # noqa: E402
 from folded_debias.simulate import noise_sigma_for_cnr0  # noqa: E402
 from folded_debias.weights import msd_and_weights  # noqa: E402
@@ -84,61 +86,6 @@ EVAL_RUNS = 1000
 EVAL_SEED = 810000
 FLOOR = 1.0
 N_BOOT = 200
-
-
-# --------------------------------------------------------------------------
-# Fisher information for any profile model
-# --------------------------------------------------------------------------
-def _series(model, exp: Experiment, variance: np.ndarray, mean: float = 0.0):
-    """Noise-free stack at the given per-frame variances (same pixel grid)."""
-    stand_in = SimpleNamespace(x=exp.x, mean=mean, amplitude=exp.amplitude,
-                               true_variance=np.asarray(variance, float))
-    return model.noise_free_series(stand_in)
-
-
-def fisher_information(model, exp: Experiment, noise_sigma: float) -> np.ndarray:
-    """Fisher matrix for theta = (sigma_0^2, D, {A_i}, {c_i}), white noise.
-
-    The profile depends on (sigma_0^2, D) only through each frame's variance
-    v_i = sigma_0^2 + 2 D t_i, so d mu_i / d sigma_0^2 = d mu_i / d v_i and
-    d mu_i / d D = 2 t_i d mu_i / d v_i. Every model is peak-normalised, so
-    d mu_i / d A_i = mu_i / A_i.
-    """
-    v, t, amp = exp.true_variance, exp.times, exp.amplitude
-    n = exp.n_frames
-    hv = 1e-4 * v
-    dv = (_series(model, exp, v + hv) - _series(model, exp, v - hv)) / (2 * hv[:, None])
-    hc = 1e-4 * exp.sigma0
-    dc = (_series(model, exp, v, hc) - _series(model, exp, v, -hc)) / (2 * hc)
-    mu = _series(model, exp, v)
-    fim = np.zeros((2 + 2 * n, 2 + 2 * n))
-    for i in range(n):
-        cols = np.zeros((2 + 2 * n, exp.x.size))
-        cols[0] = dv[i]
-        cols[1] = 2.0 * t[i] * dv[i]
-        cols[2 + i] = mu[i] / amp[i]
-        cols[2 + n + i] = dc[i]
-        fim += cols @ cols.T
-    return fim / noise_sigma ** 2
-
-
-def per_frame_crlb(model, exp: Experiment, noise_sigma: float) -> np.ndarray:
-    """Var(sigma_hat_i^2) floor for each frame alone (A_i, c_i as nuisances)."""
-    v = exp.true_variance
-    hv, hc = 1e-4 * v, 1e-4 * exp.sigma0
-    dv = (_series(model, exp, v + hv) - _series(model, exp, v - hv)) / (2 * hv[:, None])
-    dc = (_series(model, exp, v, hc) - _series(model, exp, v, -hc)) / (2 * hc)
-    mu = _series(model, exp, v)
-    out = np.empty(exp.n_frames)
-    for i in range(exp.n_frames):
-        jac = np.stack([dv[i], mu[i] / exp.amplitude[i], dc[i]])
-        out[i] = np.linalg.inv(jac @ jac.T / noise_sigma ** 2)[0, 0]
-    return out
-
-
-def crlb_D(model, exp: Experiment, cnr0: float) -> float:
-    fim = fisher_information(model, exp, noise_sigma_for_cnr0(exp, cnr0))
-    return float(np.linalg.inv(fim)[1, 1])
 
 
 # --------------------------------------------------------------------------

@@ -395,3 +395,148 @@ def test_calibration_D_se_predicts_draw_to_draw_scatter():
     observed = np.std(means, ddof=1)
     ratio = observed / np.mean(predicted)
     assert 0.5 < ratio < 2.0, (observed, np.mean(predicted))
+
+
+# --------------------------------------------------------------------------
+# Fisher-anchored calibration
+# --------------------------------------------------------------------------
+def _synthetic_width_scaled_model(bias_coef=0.05):
+    """A model whose calibrated bias is exactly bias_coef / CNR^2, with a sqrt(v) width table."""
+    from folded_debias import TruncationModel
+    grid = np.geomspace(0.5, 1000.0, 400)
+    variance_grid = np.geomspace(0.25, 16.0, 41)
+    return TruncationModel(cnr_grid=grid, p_grid=np.zeros_like(grid),
+                           relvar_grid=np.ones_like(grid),
+                           varbias_grid=bias_coef / grid ** 2,
+                           width_variance_grid=variance_grid,
+                           width_scale_grid=np.sqrt(variance_grid),
+                           calibration_variance=1.0)
+
+
+def test_fisher_leading_bias_matches_closed_form():
+    """1-D Gaussian, peak CNR, white noise: Var(sigma_hat) = (2/sqrt(pi)) sigma dx / CNR^2."""
+    from folded_debias import leading_order_terms
+    x = Experiment().x
+    terms = leading_order_terms(GaussianModel(), x, 1.0)
+    assert terms.bias_coef == pytest.approx(2.0 / np.sqrt(np.pi) * (x[1] - x[0]), rel=1e-3)
+    assert terms.framevar_coef == pytest.approx(4.0 * terms.bias_coef, rel=1e-12)
+
+
+def test_fisher_numerical_jacobian_matches_analytic_gaussian():
+    from folded_debias.fisher import var_of_fitted_variance
+    x = Experiment().x
+    g = np.exp(-0.5 * x ** 2)
+    jac = np.stack([x ** 2 / 2.0 * g, g, x * g])      # d/dv, d/dA, d/dc at v = 1
+    analytic = np.linalg.inv(jac @ jac.T)[0, 0]
+    numerical = var_of_fitted_variance(GaussianModel(), x, 1.0, 1.0, estimator="ml")
+    assert numerical == pytest.approx(analytic, rel=1e-5)
+
+
+def test_least_squares_sandwich_equals_crlb_only_for_white_noise():
+    from folded_debias.fisher import var_of_fitted_variance
+    x = Experiment().x
+    model = GaussianModel()
+    ls = var_of_fitted_variance(model, x, 1.0, 2.0, estimator="ls")
+    ml = var_of_fitted_variance(model, x, 1.0, 2.0, estimator="ml")
+    assert ls == pytest.approx(ml, rel=1e-10)
+    shot = 1.0 + 5.0 * np.exp(-0.5 * x ** 2)            # noise concentrated on the peak
+    assert var_of_fitted_variance(model, x, 1.0, shot, estimator="ls") > \
+        1.001 * var_of_fitted_variance(model, x, 1.0, shot, estimator="ml")
+
+
+def test_width_scale_grows_as_sigma_and_faster_once_the_window_truncates():
+    from folded_debias import leading_order_terms
+    variance_grid = np.array([0.25, 0.5, 1.0, 1.5, 2.25, 9.0])
+    terms = leading_order_terms(GaussianModel(), Experiment().x, 1.0, variance_grid)
+    inside = variance_grid <= 2.25
+    assert np.allclose(terms.bias_scale[inside], np.sqrt(variance_grid[inside]), rtol=1e-3)
+    assert terms.bias_scale[-1] > 1.01 * np.sqrt(9.0)
+
+
+def test_pspline_recovers_curve_and_is_flat_above_knee():
+    from folded_debias.smoothing import pspline_fit
+    rng = np.random.default_rng(0)
+    knee = 1.8
+    u = np.linspace(-1.0, 3.5, 80)
+    truth = np.where(u < knee, 0.3 * (knee - u) ** 2, 0.0)
+    se = np.full(u.size, 0.02)
+    fit = pspline_fit(u, truth + rng.normal(0.0, 0.02, u.size), se,
+                      knee=knee, intercept=False)
+    assert np.max(np.abs(fit.evaluate(u) - truth)) < 0.04
+    assert np.all(fit.evaluate(np.array([knee, 2.5, 3.5])) == 0.0)
+    assert np.linalg.eigvalsh(fit.coef_cov).min() > -1e-12
+
+
+def test_width_scaled_lookup_inverts_the_bias_at_the_true_width():
+    model = _synthetic_width_scaled_model(bias_coef=0.05)
+    cnr, v_true = 3.0, 4.0
+    bias = np.sqrt(v_true) * 0.05 / cnr ** 2
+    assert model.var_bias(cnr, v_true + bias) == pytest.approx(bias, rel=1e-3)
+    assert model.var_bias(cnr) == pytest.approx(0.05 / cnr ** 2, rel=1e-3)
+
+
+def test_correlated_calibration_se_reduces_to_independent_for_diagonal_factor():
+    from dataclasses import replace
+    from folded_debias import TruncationModel, calibration_D_se
+    grid = np.array([1.0, 2.0, 4.0, 8.0, 16.0])
+    se = np.array([0.03, 0.02, 0.01, 0.005, 0.002])
+    independent = TruncationModel(cnr_grid=grid, p_grid=np.zeros(5),
+                                  relvar_grid=np.ones(5), varbias_grid=0.05 / grid ** 2,
+                                  varbias_se_grid=se)
+    correlated = replace(independent, varbias_cov_factor=np.diag(se))
+    assert np.allclose(correlated.var_bias_se(grid), se)
+    times = np.linspace(0.0, 2.0, 5)
+    cnr = grid[::-1]
+    msd, w = np.zeros(5), np.ones(5)
+    assert calibration_D_se(times, msd, w, cnr, correlated) == pytest.approx(
+        calibration_D_se(times, msd, w, cnr, independent), rel=1e-12)
+
+
+def test_fisher_calibration_cuts_calibration_se_at_equal_budget():
+    """The same number of Monte Carlo fits gives a smaller calibration SE of D."""
+    from folded_debias import calibrate_d_free, calibrate_fisher, calibration_D_se, msd_and_weights
+    raw = calibrate_d_free(np.array([5.0, 20.0]), n_runs=60, seed=3)     # 2 x 60 x 12 fits
+    smoothed = calibrate_fisher(np.geomspace(0.5, 30.0, 24), n_runs=60, seed=4)  # 24 x 60
+    exp = Experiment(D=0.02)
+    ens = run_ensemble(exp, 13.0, n_runs=20, seed=777)
+
+    def mean_calibration_se(model):
+        ses = []
+        for r in range(ens.n_runs):
+            msd, w = msd_and_weights("folded_normal", ens.variance[r], ens.cnr_frame, model)
+            ses.append(calibration_D_se(exp.times, msd, w, ens.cnr_frame, model, ens.variance[r]))
+        return np.nanmean(ses)
+
+    assert mean_calibration_se(smoothed) < 0.8 * mean_calibration_se(raw)
+    assert smoothed.var_bias(20.0) == pytest.approx(smoothed.var_bias(20.0, 1.3))  # no width table
+
+
+def test_new_fields_leave_old_lookups_unchanged():
+    from dataclasses import replace
+    from folded_debias import calibrate_d_free
+    trunc = calibrate_d_free(np.array([5.0, 20.0]), n_runs=60, seed=3)
+    cnr = np.array([0.7, 2.0, 9.0])
+    plain = np.interp(cnr, trunc.cnr_grid, trunc.varbias_grid)
+    assert np.array_equal(trunc.var_bias(cnr, np.array([1.2, 0.8, 3.0])), plain)
+    scaled = _synthetic_width_scaled_model()
+    stripped = replace(scaled, width_scale_grid=None, width_variance_grid=None,
+                       calibration_variance=None)
+    assert np.array_equal(stripped.var_bias(cnr, np.array([4.0, 4.0, 4.0])),
+                          stripped.var_bias(cnr))
+    assert np.array_equal(trunc.frame_variance(cnr),
+                          np.interp(cnr, trunc.cnr_grid, trunc.framevar_grid))
+
+
+def test_truncation_model_save_load_round_trip(tmp_path):
+    from folded_debias import TruncationModel, calibrate_d_free
+    scaled = _synthetic_width_scaled_model()
+    scaled.save(tmp_path / "scaled.npz")
+    loaded = TruncationModel.load(tmp_path / "scaled.npz")
+    assert loaded.calibration_variance == 1.0
+    assert loaded.var_bias(3.0, 4.0) == pytest.approx(scaled.var_bias(3.0, 4.0), rel=1e-15)
+    trunc = calibrate_d_free(np.array([5.0, 20.0]), n_runs=60, seed=3)
+    trunc.save(tmp_path / "plain.npz")
+    legacy = TruncationModel(**np.load(tmp_path / "plain.npz"))   # the experiments' loader
+    assert not legacy.is_2d and not legacy.is_width_scaled
+    assert np.array_equal(legacy.var_bias(np.array([1.0, 4.0])),
+                          trunc.var_bias(np.array([1.0, 4.0])))

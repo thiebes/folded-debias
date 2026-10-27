@@ -32,9 +32,11 @@ from .truncation import FrameStats, TruncationModel, frame_stats
 from .weights import (SCHEMES, calibration_D_se, corrected_variance,
                       msd_and_weights)
 from .validate import (FrameDiagnostic, SchemeResult, calibrate,
-                       calibrate_d_free, evaluate, per_frame_diagnostic,
-                       sweep_stats)
-from .calibration import CalibrationGrid, calibrate_cnr_sigma2
+                       calibrate_d_free, calibrate_fisher, evaluate,
+                       per_frame_diagnostic, sweep_stats)
+from .calibration import (CalibrationCells, CalibrationGrid, calibrate_cells,
+                          calibrate_cnr_sigma2)
+from .fisher import LeadingOrderTerms, leading_order_terms
 
 __version__ = "0.3.0"
 
@@ -46,7 +48,10 @@ __all__ = [
     "Ensemble", "run_ensemble",
     "FrameStats", "TruncationModel", "frame_stats",
     "SCHEMES", "msd_and_weights", "corrected_variance", "calibration_D_se",
-    "SchemeResult", "calibrate", "calibrate_d_free", "evaluate", "sweep_stats",
+    "SchemeResult", "calibrate", "calibrate_d_free", "calibrate_fisher",
+    "evaluate", "sweep_stats",
     "FrameDiagnostic", "per_frame_diagnostic",
     "CalibrationGrid", "calibrate_cnr_sigma2",
+    "CalibrationCells", "calibrate_cells",
+    "LeadingOrderTerms", "leading_order_terms",
 ]
