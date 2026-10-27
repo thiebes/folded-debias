@@ -1,0 +1,43 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.0"
+      - run: uv python install ${{ matrix.python-version }}
+      # --locked fails if uv.lock is out of step with pyproject.toml.
+      - run: uv sync --locked --extra dev --python ${{ matrix.python-version }}
+      - run: uv run pytest -v
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Same uv version, interpreter, and hash-checked build command as the
+      # build job in publish.yml, so a stale or broken
+      # .github/build-constraints.txt fails here first.
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          version: "0.13.0"
+      - run: uv python install 3.13.16
+      - run: uv build --python 3.13.16 --managed-python --build-constraints .github/build-constraints.txt --require-hashes
+      # Same twine and packaging versions as the pinned PyPI publish action
+      # (its requirements/runtime.txt). Update both pins in the same change
+      # that bumps pypa/gh-action-pypi-publish in publish.yml.
+      - run: uvx --with packaging==26.2 twine==7.0.0 check --strict dist/*
