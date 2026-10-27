@@ -48,7 +48,7 @@ def diagnose(A: float, cnr0: float, power: int = 2, n_mc: int = 4000,
     print(f"A={A:.0f}, CNR_0={cnr0}, emission power={power}, {n_mc} MC fits/frame")
     print(" frame  t(ns)   cnr  sigma2_ref  B_actual  B_calib   verdict")
     for f in range(nf.N_FRAMES):
-        ref = rg.fit_var[f]
+        ref = rg.gauss_var[f]
         clean = rg.clean[f]
         fitted = np.empty(n_mc)
         subtracted = np.empty(n_mc)

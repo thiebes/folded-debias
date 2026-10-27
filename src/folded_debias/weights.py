@@ -29,11 +29,12 @@ the CNR is known exactly; on real data it is measured from each profile with
 the ``fft-cnr`` package (see :mod:`folded_debias.cnr`).
 
 The ``model`` (a :class:`~folded_debias.truncation.TruncationModel`) can be
-either a legacy 1-D, D-aware calibration or the 2-D, D-free one from
+a 1-D calibration (recommended: :func:`~folded_debias.validate.calibrate_d_free`,
+built at D = 0, so it carries no reference to the application's D) or the
+experimental joint (CNR, sigma^2) calibration from
 :func:`~folded_debias.calibration.calibrate_cnr_sigma2`. With the joint
-(CNR, sigma^2) calibration the
-per-frame raw fitted variance is also passed into the lookup, so the
-correction is width-aware and carries no reference to D.
+calibration the per-frame raw fitted variance is also passed into the lookup,
+so the correction is width-aware.
 """
 from __future__ import annotations
 

@@ -4,9 +4,11 @@ The cleanest test of where the correction works: isolated single profiles
 at chosen per-profile CNR, with no diffusion, no decay, no frame indexing.
 For each test CNR:
 
-1. Build a dense D-free calibration of var_bias(CNR) (matching
-   dense_calibration_and_test.py: 100 log-spaced CNR_0 in [2,100], 1000
-   runs/cell).
+1. Build a dense D-free calibration of var_bias(CNR) (100 log-spaced CNR_0 in
+   [2,100], N_RUNS_CAL runs/cell). Each committed table records its own budget
+   on its third line: the Gaussian, Voigt, and p = 2 tables used 1000 runs/cell,
+   the p = 1.5 and p = 4 tables 5000, so the floors rest on different
+   calibration budgets.
 2. Simulate isolated noisy profiles at sigma^2 = sigma_0^2 and the chosen
    per-profile CNR. Many of them (n_runs_test per cell). Fit each.
 3. Apply the calibration's var_bias(CNR_test) to get the corrected

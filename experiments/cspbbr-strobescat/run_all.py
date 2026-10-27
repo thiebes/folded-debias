@@ -16,7 +16,7 @@ with `--stages` to resume (e.g. `--stages apply,summary` after a calibration run
 
 Example::
 
-    python real_examples/cspbbr/run_all.py \
+    python experiments/cspbbr-strobescat/run_all.py \
         --sample-root "P:/Upasana/CsPbBr_SingleCrystal/Sample_1" \
         --out-dir output/cspbbr --workers 16 --n-runs 8000
 

@@ -26,8 +26,8 @@ import numpy as np
 # Allow running from a source checkout without installing the package.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (Experiment, evaluate, model_from_spec,  # noqa: E402
-                           spec_tag, sweep_stats)
+from folded_debias import (Experiment, calibrate_d_free, evaluate,  # noqa: E402
+                           model_from_spec, spec_tag, sweep_stats)
 from folded_debias.truncation import TruncationModel  # noqa: E402
 
 # Nanocrystal-solid regime: short diffusion length against the spot size.
@@ -64,10 +64,19 @@ def main() -> None:
     print(f"  CNR_0 sweep: {CNR0_GRID}")
     print(f"  {N_RUNS} Monte Carlo runs per CNR_0\n")
 
-    # One calibration sweep, reused for the truncation model and panel (a).
-    print("Calibrating truncation model ...")
+    # Panel (a) diagnostic sweep at the experiment's own D: the MSD sign
+    # fraction and skewness need a nonzero true MSD, so this sweep cannot be
+    # the D = 0 one. It is not used by the correction.
+    print("Diagnostic sweep for panel (a) ...")
     stats = sweep_stats(EXP, CNR0_GRID, n_runs=N_RUNS, seed=1, model=pmodel)
-    model: TruncationModel = TruncationModel.from_stats(stats)
+
+    # The correction's calibration is D-free: the same sweep at D = 0, so the
+    # lookup never uses the D being estimated (docs/DERIVATION.md section 8).
+    print("Calibrating (D-free) ...")
+    model: TruncationModel = calibrate_d_free(
+        CNR0_GRID, sigma0=EXP.sigma0, tau=EXP.tau, half_window=EXP.half_window,
+        n_pixels=EXP.n_pixels, n_frames=EXP.n_frames, t_max=EXP.t_max,
+        amplitude0=EXP.amplitude0, n_runs=N_RUNS, seed=1, model=pmodel)
 
     # Independent evaluation sweep (different seed).
     print("Evaluating schemes ...")
@@ -75,9 +84,13 @@ def main() -> None:
                        seed=20000, profile_model=pmodel)
 
     # --- summary table ---------------------------------------------------
-    print("\n  <D_est> / D_true   (1.000 = unbiased; SE = Monte Carlo standard error)")
+    # The combined SE adds the calibration's own Monte Carlo error, which is
+    # shared by every run evaluated with this calibration (weights.calibration_D_se).
+    print("\n  <D_est> / D_true   (1.000 = unbiased; SE = evaluation and "
+          "calibration combined)")
     print("  CNR_0     OLS     inv-var   folded-normal     SE")
-    fn_se = results["folded_normal"].spread / np.sqrt(N_RUNS)
+    fn = results["folded_normal"]
+    fn_se = np.hypot(fn.spread / np.sqrt(N_RUNS), fn.cal_se)
     for i, c0 in enumerate(CNR0_GRID):
         print(f"  {c0:6.0f}  {results['ols'].mean_bias[i]:7.3f}  "
               f"{results['inverse_variance'].mean_bias[i]:7.3f}  "

@@ -31,11 +31,14 @@ snapshots are here.
 
 ## Key result + figure
 
-Above per-frame CNR ~1.2 the bounded and unbounded fits are bit-for-bit identical
-(the wall never binds); below it, removing the wall only partly debiases and
-explodes the variance, because a nonlinear shape-matched fit intrinsically
-resists negative variances. Only folded-normal is both unbiased and precise
-across CNR0. Figures: `method_comparison.png`, `unbounded_fit_comparison.png`;
+From per-frame CNR ~1.5 up the bounded and unbounded fits are bit-for-bit
+identical (the wall never binds), and both carry the same upward bias (mean
+fitted variance 1.038, 1.016, 1.010 sigma_0^2 at CNR 1.52, 2.0, 2.6; `<D>/D_ref`
+1.199 at CNR0 34 for both, 0.999 after folded-normal). So the bias in that range
+is not a wall effect, and removing the wall does not remove it. Below CNR ~1.5,
+removing the wall only partly debiases and explodes the variance, because a
+nonlinear shape-matched fit intrinsically resists negative variances. Only
+folded-normal is both unbiased and precise across CNR0. Figures: `method_comparison.png`, `unbounded_fit_comparison.png`;
 table `unbounded_fit_comparison.txt`.
 
 ## Depends on

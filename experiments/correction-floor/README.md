@@ -38,8 +38,10 @@ Set `FOLDED_DEBIAS_WORKERS=0`; `per_profile_floor.py` runs ~45 min (Gaussian) to
 
 Per-profile floor (50,000 fits per cell; deepest CNR before the first cell
 whose residual exceeds both 2 SE and 0.01 sigma_0^2): Gaussian 1.16, Voigt 1.5
-(within 0.01 sigma_0^2 again from 1.16 down to 0.53), p = 1.5 0.89, p = 4 0.69
-(within 0.013 down to 0.11). The p = 4 fit reads low, not high, at deep CNR.
+(-0.013 sigma_0^2 at 1.16; within 0.01 again at 0.89 and 0.69; +0.030 at
+0.53), p = 1.5 0.89, p = 4 0.69 (within 0.013 down to 0.11). The calibrations
+behind these floors used 1000 runs/cell (Gaussian, Voigt) and 5000 (p = 1.5,
+p = 4); see each table's header. The p = 4 fit reads low, not high, at deep CNR.
 The floor readout requires |residual| > 0.01 sigma_0^2 in addition to
 significance, because at 50,000 fits significance alone flags 1e-4 calibration
 offsets and reports the top of the grid. The folded-normal model

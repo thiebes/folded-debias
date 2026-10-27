@@ -7,9 +7,23 @@ per-frame CNR collapses; the correction removes that bias before the D fit. The
 real-data figure of this repository is in `experiments/wse2-strobescat/`; this
 folder is a second real-data application. Data on the pshare; see `DATASETS.md`.
 
-The noise is white (constant-floor), not shot-limited -- a raster-scanned APD
-measurement whose photon-transfer fit comes out floor-dominated -- so the
-calibration uses the gaussian model.
+The calibration uses the gaussian (white, constant-floor) noise model. That
+choice is asserted, not measured: `reduce.py` runs no noise-law fit, and a
+raster-scanned APD (photon-counting) measurement could be shot-limited instead.
+
+## Limitations (read before quoting a result)
+
+- **No committed result.** No D from this folder has been reported or checked.
+- **Noise law not measured.** See above; a shot-noise-limited measurement needs
+  a matched calibration (`experiments/noise-law`).
+- **No background subtraction before the width fit.** `reduce.py` fits the
+  merged profiles directly, and the Gaussian fit has no offset term, so a dark
+  count or pedestal widens the fitted late frames in the same direction as the
+  noise bias.
+- **Experimental calibration path.** `apply_correction.py` uses the joint
+  `(CNR, sigma^2)` calibration, which `src/folded_debias/calibration.py` marks
+  as experimental; it applies no per-frame CNR floor and propagates no
+  calibration SE.
 
 ## All fluences at once (recommended)
 

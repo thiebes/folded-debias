@@ -50,8 +50,9 @@ def per_frame_cnr(profiles: np.ndarray,
         default peak method -- is accurate on a true Gaussian but biased on the
         heavy-tailed / flat-topped shapes that bracket Voigt and
         generalized-Gaussian: the fft-cnr shape-sensitivity study (case 3) puts
-        a Gaussian fit 5-17 % off across that kurtosis range while the
-        generalized-Gaussian fit stays within ~1 %, with the Gaussian falling
+        a Gaussian fit 0.05-0.17 of the amplitude off across that kurtosis
+        range while the generalized-Gaussian fit stays within ~0.01, with the
+        Gaussian falling
         out as the p=2 special case. Because the truncation bias scales as
         ~A/CNR^2, a biased CNR feeds straight into a biased correction, so the
         shape-robust estimator matters here. The generalized-Gaussian fit

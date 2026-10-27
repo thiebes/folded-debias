@@ -16,17 +16,19 @@ wobble -- the systematic bias survives averaging, the noise does not -- so the
 correction shows on every binned point.
 
 Result: **naive D = 0.0116, corrected D = 0.0113 um^2/ns, ratio 0.97** -- the
-correction pulls D down by ~3% on this real measurement, consistently across the
-binned points (over the full retained range to ~7 ns the pull is ~5%). Fit over
-the 16 frames with per-frame CNR >= 1.3 and t <= 2 ns (t = -0.1..1.8 ns, CNR
-2.5..18). Below-CNR-floor late frames (where the correction over-subtracts -- the
-documented limitation) are excluded.
+correction lowers D by about 0.03 of its value on this measurement (over the
+retained range to the 4.8 ns tail cut, the de-parity diagnostics give ratio
+0.95; `diagnostics/index.md`). Fit over the 16 frames with per-frame CNR >= 1.3
+and t <= 2 ns (t = -0.1..1.8 ns, CNR 2.5..18). Below-CNR-floor late frames (where
+the correction over-subtracts -- the documented limitation) are excluded.
 
-Message: on real data the correction removes a small, systematic upward bias in D
-that averaging alone cannot -- "replication reduces variance, not bias." The
-correction is modest here because the reliable frames sit at moderate CNR; the
-large bias in the deep-low-CNR regime, where truth is known, is shown by the
-simulation recovery demo (`diagnostics/_frame_ladder/0_simulated_benefit.png`,
+What this shows and what it does not: the corrected points sit below the naive
+ones on every binned point by construction, because the subtracted bias is
+positive and grows as CNR falls. No independent reference D exists for this
+scan and no SE is computed for the ratio, so the panel shows what the correction
+does, not that the corrected D is closer to the true D. The bias magnitude, and
+its removal where the reference is known, are shown by the simulation recovery
+demo (`diagnostics/_frame_ladder/0_simulated_benefit.png`,
 `0b_simulated_distribution.png`).
 
 The pixel scale is not taken from the ratio of Enrique's fitted sigma (um) to the

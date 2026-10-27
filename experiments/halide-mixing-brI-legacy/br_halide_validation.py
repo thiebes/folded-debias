@@ -219,8 +219,9 @@ def write_report(results: list[CaseResult], n_frames: int, path: Path) -> None:
         lines.append(f"=== {r.name} ===  shape gap (fit vs carrier truth) "
                      f"{r.shape_gap:.1f} nm^2")
         lines.append(f"  carrier truth alpha = {r.a_true:.3f};  noiseless fit "
-                     f"alpha = {r.a_nf:.3f} (recovers it);  noiseless moment "
-                     f"alpha = {r.a_nm:.3f} (box-clipped, low)")
+                     f"alpha = {r.a_nf:.3f} ({r.a_nf - r.a_true:+.3f} vs carrier);"
+                     f"  noiseless moment alpha = {r.a_nm:.3f} "
+                     f"({r.a_nm - r.a_true:+.3f} vs carrier)")
         lines.append("  CNR_0 | min CNR | n>=1 | alpha naive/method | D naive/method")
         for i, c in enumerate(r.cnr0):
             lines.append(f"  {c:5.0f} | {r.min_cnr[i]:7.2f} | "

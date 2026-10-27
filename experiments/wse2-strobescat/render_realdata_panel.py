@@ -1,18 +1,20 @@
-"""Real-data panel: de-parity merged, full-range,
+"""Real-data panel: de-parity merged, early diffusive window (t <= T_FIT),
 in physical um^2 units.
 
 MoSSe alloy (Enrique's `mixed_tmdc/26_32/250716`, sample "250716_MoSSe_mystery").
 De-parity merged reduction (each interleaved sweep re-zeroed to its own t0),
 converted to um^2 with the 0.060 um pixel (``UM_PER_PX``;
-not the ratio of his sigma(um) to the px fit, which depends on the fit). The message: on real data a measurable ~5% upward
-bias in D, concentrated in the low-CNR late frames that are normally discarded.
+not the ratio of his sigma(um) to the px fit, which depends on the fit).
 
 Numbers-only (no fit lines): naive sigma^2 (red, open) vs corrected (blue,
-filled), error bars, D and the ratio in the legend. Every frame is shown; the
-single below-floor frame (CNR < 1.3, which over-subtracts -- the correction's
-documented limitation) is flagged and excluded from the fit, so the reported D is
-the floor-valid, ~5% result (including it would give a spurious 41% from the
-over-subtraction, not the clean bias).
+filled), error bars, D and the ratio in the legend. Frames below the per-frame
+CNR floor (``FLOOR``, where the subtraction over-corrects -- the correction's
+documented limitation) are flagged and excluded from the fit.
+
+The panel shows what the correction does; it is not a validation. The
+corrected-to-naive ratio is below 1 by construction (the subtracted bias is
+positive and grows as CNR falls), and no independent reference D exists for
+this scan.
 
 Usage::
 

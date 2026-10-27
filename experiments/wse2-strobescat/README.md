@@ -20,18 +20,23 @@ establish what the correction does on real measurements.
   `mixed_tmdc/50_50/250702` are degenerate (negative D) under per-sweep
   re-zeroing and are not used; other WSe2 power dates are clean (both sweeps
   agree).
-- **On real data the correction is small where the data are reliable.**
-  Reproducing Enrique's exact fit (t <= 2 ns, forced origin, inverse-variance),
-  the corrected/naive D ratio is ~1.00 for high-CNR measurements and ~0.95-0.99
-  where the fit reaches CNR ~1.4-2.5. The effect grows monotonically as the fit
-  reaches lower CNR, as the theory predicts. The large bias lives at low CNR,
-  which is also where real frames become individually unreliable.
-- **The bias magnitude is established in simulation; real data validate the
-  behaviour.** The correction debiases the *mean* (and hence D, a mean-trend
-  slope), not every individual near-floor frame. The simulated recovery demo
-  shows the true width recovered (the reference is known there); the real data show
-  that the method returns stable, self-consistent D and a CNR dependence that
-  matches theory.
+- **What the correction does on real data (not a validation).** The
+  corrected/naive D ratio is about 1.00 for high-CNR measurements and 0.95 to
+  0.99 where the fit reaches per-frame CNR of about 1.4 to 2.5
+  (`diagnostics/index.md`). A ratio below 1 that grows as CNR falls follows from
+  the construction (the subtracted bias is positive and increases as CNR falls),
+  so it does not show that the corrected D is closer to the true D. No
+  independent reference D exists for these scans yet, and no SE is computed for
+  the real-data ratios. `realdata_enrique_pipeline.py` applies this repo's
+  bounded-Gaussian calibration to widths from Enrique's own fit, a different
+  estimator, so its corrected values are not a valid correction of those widths.
+- **The bias magnitude is established in simulation only.** The correction
+  debiases the *mean* (and hence D, a mean-trend slope), not every individual
+  near-floor frame. The simulated recovery demo shows the true width recovered
+  (the reference is known there). Whether the corrected real-data D is closer to
+  the true D is untested; the planned check is a leave-one-out scan merge (the
+  merge of the other scans of a measurement as a higher-CNR reference for each
+  single scan).
 
 ## The CNR key on real data: estimated, not exact
 
@@ -137,10 +142,12 @@ CPU contention.
   **MoSSe alloy** `26_32/250716` (sample `250716_MoSSe_mystery`, **not WSe2**),
   de-parity merged, in physical um^2 (0.060 um per px). The panel fits the early
   diffusive window (t <= 2 ns): naive D 0.0116 -> corrected 0.0113 um^2/ns
-  (ratio 0.97). Over the full retained range (to ~7 ns), naive D 0.0050 ->
-  corrected 0.0047 um^2/ns (ratio 0.95) -- a measurable ~5% upward bias
-  concentrated in the low-CNR late frames (2-7 ns) that are normally discarded.
-  Rendered by `render_realdata_panel.py`. The WSe2 `Power_var/250224/0.020` scan
+  (ratio 0.97). The de-parity diagnostics over the retained range (tail cut at
+  4.8 ns; `diagnostics/index.md`) give 1.480 -> 1.401 px^2/ns, that is
+  0.0053 -> 0.0050 um^2/ns (ratio 0.95), with the change concentrated in the
+  low-CNR late frames. Neither number has an SE, and neither is validated against
+  an independent reference (see Key findings). Rendered by
+  `render_realdata_panel.py`. The WSe2 `Power_var/250224/0.020` scan
   is not used: it is degenerate (negative D) under per-sweep re-zeroing.
 - Per-measurement views: `diagnostics/<measurement>/msd_enrique_pipeline.png`,
   `msd_deparity.png`; summary in `diagnostics/index.md`. Reported in px^2 or

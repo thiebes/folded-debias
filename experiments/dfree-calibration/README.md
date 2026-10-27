@@ -55,13 +55,13 @@ committed snapshots are in this folder.
 
 `validate_d_zero` (300-run calibration, 300 evaluation runs per cell) prints
 each cell's evaluation SE, the calibration's own propagated SE
-(`calibration_D_se`), their combination, and |bias - 1| in combined SE. The
-corrected `mean(D_hat)/D_ref` is consistent with 1 within two combined SE in 136
-of 140 cells (Gaussian, Voigt, p = 1.5, p = 4; D 0.005 to 0.1; CNR0 5 to 90),
-with the other four at 2.0 to 3.4 SE, about the number expected by chance: no
-resolved bias. Small D is precision-limited, not biased: combined SE 0.02 to
-7.9 at `D <= 0.01`, 0.02 to 1.05 at `D = 0.02`, at most 0.03 only for
-`D >= 0.05` at `CNR0 >= 34`.
+(`calibration_D_se`), their combination, and |bias - 1| in combined SE. Its
+committed tables use the former MSD-point weights and are superseded by
+`slope_fit_check` (below). With those former weights, 136 of 140 cells lay
+within two combined SE; that count is not a test against a binomial null,
+because every shape uses the same seeds (the four shapes see the same noise
+draws) and one calibration serves all 35 cells of a shape. The small-D cells had
+combined SE up to 7.9 at `D <= 0.01`, so they constrain the bias only loosely.
 
 `calibration_se_check` (`calibration_se_check.txt`): the propagated
 calibration SE is correct. Observed / predicted variance of the cell mean over

@@ -57,11 +57,14 @@ the calibration's contribution to the uncertainty from
 
 - The width fit reflects rather than clips at the lower bound, so the
   folded-normal route applies (`experiments/boundary-diagnostic`).
-- With the calibration's own Monte Carlo error included, the corrected D is
-  consistent with the reference within two combined standard errors in 136 of
-  140 cells (Gaussian, Voigt, and generalized-Gaussian p = 1.5 and p = 4
-  profiles; D from 0.005 to 0.1 sigma_0^2/tau; initial CNR 5 to 90). Small D is
-  limited by precision, not bias (`experiments/dfree-calibration`).
+- With the calibration's own Monte Carlo error included, 4 of 96 cells lie
+  beyond two combined standard errors of the reference (Gaussian, Voigt, and
+  generalized-Gaussian p = 1.5 and p = 4 profiles; D = 0.005, 0.02, and 0.1
+  sigma_0^2/tau; initial CNR 3 to 90; `slope_fit_check.txt`). The cells share
+  noise seeds across shapes and one calibration per shape, so the count is
+  indicative rather than a test against a binomial null. At small D and low
+  initial CNR the combined SE is large, so those cells constrain the bias only
+  loosely (`experiments/dfree-calibration`).
 - The correction holds above a per-frame CNR of about 1 (0.7 to 1.5 depending on
   shape), where the folded-normal model itself breaks
   (`experiments/correction-floor`). With single-exponential decay to

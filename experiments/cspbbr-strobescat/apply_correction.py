@@ -9,7 +9,7 @@ bias ``var_bias(CNR, sigma_hat^2)`` from each frame before the MSD slope fit.
 
 Example::
 
-    python real_examples/cspbbr/apply_correction.py \
+    python experiments/cspbbr-strobescat/apply_correction.py \
         --reduced output/cspbbr_13p47.npz \
         --calibration output/calibration_cspbbr_gaussian.npz
 

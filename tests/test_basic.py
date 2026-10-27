@@ -132,8 +132,9 @@ def test_moment_estimator_can_go_negative():
 
 def test_unbounded_matches_bounded_at_high_cnr():
     """With the wall removed, the fit must be identical to the bounded one when
-    the wall does not bind -- i.e. at healthy CNR, where the truncation bias and
-    its correction are moot."""
+    the wall does not bind -- i.e. at healthy CNR. There the zero bound is moot,
+    but the bias is not: both fits carry the same width-estimation bias, which
+    the correction still removes."""
     exp = Experiment(D=0.0)
     clean = noise_free_series(exp)
     rng = np.random.default_rng(0)
@@ -376,7 +377,11 @@ def test_calibration_D_se_predicts_draw_to_draw_scatter():
     ens = run_ensemble(exp, 13.0, n_runs=60, seed=777)
     means, predicted = [], []
     for k in range(8):
-        trunc = calibrate_d_free(np.array([6.0, 13.0, 30.0]), n_runs=80, seed=100 + k)
+        # sweep_stats seeds CNR_0 cell i with seed + i, so draws spaced by 1000
+        # share no ensemble; adjacent seeds (100 + k) would share two of three
+        # cells and make the draws correlated, shrinking the observed scatter.
+        trunc = calibrate_d_free(np.array([6.0, 13.0, 30.0]), n_runs=80,
+                                 seed=1000 * (k + 1))
         ds, ses = [], []
         for r in range(ens.n_runs):
             msd, w = msd_and_weights("folded_normal", ens.variance[r],

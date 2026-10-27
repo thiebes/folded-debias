@@ -297,9 +297,12 @@ class UnboundedGaussianModel:
     implicit wall the optimiser will not cross, so a variance-bounded "unbounded"
     fit cannot actually reach negative values.
 
-    Finding (``scripts/unbounded_fit_comparison.py``): above per-frame CNR ~ 2-3
-    this fit is indistinguishable from the bounded one and both are unbiased, so
-    the correction is moot there. In the bias-prone band (per-frame CNR < ~1.5)
+    Finding (``experiments/estimator-comparison/unbounded_fit_comparison.py``):
+    from per-frame CNR ~1.5 up this fit is identical to the bounded one, because
+    the wall never binds. Both still carry the same upward bias (mean fitted
+    variance 1.038, 1.016, 1.010 sigma_0^2 at CNR 1.52, 2.0, 2.6, against 1.0),
+    which the correction removes: there the wall question is moot, the
+    correction is not. In the bias-prone band (per-frame CNR < ~1.5)
     removing the wall only *partly* debiases the mean (e.g. at CNR 0.5 the mean
     fitted variance falls from ~2.4 to ~1.6 sigma_0^2, still well above the true
     1.0) and explodes the variance (the ``1 / b`` tail), because even without a

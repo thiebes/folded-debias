@@ -34,6 +34,11 @@ folder are the current results.
 
 ## Key result + figure
 
+The committed tables below were produced with a D-aware calibration (the sweep
+run at the evaluation D = 0.02) and an evaluation-only SE. The script now
+calibrates D-free (`calibrate_d_free`, D = 0) and prints the combined SE
+(evaluation and calibration); the tables are to be regenerated with it.
+
 D = 0.02, 400 runs per CNR_0, each table with the folded-normal cell's Monte
 Carlo SE. Over CNR_0 13 to 90 the folded-normal mean `|mean(D_hat)/D_ref - 1|`
 is 0.052 (Gaussian), 0.056 (Voigt), 0.048 (generalized-Gaussian p = 1.5), and
@@ -52,8 +57,8 @@ reference. Figures: `poc_demo*.png`.
 
 ## Depends on
 
-`folded_debias` (`model_from_spec`, `Experiment`, `evaluate`, `sweep_stats`,
-`TruncationModel`). No sibling-folder helpers.
+`folded_debias` (`model_from_spec`, `Experiment`, `calibrate_d_free`,
+`evaluate`, `sweep_stats`, `TruncationModel`). No sibling-folder helpers.
 
 ## See also
 

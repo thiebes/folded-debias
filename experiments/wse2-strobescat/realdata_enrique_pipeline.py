@@ -1,5 +1,11 @@
 """Reproduce Enrique's diffusion fit exactly, then apply our bias correction.
 
+Caveat: the calibration subtracted here is built for this repo's bounded
+Gaussian width fit, but the widths it is applied to come from Enrique's own fit,
+a different estimator with its own bias at low CNR. The corrected values from
+this script are therefore not a valid correction of his widths; the
+estimator-matched pipeline is ``realdata_diagnostics.py``.
+
 Enrique's pipeline (``diff_eval_app.py`` ``DiffusionAnalysis`` / the merged-array
 D fit) takes his per-time fitted widths, merges the interleaved sweeps onto one
 sorted time axis, and fits

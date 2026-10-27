@@ -26,8 +26,8 @@ snapshots are here.
 ## Key result + figure
 
 The per-frame corrected residual collapses onto one curve vs per-frame CNR
-(across-law spread <= 0.011 sigma0^2 for CNR >= 1); corrected `<D>/D_true` stays
-0.9-1.1. The naive result is strongly decay-specific (19x at CNR0 = 8 for
+(across-law spread <= 0.012 sigma0^2 for CNR >= 1); corrected `<D>/D_true` stays
+0.89-1.11 (the table prints no SE). The naive result is strongly decay-specific (19x at CNR0 = 8 for
 single-exponential vs ~1.3x bi-exponential), so any CNR0-indexed threshold is
 single-exponential-specific -- state thresholds in per-frame CNR. Figure:
 `multiexp_decay.png`; table `multiexp_decay.txt`.

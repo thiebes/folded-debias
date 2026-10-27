@@ -36,9 +36,10 @@ For `X ~ N(σ, s²)`, using `E[X²] = σ² + s²` and `E[X⁴] = σ⁴ + 6σ²s�
     Var[σ̂²] = E[X⁴] − E[X²]² = 4σ²s² + 2s⁴ = 2s²(2σ² + s²)
 
 **The fitted variance carries an additive upward bias equal to the estimation
-noise variance `s²`.** This is the Gaussian-width analogue of the Rician
-identity `Â² = M² − σ²` (Gudbjartsson–Patz 1995) and of the Wardle–Kronberg
-polarization estimator.
+noise variance `s²`.** This is the width analogue of the squared-magnitude
+corrections used for Rician magnitude data and for polarization amplitudes; the
+specific references are leads in `prior_art_map.md` and are not yet audited in
+`citations_audit.md`, so none is cited here.
 
 ## 3. The per-frame truncation fraction
 
@@ -106,7 +107,7 @@ it tells us the bias is *additive*, *positive*, and a function of the per-frame
 CNR, so a one-dimensional `var_bias(CNR)` calibration is the right object to
 build. Calibration and evaluation use independent random seeds. On real data
 the same calibration is done against simulations matched to the measurement
-(Koay-style simulation-based debiasing).
+(simulation-based debiasing).
 
 ## 7. Two alternatives, tested
 
@@ -193,24 +194,23 @@ every measurement corrected with it, so it does not average away over runs.
 `weights.calibration_D_se` propagates it into D through the slope fit's
 linear map (`TruncationModel.var_bias_se` gives each looked-up bias's SE;
 with `D̂ = ½ Σ cᵢ mᵢ` and `Σ cᵢ = 0`, `Var_cal(D) = ¼ Σ cᵢ² sᵢ²`, and the t = 0
-frame's error cancels into the intercept). Checked against independent
-calibration draws applied to one fixed evaluation set: observed scatter 0.214
-D_ref, predicted 0.207 (`tests/test_basic.py`). At these budgets the
+frame's error cancels into the intercept). Checked against 16 independent
+calibration draws applied to one fixed evaluation set: observed / predicted
+variance of the cell mean 0.89 with the current slope weights
+(`experiments/dfree-calibration/slope_fit_check.txt`). At these budgets the
 calibration and evaluation terms are comparable, and the calibration term does
 not shrink with more evaluation runs.
 
-With both terms in the cell SE, the corrected ⟨D⟩/D_ref is consistent with 1
-within two combined SE in 136 of 140 cells (four shapes, all five D, CNR₀ 5 to
-90); the other four lie at 2.0 to 3.4 SE, about the number expected by chance.
-No resolved bias remains anywhere in the tested domain. What limits the small-D,
-low-CNR cells is precision: the combined SE is 0.02 to 7.9 (in D/D_ref) at
-`D ≤ 0.01`, 0.02 to 1.05 at `D = 0.02`, and at most 0.03 only for `D ≥ 0.05` at
-`CNR₀ ≥ 34`. `D = 0.005` has `L_D ≈ 0.015 FWHM`, so its slope is near the
-precision limit of any estimator at these CNRs. The combined SE also accounts
-for the differences between two independent draws of the whole validation
-(calibration and evaluation): RMS standardized difference 1.10 over 70 cells,
-largest 2.9 SE. A low-CNR application should
-report the combined SE, and a tighter claim needs a larger calibration budget.
+With both terms in the cell SE and the current slope weights, 4 of 96 cells
+(four shapes; D = 0.005, 0.02, 0.1; CNR₀ 3 to 90) lie beyond two combined SE
+(`slope_fit_check.txt`). The cells share noise seeds across shapes and one
+calibration per shape, so this count is indicative, not a test against a
+binomial null. (An earlier count, 136 of 140 cells within two combined SE, used
+the former MSD-point weights and is superseded.) The small-D, low-CNR cells
+have large combined SE and so constrain the bias only loosely. `D = 0.005` has
+`L_D = √(2Dτ) ≈ 0.042 FWHM`, so its slope is near the precision limit of any
+estimator at these CNRs. A low-CNR application should report the combined SE,
+and a tighter claim needs a larger calibration budget.
 
 The D = 0 lookup assumes the width changes little over the measurement. When
 it grows several-fold, the bias at a given CNR changes with it, and a joint
@@ -242,8 +242,8 @@ per CNR cell and the dense calibration. For Gaussian profiles at
 
 | per-profile CNR | folded-normal residual (σ_0²) | reading |
 |---|---|---|
-| ≳ 1 | \|residual\| ≲ 0.01 | correction excellent (≲ 1% of σ²_true) |
-| 0.7 – 1.0 | up to ≈ 0.05 | useful; a few % of σ²_true |
+| ≳ 1 | \|residual\| ≲ 0.01 | correction excellent (≲ 0.01 of σ²_true) |
+| 0.7 – 1.0 | up to ≈ 0.05 | useful; a few hundredths of σ²_true |
 | 0.5 – 0.7 | 0.1 – 0.3 | unreliable per realisation; mean still toward the reference |
 | 0.3 – 0.5 | 0.3 – 0.8 | failing; residuals comparable to σ²_true |
 | < 0.3 | ≳ σ²_true | broken |
@@ -255,7 +255,7 @@ first cell whose residual exceeds both 2 SE and 0.01 σ_0²:
 | shape | floor (CNR) | first failure below it |
 | ------- | ------- | ------- |
 | Gaussian | 1.16 | +0.036 σ_0² at 0.89, −0.34 at 0.69 |
-| Voigt | 1.5 | −0.013 at 1.16; within 0.01 again down to 0.53; +0.34 at 0.41 |
+| Voigt | 1.5 | −0.013 at 1.16; within 0.01 again at 0.89 and 0.69; +0.030 at 0.53; +0.34 at 0.41 |
 | generalized-Gaussian p = 1.5 | 0.89 | −0.12 at 0.69 |
 | generalized-Gaussian p = 4 | 0.69 | +0.013 at 0.53; within 0.012 down to 0.11 |
 
@@ -455,8 +455,8 @@ robust variant was inert at the tested CNR₀: it left the result unchanged.
   `var_bias(per-frame CNR)`, so it depends on the per-frame CNR, not on how the
   population decays. `experiments/multiexp-decay/multiexp_decay.py` (the `MultiExpExperiment` bed)
   confirms the per-frame residual collapses across single- and bi-exponential
-  decay for per-frame CNR ≥ 1 (across-law spread ≤ 0.011 σ₀²) and corrected D
-  stays within 0.9–1.1. Thresholds quoted in the *initial* CNR₀ (the §9 design
+  decay for per-frame CNR ≥ 1 (across-law spread ≤ 0.012 σ₀²) and corrected D
+  stays within 0.89–1.11. Thresholds quoted in the *initial* CNR₀ (the §9 design
   rule `CNR₀ ≳ exp(t_max/τ)`) are single-exponential-specific; the invariant
   form is the per-frame `CNR ≳ 1` of §9.
 - **Wall pile-up at CNR ≈ 1.** The Voigt and generalized-Gaussian p = 1.5 fits

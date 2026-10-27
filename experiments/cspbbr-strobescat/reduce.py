@@ -15,7 +15,7 @@ match (``half_window_um``, ``max_var``). Feed it to ``apply_correction.py``.
 
 Example::
 
-    python real_examples/cspbbr/reduce.py \
+    python experiments/cspbbr-strobescat/reduce.py \
         --data "P:/Upasana/CsPbBr_SingleCrystal/Sample_1/13.47 uJ_Fluence_19_May_2026" \
         --n-files 3 --max-var 6.25 --out output/cspbbr_13p47.npz
 

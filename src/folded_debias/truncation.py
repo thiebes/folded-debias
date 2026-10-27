@@ -17,16 +17,20 @@ alone (measured, on real data, with the ``fft-cnr`` package).
 
 The class supports **two calibration modes** with the same API:
 
-* **1-D, D-aware** (legacy): built from :func:`frame_stats` via
-  :meth:`TruncationModel.from_stats`. Looks up ``var_bias`` and
-  ``rel_variance`` from CNR alone. The calibration implicitly conditions on
-  the D used to generate the sweep -- see ``docs/DERIVATION.md``.
-* **2-D, D-free** (recommended): built from a
+* **1-D** (recommended when built at D = 0): built from :func:`frame_stats`
+  via :meth:`TruncationModel.from_stats`. Looks up ``var_bias`` and the
+  per-frame width variance from CNR alone.
+  :func:`~folded_debias.validate.calibrate_d_free` builds it at D = 0, so the
+  lookup carries no reference to the application's D;
+  :func:`~folded_debias.validate.calibrate` builds it at a given D (legacy,
+  D-aware) -- see ``docs/DERIVATION.md``.
+* **2-D, joint (CNR, sigma^2)** (experimental): built from a
   :class:`~folded_debias.calibration.CalibrationGrid` via
   :meth:`TruncationModel.from_calibration`. Looks up ``var_bias`` and
-  per-frame ``rel_variance`` from (CNR, fitted-variance) jointly. The
-  calibration carries no reference to *D*; the lookup is queried at each
-  frame's own observed width. This is the deployment-ready mode.
+  per-frame ``rel_variance`` from (CNR, fitted-variance) jointly. Its low-CNR
+  cells need far more Monte Carlo runs than the 1-D path, and keying each frame
+  on its own fitted width under-corrects when the width grows several-fold
+  (see :meth:`var_bias`); see :mod:`folded_debias.calibration`.
 
 The selection between the two is automatic: pass a ``variance`` argument to
 :meth:`var_bias` or :meth:`rel_variance` to trigger the 2-D lookup when the

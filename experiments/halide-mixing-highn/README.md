@@ -123,9 +123,10 @@ the lookup; D is short-window D / D_ref with an SE from resampling the seeds.
   iterated keys give the same D as the exact key to within 0.003. The
   per-frame key is the exception: it leaves a resolved low bias even here
   (0.90 and 0.89 at CNR0 15, 0.96 at 20, for x = 0.5 and 0.75; SE 0.01).
-- The trend keys are not accurate keys. The iterated line reads 8 to 20
-  percent below the true sigma^2 on average, with a 15 to 39 percent scatter
-  per frame and measurement, yet from CNR0 15 that costs at most 0.003 in D.
+- The trend keys are not accurate keys. The iterated line reads 0.08 to 0.20
+  of the true sigma^2 below it on average, with a scatter of 0.15 to 0.39 of
+  sigma^2 per frame and measurement, yet from CNR0 15 that costs at most 0.003
+  in D.
 - At CNR0 8 to 10 the result depends on the key: dD/de is 0.12 to 0.28,
   even the exact key gives 1.00 to 1.13, and the smoothed and iterated keys
   disagree by up to 0.3 (x = 0.5, CNR0 8: smoothed 0.59, iterated 0.89, exact

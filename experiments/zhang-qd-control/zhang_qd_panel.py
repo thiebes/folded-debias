@@ -26,7 +26,7 @@ Dfast is partly a noise-bias artifact. Two facts answer it:
 
 * The per-frame CNR is moderate (9-24) and the noise is white (the camera
   differential has a constant read floor, gain ~ 0), so ``var_bias(CNR)`` is
-  sub-percent of sigma0^2.
+  below 0.01 of sigma0^2.
 * The CNR *rises* with delay (the TA bleach builds up over the first few hundred
   fs faster than the spot dilutes), so the bias is largest at t=0 -- the
   subtracted reference. A bias that shrinks with time adds a *negative*-sloping

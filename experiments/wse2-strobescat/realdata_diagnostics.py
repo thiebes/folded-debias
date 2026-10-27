@@ -7,9 +7,12 @@ overlay montage, and per-frame overlays for the noisiest frames).
 What it does for one measurement
 --------------------------------
 1. Reads Enrique's processed ``analysis_[...]_.npy`` (his per-frame reduced 1-D
-   ``profiles`` and his fitted widths ``sigmas(um)`` / ``err_sigmas``). These are
-   his reduction: sign-fixed-per-delay, line-cut band through the spot, physical
-   time. We use his profiles and his widths rather than re-reducing.
+   ``profiles`` and his fitted widths ``sigmas(um)`` / ``err_sigmas``). His
+   profiles are used (line-cut band through the spot, physical time), re-oriented
+   by correlation with a bright-frame reference (``_orient_to_reference``). The
+   widths are this repo's own bounded Gaussian fit of each profile in a fixed
+   window, so the data estimator matches the calibration's; his widths enter
+   only through their relative fit error.
 2. Measures per-frame CNR and the noise law with ``fft-cnr``
    (``estimate_noise_model=True``): the white/spectral CNR with its CI, the
    shot-corrected CNR, and the fitted ``gain`` / ``read`` decomposition. The
@@ -25,11 +28,7 @@ The pixel is ``UM_PER_PX`` = 0.060 um at the sample for every scan. Do not deriv
 the ratio of his fitted ``sigmas(um)`` to our px fit is not a calibration (its
 per-scan median ranges from 0.065 to 0.089 um/px and depends on the fit model
 and window). The diagnostics here report **px^2**; multiply by ``UM_PER_PX**2``
-for um^2. His ``sigmas`` are used only through the unit-free ratio
-``sigma(t)/sigma(0)``, anchored to a px scale by a direct ``fit_variance`` of his
-t=0 profile -- this tracks his robust per-frame fit (which the generic fitter
-cannot reproduce at the noisy late frames) while staying in consistent px^2.
-The naive per-point error uses his scale-free relative error
+for um^2. The naive per-point error uses his scale-free relative error
 ``err_sigma/sigma``.
 
 Caveats surfaced for review (not silently handled)
@@ -38,12 +37,18 @@ Caveats surfaced for review (not silently handled)
   interleaved fine-delay batch reads ~2x wider); all frames are kept and the
   oscillation is shown, never smoothed.
 * The corrected per-point SE currently carries only the naive fit SE; the
-  calibration's MC error on ``var_bias`` is not yet propagated (it is
-  sub-dominant at n_runs used here). Flagged as a deferred refinement.
+  calibration's MC error on ``var_bias`` is not propagated, and its size has
+  not been measured for these calibrations.
+* ``var_bias(CNR)`` is scaled by the frame-0 width (``sigma0^2``) for every
+  frame, inside a window fixed at frame 0, although sigma^2 grows several-fold
+  over the retained frames on some scans; the D-free calibration is valid only
+  while sigma^2 stays near sigma0^2.
+* The CNR key is the ``fft-cnr`` estimate; its confidence interval is recorded
+  in the manifest but not propagated.
 
 Usage::
 
-    .venv/Scripts/python.exe scripts/realdata_diagnostics.py mapbbr_250730
+    .venv/Scripts/python.exe experiments/wse2-strobescat/realdata_diagnostics.py mapbbr_250730
 """
 from __future__ import annotations
 
