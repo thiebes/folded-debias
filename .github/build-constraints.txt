@@ -1,0 +1,12 @@
+# Hash-pinned build backend and its dependencies for the release build
+# (uv build --build-constraints .github/build-constraints.txt --require-hashes).
+# Keep the setuptools version equal to [build-system] requires in pyproject.toml.
+# Regenerate after changing it, and before each release. --exclude-newer keeps
+# every pin at least seven days old, the same cooldown as dependabot.yml:
+#   echo "setuptools==<version>" | uv pip compile - --universal \
+#     --generate-hashes --python-version 3.11 --exclude-newer <date 7 days ago> \
+#     --no-header --no-annotate -o .github/build-constraints.txt
+# Generated with --exclude-newer 2026-10-15.
+setuptools==84.0.0 \
+    --hash=sha256:51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670 \
+    --hash=sha256:f4695c21257f0d9b537ec2692c941d02ee143b7cc1276941349a546573b2ef73

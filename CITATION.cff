@@ -1,0 +1,19 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it using the metadata below."
+title: "folded-debias: folded-normal correction of the low-CNR bias in fitted widths for MSD diffusion measurements"
+type: software
+authors:
+  - family-names: Thiebes
+    given-names: "Joseph J."
+    email: joseph@thiebes.org
+    orcid: "https://orcid.org/0000-0002-7456-3952"
+    affiliation: "Universidad Autónoma de Madrid"
+license: MIT
+repository-code: "https://github.com/thiebes/folded-debias"
+url: "https://github.com/thiebes/folded-debias"
+keywords:
+  - diffusion
+  - mean-squared displacement
+  - bias correction
+  - contrast-to-noise ratio
+  - transient microscopy

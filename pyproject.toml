@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools==84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,7 +9,8 @@ dynamic = ["version"]
 description = "Folded-normal debiasing of the low-CNR truncation-at-zero bias in bounded width fits (e.g. MSD diffusion)."
 readme = "README.md"
 requires-python = ">=3.11"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [
     { name = "Joseph J. Thiebes", email = "joseph@thiebes.org" },
 ]
