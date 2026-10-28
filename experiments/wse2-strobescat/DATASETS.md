@@ -28,7 +28,9 @@ Reduction / fit follow Enrique's own pipeline at
 reproduced by `realdata_enrique_pipeline.py`). The `realdata_triage.py` screen
 scans every `analysis_*` folder under `P:\Lab\Enrique\lab\`.
 
-All generated outputs live in-repo under `diagnostics/`. The registry includes
+The scripts write all generated outputs under `diagnostics/`, which is not
+tracked: it holds values and images derived from the unpublished scans. The
+registry includes
 WSe2 `Power_var\250224\0.020`, which is degenerate (negative D) under per-sweep
 re-zeroing and is not used.
 

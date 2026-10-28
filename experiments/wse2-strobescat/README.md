@@ -108,9 +108,12 @@ and generalized-Gaussian p = 1.5 and p = 4 profiles, D 0.005 to 0.1, CNR_0 5 to
 ## Data
 
 Read-only from the pshare; see `DATASETS.md`. Raw collaborator scans stay on the
-pshare (never committed). All *generated* outputs are tracked here under
-`diagnostics/` (per-measurement folders, `_frame_ladder/`, `_calib/` calibration
-caches, `index.md`, `METHOD.md`, `triage*.csv`).
+pshare (never committed). The scripts write their outputs under `diagnostics/`
+(per-measurement folders, `_frame_ladder/`, `_calib/` calibration caches,
+`index.md`, `METHOD.md`, `triage*.csv`). That folder holds values and images
+derived from unpublished scans, so it is not tracked; the commands below
+regenerate it. The `diagnostics/` paths cited in this README refer to those
+generated files.
 
 ## Run
 

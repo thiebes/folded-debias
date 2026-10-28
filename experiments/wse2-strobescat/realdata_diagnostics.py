@@ -67,7 +67,8 @@ from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
 from folded_debias.fit import fit_D, fit_variance  # noqa: E402
 from folded_debias.truncation import TruncationModel  # noqa: E402
 
-# outputs live with the experiment (this folder's diagnostics/ subtree), tracked
+# outputs live with the experiment (this folder's diagnostics/ subtree); not
+# tracked, because they are derived from unpublished scans
 WIP = os.path.join(os.path.dirname(__file__), "diagnostics")
 CALIB_DIR = os.path.join(WIP, "_calib")
 

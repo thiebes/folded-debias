@@ -46,6 +46,8 @@ Thumbs.db
 # see the set's DATASETS.md for the pshare source.
 mc_experiments/**/data/
 experiments/**/data/
+# Per-scan outputs derived from unpublished measurements; regenerated locally.
+experiments/wse2-strobescat/diagnostics/
 
 # Origin project binaries (raw published-figure data; extracted CSVs are committed)
 *.opju
