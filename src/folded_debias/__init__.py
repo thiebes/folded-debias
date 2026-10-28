@@ -38,7 +38,7 @@ from .calibration import (CalibrationCells, CalibrationGrid, calibrate_cells,
                           calibrate_cnr_sigma2)
 from .fisher import LeadingOrderTerms, leading_order_terms
 
-__version__ = "0.3.0"
+__version__ = "0.4.0"
 
 __all__ = [
     "Experiment", "AnomalousExperiment", "MultiExpExperiment",
