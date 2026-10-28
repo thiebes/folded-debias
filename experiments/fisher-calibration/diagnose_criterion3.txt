@@ -1,0 +1,23 @@
+Criterion 3 decomposition: observed / predicted calibration variance of D, Fisher arm, frames with CNR >= 1.0, 64 draws
+columns: mean over the 35 cells, then the mean over D at each CNR_0 5 8 13 21 34 55 90
+
+=== gaussian: GCV lambda over draws, 5th to 95th percentile 0.01 to 1; fixed lambda 0.562
+  as run           0.99   |  0.85  0.84  0.83  0.85  0.92  0.84  1.83
+  fixed weights    1.00   |  0.87  0.86  0.86  0.87  0.91  0.84  1.79
+  fixed lambda     0.82   |  0.78  0.84  0.85  0.85  0.85  0.80  0.79
+
+=== voigt: GCV lambda over draws, 5th to 95th percentile 0.0628 to 56.2; fixed lambda 5.62
+  as run           1.75   |  1.35  1.23  1.16  1.21  1.30  1.86  4.13
+  fixed weights    1.77   |  1.37  1.18  1.17  1.17  1.25  1.85  4.39
+  fixed lambda     1.01   |  1.04  0.99  0.98  0.98  0.98  1.02  1.05
+
+=== generalized_gaussian:1.5: GCV lambda over draws, 5th to 95th percentile 0.0628 to 3.16; fixed lambda 1
+  as run           0.89   |  1.03  0.83  0.75  0.80  0.76  0.89  1.14
+  fixed weights    0.87   |  0.97  0.79  0.76  0.76  0.77  0.88  1.18
+  fixed lambda     0.86   |  0.93  0.83  0.82  0.81  0.81  0.87  0.92
+
+=== generalized_gaussian:4: GCV lambda over draws, 5th to 95th percentile 0.0199 to 1e+03; fixed lambda 3.16
+  as run           2.71   |  1.72  1.90  2.06  2.11  2.43  3.33  5.43
+  fixed weights    2.68   |  1.73  1.94  2.07  2.14  2.38  3.25  5.29
+  fixed lambda     1.23   |  1.22  1.24  1.24  1.24  1.21  1.20  1.24
+

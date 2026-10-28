@@ -368,17 +368,24 @@ class TruncationModel:
         fit_asymptote = asymptote is None
         offset = 0.0 if fit_asymptote else float(asymptote)
 
-        # Deep-CNR spreads are heavy-tailed; a pilot smooth keeps one wild cell
-        # from dominating the inverse-variance weights of the ratio fit.
-        pilot = pspline_fit(u, np.log(cells.bias_sd[good]), np.ones_like(u))
-        ratio_se = np.exp(pilot.evaluate(u)) / (leading * np.sqrt(n_fits))
+        # A cell mean's SE is its RMS spread over sqrt(n). Deep-CNR spreads are
+        # heavy-tailed, so one cell's sample spread is too noisy to weight by:
+        # smooth the sample variance relative to its Fisher value. A smooth of
+        # its log (the pilot) estimates a geometric mean, which sits below the
+        # arithmetic one where the tail is heavy (it understated the variance of
+        # the cell means near CNR 1 two- to fourfold); it only sets the weights
+        # and a floor for the smooth of the variance itself.
+        framevar_ratio = cells.bias_sd[good] ** 2 / (terms.framevar_coef / cnr ** 2)
+        pilot = np.exp(pspline_fit(u, np.log(framevar_ratio), np.ones_like(u)).evaluate(u))
+        spread = pspline_fit(u, framevar_ratio, pilot * np.sqrt(2.0 / (n_fits - 1)))
+        cell_var = np.maximum(spread.evaluate(u), pilot) * terms.framevar_coef / cnr ** 2
+        ratio_se = np.sqrt(cell_var / n_fits) / leading
         ratio_fit = pspline_fit(u, cells.mean_bias[good] / leading - offset,
                                 ratio_se, knee=knee, intercept=fit_asymptote)
         # The weights need Var(sigma_hat^2) only to leading accuracy: smooth its
         # log ratio to the Fisher value (which the fit attains at high CNR, so
         # the log asymptote is 0), with the normal-theory SE of a log sample
         # variance.
-        framevar_ratio = cells.bias_sd[good] ** 2 / (terms.framevar_coef / cnr ** 2)
         framevar_fit = pspline_fit(u, np.log(framevar_ratio),
                                    np.sqrt(2.0 / (n_fits - 1)), knee=knee,
                                    intercept=fit_asymptote)

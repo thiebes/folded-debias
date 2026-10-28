@@ -28,9 +28,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `calibrate_fisher` builds a D-free 1-D calibration from that exact leading
   term and a P-spline smooth of the higher-order residual over single-frame
   Monte Carlo cells (`calibrate_cells`, `CalibrationCells`,
-  `TruncationModel.from_cells`). The smoothed lookup carries its covariance
-  factor (`TruncationModel.var_bias_factor`, `var_bias_cov`), and
-  `calibration_D_se` uses it. With `width_scaling=True` a width table rescales
+  `TruncationModel.from_cells`). The smoothed lookup carries the sampling
+  covariance of the smooth as a factor (`TruncationModel.var_bias_factor`,
+  `var_bias_cov`), and `calibration_D_se` uses it. With `width_scaling=True` a width table rescales
   the bias to each frame's width (it grows as sigma at a fixed pixel grid and
   peak CNR). It is not yet the recommended path.
 - `msd_and_weights`, `corrected_variance`, and `calibration_D_se` take an

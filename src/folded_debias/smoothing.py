@@ -91,9 +91,16 @@ def pspline_fit(u: np.ndarray, y: np.ndarray, se: np.ndarray, *,
                 lam_grid: np.ndarray | None = None) -> PSplineFit:
     """Fit y(u) with inverse-variance weights 1/se^2, smoothing chosen by GCV.
 
-    The coefficient covariance is phi (X'WX + lam P)^-1, the Bayesian form that
-    includes the smoothing bias, with phi = max(1, weighted RSS / residual dof)
-    so that cell errors understated by ``se`` widen it rather than narrow it.
+    The coefficient covariance is the sampling covariance of the penalised fit,
+    phi S^-1 X'WX S^-1 with S = X'WX + lam P: how far independent Monte Carlo
+    draws scatter about their common mean, which is what the calibration SE of
+    D propagates and what a draw-to-draw check can verify. The Bayesian form
+    phi S^-1 adds an allowance for smoothing bias; in a 32-draw check of the
+    Gaussian calibration it overstated the draw-to-draw variance near the knee
+    about twofold, and the smoothing bias is tested directly by the accuracy of
+    corrected D instead. phi = max(1,
+    weighted RSS / residual dof), so cell errors understated by ``se`` widen the
+    covariance rather than narrow it.
     """
     u = np.asarray(u, float)
     y = np.asarray(y, float)
@@ -125,7 +132,8 @@ def pspline_fit(u: np.ndarray, y: np.ndarray, se: np.ndarray, *,
                          "use more cells or fewer segments")
     _, lam, coef, edf, rss, system = best
     phi = max(1.0, rss / (n_cells - edf))
+    system_inv = np.linalg.inv(system)
     return PSplineFit(knots=knots, degree=degree, knee=knee, intercept=intercept,
                       coef=coef,
-                      coef_cov=phi * np.linalg.inv(system), lam=float(lam),
+                      coef_cov=phi * system_inv @ gram @ system_inv, lam=float(lam),
                       edf=edf, phi=phi)

@@ -33,6 +33,7 @@ output/              regenerated run outputs and cached calibrations (not tracke
 | [multiexp-decay](../experiments/multiexp-decay/) | `multiexp_decay.py` | the correction keys on per-frame CNR, not on the decay law | `multiexp_decay.png` |
 | [crlb-precision](../experiments/crlb-precision/) | `crlb.py`, `efficiency_check.py`, `render_crlb_panel.py` (+ `precision_limit.md`) | sqrt(CRLB)/D is several times D at low CNR; with the library's per-frame width-variance weighting the corrected D reaches 0.98-1.08 x sqrt(CRLB) | `poster_panel4_crlb.png` |
 | [closed-form-scaling](../experiments/closed-form-scaling/) | `linearity_test.py` | the median bias tracks lambda(-s)/s within a band | `linearity_test.png` |
+| [fisher-calibration](../experiments/fisher-calibration/) | `compare_calibrations.py`, `fisher_check.py`, `diagnose_criterion3.py` | pre-registered switch test: `calibrate_fisher` matches the raw path's accuracy with 0.20-0.32 of its calibration SE but fails the criterion on Voigt and p = 4 (predicted SE too small: per-draw GCV smoothing choice) and p = 1.5 (cells beyond 2 SE), so the raw path stays recommended; Fisher A matches Monte Carlo to 0.998-1.003 on four shapes; width scaling not established | `.txt` tables |
 | [fft-cnr-recovery](../experiments/fft-cnr-recovery/) | `build_fft_cnr_recovery_figure.py` (+ committed summary `.npz`) | fft-cnr recovers the true CNR on the 1:1 line from CNR 2 to 100, N = 128-1024 | `fft_cnr_recovery.png` |
 
 ### Transport-simulation beds (Marc Meléndez; data on the pshare, see each `DATASETS.md`)
