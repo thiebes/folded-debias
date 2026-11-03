@@ -162,12 +162,22 @@ class Regime:
 
 
 def _alpha(times: np.ndarray, var: np.ndarray) -> float:
-    """Anomalous exponent of MSD(t) = var(t) - var(0): slope of log-log fit."""
+    """Anomalous exponent of MSD(t) = var(t) - var(0): slope of log-log fit.
+
+    A non-positive MSD point has no logarithm and is left out; ``_n_dropped``
+    counts them so the reports can say how many.
+    """
     msd = var - var[0]
     keep = (times > 0) & (msd > 0)
     if keep.sum() < 2:
         return np.nan
     return float(np.polyfit(np.log(times[keep]), np.log(msd[keep]), 1)[0])
+
+
+def _n_dropped(times: np.ndarray, var: np.ndarray) -> int:
+    """Frames after t = 0 that ``_alpha`` leaves out because their MSD is not positive."""
+    msd = var - var[0]
+    return int(np.sum((times > 0) & ~(msd > 0)))
 
 
 def _moment_on_grid(grid: np.ndarray, profile: np.ndarray) -> float:
@@ -313,7 +323,7 @@ def first_stage_report(regimes_by_power: dict[int, list[Regime]],
             print(f"\nFirst-stage recovery at CNR_0={cnr0}, "
                   f"free_charge_emission_power={power}")
             print("      A   a_carrier   a_moment(noisy)  a_gauss+folded   "
-                  "frames<fit  frames<mom")
+                  "frames<fit  frames<mom   MSD<=0 dropped (mom, fit)")
             results = []
             for k, rg in enumerate(regimes):
                 tr = first_stage_trajectories(rg, cnr0, model,
@@ -322,15 +332,19 @@ def first_stage_report(regimes_by_power: dict[int, list[Regime]],
                 keep_fit = ~tr["below_fit_floor"]
                 a_mom = (_alpha(rg.times[keep_mom], tr["moment"][keep_mom])
                          if keep_mom.sum() >= 2 else np.nan)
+                drop_mom = (_n_dropped(rg.times[keep_mom], tr["moment"][keep_mom])
+                            if keep_mom.sum() >= 2 else 0)
                 if tr["gauss_folded"] is not None and keep_fit.sum() >= 2:
                     a_gf = _alpha(rg.times[keep_fit], tr["gauss_folded"][keep_fit])
+                    drop_fit = _n_dropped(rg.times[keep_fit], tr["gauss_folded"][keep_fit])
                 else:
-                    a_gf = np.nan
+                    a_gf, drop_fit = np.nan, 0
                 results.append((rg, tr, a_mom, a_gf))
                 print(f"  {rg.A:7.0f}    {rg.alpha_carrier:6.3f}      "
                       f"{a_mom:6.3f}          {a_gf:6.3f}           "
                       f"{int(tr['below_fit_floor'].sum())}          "
-                      f"{int(tr['below_moment_floor'].sum())}")
+                      f"{int(tr['below_moment_floor'].sum())}            "
+                      f"{drop_mom}, {drop_fit}")
             if ci == 0:
                 _plot_first_stage(power, results, cnr0)
 

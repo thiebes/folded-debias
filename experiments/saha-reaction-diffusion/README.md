@@ -13,8 +13,13 @@ Antonella and Carlos free-exciton diffusion paper) are in the separate
 
 ## Findings
 
-The folded-normal truncation correction is robust on this bed. Two properties
-limit what the bed demonstrates:
+The correction does not improve the recovered exponent on this bed.
+`poster_saha_nonfickian.png` (no error bars; its generating script is not in this
+repo) shows the uncorrected alpha below the noise-free-fit reference (1.270) by
+0.034 at the lowest CNR_0 (about 12) and folded-normal further below it, by
+0.055; the same order holds at CNR_0 about 18 and 25, and from CNR_0 40 up both
+are within 0.003 of the reference. Two properties limit what the bed
+demonstrates:
 
 - The truncation effect is modest in the trusted CNR band. The clean correction
   demonstration is the single-population NC-solid bed (where emission is
@@ -35,8 +40,13 @@ The bed supports three technical results:
   input-derived, experimental truth is recovered by forward fit or analytics).
 - The recombination and emission terms are bimolecular in the free population,
   so they carry x², not x (checked against Marc's authoritative code).
-- The correction over-subtracts below per-frame CNR ≈ 1.3 on this bed (a low-CNR
-  calibration-convexity boundary), so the correction floor is ≈ 1.3.
+- The 2-D lookup over-subtracts below a per-frame CNR between 1.13 and 1.37 on
+  this bed (`diagnose_overcorrection.txt`: A = 2000, CNR_0 6, 12, 25, 50, 4000
+  fits per frame; walking down in CNR, the first gap resolved at 3 SE is
+  +0.012 um^2 at CNR 1.13, and the 31 frames from CNR 1.37 up have gaps of
+  -0.004 to +0.001 um^2, |z| <= 2.4). This supports the per-frame floor of 1.3
+  that the real-data scripts apply. Below CNR 1 the gaps are large in both
+  directions, but those frames are dropped in every application.
 
 ## Files
 
@@ -47,10 +57,13 @@ The bed supports three technical results:
 - `nonfickian_validation.py` — the validation harness: builds regimes and their
   carrier / emission / fit reference α, runs the estimator paths (Gaussian fit
   plus the non-truncated moment estimator), applies the folded-normal correction,
-  and flags the CNR floor.
-- `diagnose_overcorrection.py` — shows why the folded correction over-subtracts
-  below per-frame CNR ≈ 1.3 (compares the measured per-frame fit bias against
-  what the calibration subtracts, frame by frame).
+  flags the CNR floor, and reports how many non-positive MSD points the
+  log-log exponent fit leaves out (`nonfickian_validation.txt`, CNR_0 60: 0 to
+  1 per regime on the moment path, none on the Gaussian + folded path).
+- `diagnose_overcorrection.py` — locates where the 2-D lookup starts to
+  over-subtract (compares the measured per-frame fit bias against what the
+  calibration subtracts, frame by frame, with a paired SE);
+  `diagnose_overcorrection.txt` is its committed output.
 - `forward_fit_validation.py` — stage-2 forward-fit validation: recovers the
   carrier transport by fitting the forward model, applying the folded-normal
   correction to the low-CNR frames. Imports the `width_debias` library.
