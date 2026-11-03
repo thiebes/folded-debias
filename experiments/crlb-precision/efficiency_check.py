@@ -33,9 +33,7 @@ divided by sqrt(CRLB), for three arms:
   frame out of the slope. A constant shift does not change a free-intercept
   slope, so this arm equals the MSD fit with weights 1 / v_i on every frame.
   The library uses these weights, so the ``library`` and ``width`` arms
-  coincide with the current package; the committed table's ``library`` arm
-  records the MSD-point weights (1 / (v_i + v_0), frame 0 at weight 0) for
-  comparison.
+  coincide with the current package.
 
 Each arm is computed with every frame and with frames below per-frame CNR 1
 dropped (the floor the paper uses). A ratio of 1 is efficient. The bound holds
@@ -45,7 +43,8 @@ this grid (``docs/DERIVATION.md`` section 8), so the comparison is fair.
 ``generate`` caches the calibrations and evaluation ensembles under
 ``output/crlb-efficiency/`` (the Gaussian calibration is draw 0 of
 ``dfree-calibration/calibration_se_check.py`` when that cache exists);
-``analyse`` prints the tables.
+``analyse`` prints the tables. Seeds are offset by 10^6 per shape, so the four
+shapes see independent noise; the cache names carry the seed.
 
     $env:WIDTH_DEBIAS_WORKERS = 0
     .venv/Scripts/python.exe experiments/crlb-precision/efficiency_check.py generate
@@ -91,12 +90,17 @@ N_BOOT = 200
 # --------------------------------------------------------------------------
 # Cached Monte Carlo
 # --------------------------------------------------------------------------
+def _offset(spec: str) -> int:
+    """Seed offset per shape, so the shapes see independent noise (the Gaussian's is 0)."""
+    return 10 ** 6 * SPECS.index(spec)
+
+
 def _cal_path(spec: str) -> Path:
-    return OUT / f"cal_{spec_tag(spec)}_runs{CAL_RUNS}.npz"
+    return OUT / f"cal_{spec_tag(spec)}_runs{CAL_RUNS}_seed{1 + _offset(spec)}.npz"
 
 
 def _eval_path(spec: str) -> Path:
-    return OUT / f"eval_{spec_tag(spec)}_runs{EVAL_RUNS}.npz"
+    return OUT / f"eval_{spec_tag(spec)}_runs{EVAL_RUNS}_seed{EVAL_SEED + _offset(spec)}.npz"
 
 
 def calibration(spec: str) -> BiasLookup:
@@ -116,7 +120,8 @@ def generate() -> None:
         model = model_from_spec(spec)
         if not (spec == "gaussian" and GAUSS_CAL.exists()) and not _cal_path(spec).exists():
             t0 = time.time()
-            m = calibrate_d_free(CAL_GRID, n_runs=CAL_RUNS, seed=1, model=model)
+            m = calibrate_d_free(CAL_GRID, n_runs=CAL_RUNS, seed=1 + _offset(spec),
+                                 model=model)
             np.savez(_cal_path(spec), cnr_grid=m.cnr_grid, p_grid=m.p_grid,
                      relvar_grid=m.relvar_grid, varbias_grid=m.varbias_grid,
                      varbias_se_grid=m.varbias_se_grid, framevar_grid=m.framevar_grid)
@@ -128,7 +133,8 @@ def generate() -> None:
             for di, d in enumerate(D_VALUES):
                 for ci, c0 in enumerate(CNR0_VALUES):
                     ens = run_ensemble(Experiment(D=d), c0, n_runs=EVAL_RUNS,
-                                       seed=EVAL_SEED + 100 * di + ci, model=model)
+                                       seed=EVAL_SEED + _offset(spec) + 100 * di + ci,
+                                       model=model)
                     var[di, ci], cnr[di, ci] = ens.variance, ens.cnr_frame
             np.savez(_eval_path(spec), variance=var, cnr=cnr)
             print(f"{spec} evaluation: {time.time() - t0:.0f} s", flush=True)

@@ -16,7 +16,8 @@ only an unbiased estimator converges to the input D.
   against sqrt(CRLB) on Gaussian, Voigt, p = 1.5, and p = 4 (numerical Fisher
   matrix from each model's profile; D-free calibration per shape; 1000 runs
   per cell). Arms: library weights, inverse-CRLB weights, a robust spread, and
-  a direct fit of the corrected widths against time. `generate` is about 70 min
+  a direct fit of the corrected widths against time. Seeds are offset by 10^6
+  per shape, so the shapes see independent noise. `generate` is about 70 min
   on 8 cores (cached in `output/crlb-efficiency/`).
 - `render_crlb_panel.py` -- renders the CRLB figure
   (`poster_panel4_crlb.png`) from `crlb.py`; uses the shared plotting primitives
@@ -31,6 +32,8 @@ None. Fully synthetic (uses `width_debias.simulate` geometry).
 
 ```bash
 .venv/Scripts/python.exe experiments/crlb-precision/crlb.py
+WIDTH_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/crlb-precision/efficiency_check.py generate
+.venv/Scripts/python.exe experiments/crlb-precision/efficiency_check.py analyse > output/crlb-efficiency/efficiency_check.txt
 ```
 
 ## Key result + figure
@@ -39,16 +42,20 @@ None. Fully synthetic (uses `width_debias.simulate` geometry).
 pin D. `render_crlb_panel.py` renders the CRLB figure
 (`poster_panel4_crlb.png`); `scripts/poster_figures.py` imports that builder.
 
-`efficiency_check` (`efficiency_check.txt`): the corrected D's spread is 1.30
-to 1.43 x sqrt(CRLB) at CNR0 34 to 90 on every shape, about half the available
-information. Inverse-CRLB weights do not help; the loss is the MSD slope fit,
-which treats the points as independent although they share sigma_hat^2(0) and
-gives frame 0 no weight. Fitting the corrected widths against time directly
-(every frame weighted by 1 / Var(sigma_hat^2_i), intercept free) reaches 0.98
-to 1.08 x sqrt(CRLB) from CNR0 21 with no systematic shift of the mean. The
-library slope fit uses these weights. `efficiency_check.txt` records the library
-arm with frame 0 at weight 0; re-running the script gives a library arm equal to
-the width-fit arm.
+`efficiency_check` (`efficiency_check.txt`, rerun 2026-10-28 with independent
+seeds per shape and the library weights): the library arm, which weights every
+frame (t = 0 included) by 1 / Var(sigma_hat^2_i) and so equals fitting the
+corrected widths against time, reaches 0.95 to 1.10 x sqrt(CRLB) from CNR0 21
+on all four shapes (frames with per-frame CNR >= 1; bootstrap SE about 0.02
+per cell), and its mean D/D_in there is 0.78 to 1.10 (0.95 to 1.03 at
+D >= 0.02). This table prints no SE on the means;
+`dfree-calibration/slope_fit_check.py` scores the same evaluation sets in
+combined SE (2 of 96 cells beyond 2 SE). Below CNR0 21 the spread rises to
+1.05 to 3.2 x sqrt(CRLB) at CNR0 3 to 13. The former MSD-point weights (1 / (v_i + v_0), frame 0 at weight
+0) gave 1.30 to 1.43 x sqrt(CRLB) at CNR0 34 to 90, about half the available
+information, because they treat the MSD points as independent although they
+share sigma_hat^2(0) and give frame 0 no weight; inverse-CRLB weights on the
+MSD points do not recover it.
 
 ## Depends on
 
