@@ -40,7 +40,7 @@ output/              regenerated run outputs and cached calibrations (not tracke
 
 | Set | Scripts | Main result | Data |
 | ------- | ------- | ------- | ------- |
-| [nc-solid](../experiments/nc-solid/) | `nc_solid_*` (+ loaders `nc_data.py`, `nc_solid_sim.py`) | the naive exponent climbs toward the ballistic limit at low CNR; the corrected exponent recovers the reference 0.88 | pshare; committed `.npz` calibration |
+| [nc-solid](../experiments/nc-solid/) | `nc_solid_*` (+ loaders `nc_data.py`, `nc_solid_sim.py`) | de-noised maps: the naive exponent climbs toward the ballistic limit at low CNR and the corrected exponent recovers the reference 0.88; raw maps: the correction does not rescue CNR0 3 to 10 (both exponents at the fit bound of 2) | pshare; committed `.npz` calibration |
 | [mn-trapping](../experiments/mn-trapping/) | `marc_diffmap_validation.py`, `marc_mn_trapping_plan_a.py` (+ loaders) | the correction removes the noise bias; the shape gap needs a forward fit | pshare; local `data/` (not tracked) |
 | [saha-reaction-diffusion](../experiments/saha-reaction-diffusion/) | `nonfickian_validation.py`, `forward_fit_validation.py`, `reaction_diffusion_saha.py` | the correction holds on non-Fickian transport; a forward fit recovers the carrier transport | pshare |
 | [halide-mixing-brI-legacy](../experiments/halide-mixing-brI-legacy/) | `br_halide_validation.py` (+ loader) | mixing suppresses transport; the correction has little to do over the short window | pshare |

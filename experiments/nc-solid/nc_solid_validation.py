@@ -21,9 +21,16 @@ match it (a negligible shape gap, reported here as a check). D and alpha are
 scored against the carrier second moment; the folded-normal correction removes
 the per-frame noise bias.
 
+The calibration file is a ``CalibrationGrid`` over (CNR, sigma^2), so the
+lookup is the experimental 2-D path, keyed on each frame's own fitted variance;
+the recommended path is the 1-D D-free lookup. The maps are used raw
+(``load_all()``; ``denoise=False``), with their finite-walker sampling noise;
+the de-noised maps are the bed of ``nc_solid_alpha_vs_cnr.py`` and the figure.
+Each exponent carries a bootstrap SE over the noise realisations.
+
 Run from the repository root::
 
-    .venv/Scripts/python.exe scripts/nc_solid_validation.py
+    .venv/Scripts/python.exe experiments/nc-solid/nc_solid_validation.py
 
 Outputs ``output/nc_solid_validation.{png,txt}``.
 """
@@ -60,7 +67,8 @@ DICE_GOLD = "#f7941e"
 
 CNR_GRID = (3.0, 5.0, 10.0, 20.0, 50.0, 100.0)
 FIG_CNR0 = 20.0
-N_SEEDS = 15
+N_SEEDS = 400        # noise realisations per (map, CNR_0); 15 left the exponent unresolved
+N_BOOT = 200         # resamples of the realisations for the exponent SE
 FLOOR_CNR = 1.0
 
 
@@ -89,29 +97,53 @@ def fit_msd_powerlaw(t: np.ndarray, var: np.ndarray,
         return np.nan, np.nan
 
 
-def fit_each_row(x: np.ndarray, profiles: np.ndarray) -> np.ndarray:
+def fit_each_row(x: np.ndarray, profiles: np.ndarray) -> tuple[np.ndarray, int]:
+    """Fitted variance per row, and the number of failed fits.
+
+    A failed fit keeps its fallback value, as the calibration's Monte Carlo
+    does: dropping it here but not there would compare two different
+    estimators, and the dropped fits are the heavy right tail that carries the
+    bias.
+    """
     out = np.full(profiles.shape[0], np.nan)
+    failed = 0
     for i in range(profiles.shape[0]):
         r = fit_gaussian(x, profiles[i])
-        if getattr(r, "ok", True) and np.isfinite(r.variance):
+        failed += not getattr(r, "ok", True)
+        if np.isfinite(r.variance):
             out[i] = r.variance
-    return out
+    return out, failed
 
 
-def validation_pass(case, trunc: BiasLookup, cnr0: float, n_seeds: int):
+def validation_pass(case, trunc: BiasLookup, cnr0: float, n_seeds: int,
+                    case_index: int):
+    """Per-realisation raw and corrected trajectories at one CNR_0.
+
+    Seeds are offset by 10^6 per map, so the maps see independent noise.
+    """
     peak0 = float(case.profiles[0].max())
     noise_sigma = peak0 / cnr0
     cnr_frame = case.profiles.max(axis=1) / noise_sigma
     n_frames = case.profiles.shape[0]
     raw = np.full((n_seeds, n_frames), np.nan)
     cor = np.full((n_seeds, n_frames), np.nan)
+    failed = 0
     for s in range(n_seeds):
-        rng = np.random.default_rng(int(cnr0) * 1000 + s)
+        rng = np.random.default_rng(10 ** 6 * case_index + int(cnr0) * 1000 + s)
         noisy = case.profiles + rng.normal(0.0, noise_sigma, case.profiles.shape)
-        var_hat = fit_each_row(case.x, noisy)
+        var_hat, n_failed = fit_each_row(case.x, noisy)
+        failed += n_failed
         raw[s] = var_hat
         cor[s] = corrected_variance("subtract", var_hat, cnr_frame, trunc)
-    return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnr_frame
+    return raw, cor, cnr_frame, failed
+
+
+def _alpha_se(t: np.ndarray, per_seed: np.ndarray, mask, rng) -> float:
+    """SE of the mean-trajectory exponent: refit the mean of resampled realisations."""
+    n = per_seed.shape[0]
+    boot = [fit_msd_powerlaw(t, np.nanmean(per_seed[rng.integers(0, n, n)], axis=0),
+                             mask=mask)[1] for _ in range(N_BOOT)]
+    return float(np.nanstd(boot, ddof=1))
 
 
 def _residual(recovered, truth, mask=None) -> float:
@@ -143,8 +175,9 @@ def main() -> None:
         "",
     ]
     fig_rows = {}
-    for case in cases:
-        nf = fit_each_row(case.x, case.profiles)              # noiseless fit
+    rng = np.random.default_rng(0)
+    for case_index, case in enumerate(cases):
+        nf, _ = fit_each_row(case.x, case.profiles)           # noiseless fit
         gap = _residual(nf, case.var_true)
         D_true, a_true = fit_msd_powerlaw(case.t, case.var_true)  # carrier truth
         D_nf, a_nf = fit_msd_powerlaw(case.t, nf)             # noiseless-fit check
@@ -159,17 +192,22 @@ def main() -> None:
         lines.append("  naive = all-frames raw fit;  method = corrected + "
                      "sub-floor frames dropped (CNR >= 1)")
         lines.append("  CNR_0 | min CNR | n>=1 | D naive/method | "
-                     "alpha naive/method  (truth D={:.3g}, alpha={:.2f})"
-                     .format(D_true, a_true))
+                     "alpha naive (SE) / method (SE) | failed fits  "
+                     "(truth D={:.3g}, alpha={:.2f})".format(D_true, a_true))
         for cnr0 in CNR_GRID:
-            raw, cor, cnr_frame = validation_pass(case, trunc, cnr0, N_SEEDS)
+            raw_s, cor_s, cnr_frame, failed = validation_pass(case, trunc, cnr0, N_SEEDS,
+                                                              case_index)
+            raw, cor = np.nanmean(raw_s, axis=0), np.nanmean(cor_s, axis=0)
             work = cnr_frame >= FLOOR_CNR
             D_naive, a_naive = fit_msd_powerlaw(case.t, raw)          # all, raw
             D_meth, a_meth = fit_msd_powerlaw(case.t, cor, mask=work)  # cut+cor
+            se_naive = _alpha_se(case.t, raw_s, None, rng)
+            se_meth = _alpha_se(case.t, cor_s, work, rng)
             lines.append(f"  {cnr0:5.0f} | {cnr_frame.min():7.2f} | "
                          f"{int(work.sum()):2d}/{cnr_frame.size} | "
                          f"{D_naive:.3g}/{D_meth:.3g} | "
-                         f"{a_naive:.3f}/{a_meth:.3f}")
+                         f"{a_naive:.3f} ({se_naive:.3f}) / {a_meth:.3f} ({se_meth:.3f}) | "
+                         f"{failed} of {raw_s.size}")
             if cnr0 == FIG_CNR0:
                 fig_rows[case.name] = (cnr_frame, raw, cor, nf)
         lines.append("")

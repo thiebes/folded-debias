@@ -103,10 +103,13 @@ def fit_powerlaw(t, var, mask=None):
 
 
 def fit_each_row(x, profiles):
+    """Fitted variance per row. A failed fit keeps its fallback value, as the
+    calibration's Monte Carlo does; dropping it here but not there would compare
+    two different estimators."""
     out = np.full(profiles.shape[0], np.nan)
     for i in range(profiles.shape[0]):
         r = fit_gaussian(x, profiles[i])
-        if getattr(r, "ok", True) and np.isfinite(r.variance):
+        if np.isfinite(r.variance):
             out[i] = r.variance
     return out
 

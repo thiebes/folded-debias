@@ -54,7 +54,25 @@ Naive alpha reads ~0.09 high at CNR0 = 30 and climbs to the ballistic ceiling
 (alpha = 2) below CNR0 ~ 8; the folded-normal correction recovers the nominal
 alpha ~ 0.88 across the measured regime (residual ~0.01 at CNR0 = 30). The bias
 only raises alpha, so it can mask subdiffusion but cannot manufacture it. Figure:
-`nc_solid_poster_figure.png`; table `nc_solid_poster_figure.txt`.
+`nc_solid_poster_figure.png`; table `nc_solid_poster_figure.txt`. That result is
+on the de-noised maps (`denoise=True`) at CNR0 30 to 82; the table predates the
+change that keeps a failed fit's fallback value in `nc_solid_alpha_vs_cnr.py`
+(the raw-map run below has no failed fits at any CNR0).
+
+On the raw maps, with their finite-walker sampling noise
+(`nc_solid_validation.py`, `nc_solid_validation.txt`; 400 noise realisations
+per CNR0, bootstrap SE on the mean-trajectory exponent; the experimental 2-D
+calibration), the correction does not rescue the low-CNR0 cells. At CNR0 3 to
+10, and on the large map at 20, the naive and the corrected alpha both sit at
+the fit's bound of 2. The whole MSD is only about 0.004 um^2 (noiseless fit
+0.040 to 0.044 um^2 over the measurement), so whatever per-frame bias the 2-D
+lookup leaves in the late, low-CNR frames is enough to make the mean trajectory
+convex; most likely that residual is what pins the exponent. From CNR0 20 up
+(50 on the large map) the correction moves alpha by at most 0.045, and both
+arms lie -0.4 to +3.2 SE from the carrier truth, mostly above it (for example
+0.928 +/- 0.022 corrected against 0.866 at CNR0 100 on the small map, +2.8 SE).
+No fit fails at any CNR0 (0 of 8000 per cell), so how failed fits are handled
+does not matter on this bed.
 
 ## Depends on
 
