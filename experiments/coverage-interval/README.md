@@ -27,12 +27,19 @@ snapshots are here.
 
 ## Key result + figure
 
-The shared sigma_hat^2_0 is common-mode (shifts the intercept, not the slope), so
-it is not the cause of under-coverage (inflation 0.91-0.93 < 1). The covariance
-CI under-covers erratically (0.74-0.79) because the D-free calibration
-mis-estimates the absolute per-point variance; the bootstrap covers ~0.94.
-Report a bootstrap or profile interval for D; the covariance CI under-covers.
-Figure: `coverage_check.png`; table `coverage_check.txt`.
+With the library slope weights (per-frame Var(σ̂²) from the D-free lookup,
+frame 0 included), the covariance interval covers D_ref 0.94 to 0.95 of the
+time at every CNR₀ from 5 to 90 (2000 runs per cell, nominal 0.95). Its width
+matches the realised spread (mean D_se / SD(D̂) 0.94 to 1.00), and the
+parametric bootstrap covers 0.94 to 0.95. The shared σ̂²₀ is common-mode: it
+shifts the intercept and leaves the slope, so it does not widen the interval
+(inflation 0.86 to 0.89, below 1). The inverse-variance contrast also covers
+0.93 to 0.95, because at this D (0.02 σ₀²/τ) its bias (1.10 to 1.65 of D_ref
+at CNR₀ 5 to 21) is small against the spread of a single measurement (0.84 to
+4.75 of D_ref). The D-free calibration is the shared
+`calibration_subdiffusive.npz` (Gaussian, 60 CNR₀ × 1500 runs), named with
+the seeds in the table header. Figure: `coverage_check.png`; table
+`coverage_check.txt`.
 
 ## Depends on
 

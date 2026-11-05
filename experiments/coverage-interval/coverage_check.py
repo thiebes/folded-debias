@@ -188,6 +188,10 @@ def write_report(rows: list[dict], path: Path) -> None:
         "=" * 78,
         f"D_true = {D_TRUE} sigma0^2/tau, Gaussian, standard geometry; "
         f"{N_RUNS} runs/cell, {N_BOOT} bootstrap.",
+        f"calibration: D-free (calibrate_d_free, D = 0), Gaussian, {len(CAL_CNR0)} "
+        f"CNR0 in [{CAL_CNR0[0]:g}, {CAL_CNR0[-1]:g}] x {N_RUNS_CAL} runs, seeds 1 + i "
+        f"(shared cache {CAL_PATH.name}); evaluation seeds {SEED} + 100 k for "
+        "CNR0 index k, bootstrap seed + 7.",
         "95% intervals. Coverage = fraction containing D_true.",
         "subtract is de-biased (coverage meaningful); inverse_variance is "
         "biased (contrast).",
