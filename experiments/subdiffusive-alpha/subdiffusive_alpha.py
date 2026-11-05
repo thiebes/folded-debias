@@ -90,6 +90,7 @@ ALPHA_TRUE = (0.6, 0.8, 1.0, 1.2)
 MSD_END = 0.12               # matched end-point MSD (sigma0^2); L_D/FWHM_0 ~ 0.15
 CNR0_EVAL = (5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 90.0)
 FLOOR_CNR = 1.0              # per-profile working floor (nc_solid bed)
+ALPHA_BOUNDS = (0.2, 2.0)    # power-law fit bounds on the exponent
 
 # D-free calibration grid (geometry-matched; built once, cached).
 CAL_CNR0 = np.geomspace(2.0, 100.0, 60)
@@ -126,7 +127,8 @@ def fit_msd_powerlaw(t: np.ndarray, var: np.ndarray,
         popt, _ = curve_fit(
             lambda tt, d, a: 2.0 * d * tt ** a, t[keep], msd[keep],
             p0=[max(msd[keep][-1] / (2.0 * t[keep][-1]), 1e-6), 1.0],
-            bounds=([0.0, 0.2], [np.inf, 2.0]), maxfev=20000)
+            bounds=([0.0, ALPHA_BOUNDS[0]], [np.inf, ALPHA_BOUNDS[1]]),
+            maxfev=20000)
         return float(popt[0]), float(popt[1])
     except (RuntimeError, ValueError):
         return np.nan, np.nan
@@ -262,7 +264,7 @@ def _summary(a: np.ndarray) -> tuple[float, float, float, float]:
 
 def write_report(cells: list[CellSamples], model_name: str, n_frames: int,
                  n_runs: int, t_max: float, floor: float, design_floor: float,
-                 path: Path) -> None:
+                 path: Path, calibration: str) -> None:
     """Table per exponent plus the headline figure of merit.
 
     The figure of merit mirrors the project's metric (lower residual bias in
@@ -281,6 +283,9 @@ def write_report(cells: list[CellSamples], model_name: str, n_frames: int,
         f"design floor cnr0 >= exp(t_max/tau) = {design_floor:.1f}",
         f"{n_runs} runs/cell; bias = exponent of the mean trajectory; "
         "1-shot = per-realisation corrected exponent (precision)",
+        calibration,
+        f"evaluation seeds {EVAL_SEED} + 1000 a + c (exponent index a, CNR0 index c); "
+        f"resampling seed + 7, {N_BOOT} resamples",
         "",
     ]
     for alpha, cells_a in by_alpha.items():
@@ -299,22 +304,57 @@ def write_report(cells: list[CellSamples], model_name: str, n_frames: int,
                 f"{med:5.2f} [{lo:4.2f},{hi:4.2f}]      | {c.d_corr_traj:7.2f}")
         lines.append("")
 
-    # Figure of merit: mean-trajectory exponent error over the working regime
-    # (cnr0 >= design floor). There the cut drops no frame, so naive + cut
-    # equals naive and naive -> corrected is the subtraction alone. The SE of
-    # the mean error combines the cells' SEs (independent seeds per cell).
+    # Figures of merit over the working regime (cnr0 >= design floor). There the
+    # cut drops no frame, so naive + cut equals naive and naive -> corrected is
+    # the subtraction alone. Cells have independent seeds, so their errors
+    # combine independently; the SEs are Monte Carlo over realisations and leave
+    # out the calibration's own error, which all cells share. A cell whose
+    # exponent sits at a fit bound is left out of the pooled value: resampling
+    # returns the bound almost every time, so its SE collapses toward zero and
+    # an inverse-variance weight would let that one cell set the pooled value.
     lines.append("=" * 78)
+    lines.append(f"Signed exponent error, exponent(mean trajectory) - alpha_true, "
+                 f"pooled over cnr0 >= {design_floor:.0f} (the design floor) with "
+                 "inverse-variance weights: value (SE) [z] {cells pooled}")
+    lines.append(f"(cells with the exponent within 0.01 of a fit bound "
+                 f"{ALPHA_BOUNDS} are left out; SE excludes the shared "
+                 "calibration error)")
+    lines.append("  true alpha | naive                     | naive+cut                 | corrected")
+    for alpha, cells_a in by_alpha.items():
+        work_cells = [c for c in cells_a if c.cnr0 >= design_floor]
+
+        def pooled(a_attr, se_attr):
+            a = np.array([getattr(c, a_attr) for c in work_cells])
+            se = np.array([getattr(c, se_attr) for c in work_cells])
+            off_bound = ((a > ALPHA_BOUNDS[0] + 0.01)
+                         & (a < ALPHA_BOUNDS[1] - 0.01))
+            ok = np.isfinite(a) & np.isfinite(se) & (se > 0) & off_bound
+            if not ok.any():
+                return f"{'all at bound':>21} {{0}}"
+            w = 1.0 / se[ok] ** 2
+            value = np.sum(w * (a[ok] - alpha)) / w.sum()
+            value_se = 1.0 / np.sqrt(w.sum())
+            return (f"{value:+6.3f} ({value_se:5.3f}) [{value / value_se:+5.1f}] "
+                    f"{{{int(ok.sum())}}}")
+
+        lines.append(f"  {alpha:9.2f}  | {pooled('a_naive_traj', 'a_naive_se')} | "
+                     f"{pooled('a_naive_cut_traj', 'a_naive_cut_se')} | "
+                     f"{pooled('a_corr_traj', 'a_corr_se')}")
+    lines.append("")
     lines.append(f"Mean |exponent(mean trajectory) - alpha_true| over cnr0 >= "
-                 f"{design_floor:.0f} (the design floor), with Monte Carlo SE:")
-    lines.append("  true alpha | naive         | naive+cut     | corrected")
+                 f"{design_floor:.0f}, with its Monte Carlo SE and the value Monte "
+                 "Carlo error alone gives (mean of sqrt(2/pi) x SE; about 0.8 SE, "
+                 "not 0, for an unbiased estimator):")
+    lines.append("  true alpha | naive                 | naive+cut             | corrected")
     for alpha, cells_a in by_alpha.items():
         work_cells = [c for c in cells_a if c.cnr0 >= design_floor]
 
         def merit(a_attr, se_attr):
             err = np.nanmean([abs(getattr(c, a_attr) - alpha) for c in work_cells])
-            se = np.sqrt(np.nansum([getattr(c, se_attr) ** 2
-                                    for c in work_cells])) / len(work_cells)
-            return f"{err:5.3f} ({se:5.3f})"
+            ses = np.array([getattr(c, se_attr) for c in work_cells])
+            se = np.sqrt(np.nansum(ses ** 2)) / len(work_cells)
+            null = np.sqrt(2.0 / np.pi) * np.nanmean(ses)
+            return f"{err:5.3f} ({se:5.3f}) null {null:5.3f}"
 
         lines.append(f"  {alpha:9.2f}  | {merit('a_naive_traj', 'a_naive_se')} | "
                      f"{merit('a_naive_cut_traj', 'a_naive_cut_se')} | "
@@ -424,8 +464,11 @@ def main() -> None:
           f"x {n_runs} runs (floor CNR >= {args.floor}) ...")
     cells = run_sweep(model, trunc, geometry, cnr0_grid, n_runs, args.floor)
 
+    calibration = (f"calibration: D-free (calibrate_d_free, D = 0), {args.model}, "
+                   f"{len(cal_cnr0)} CNR0 in [{cal_cnr0[0]:g}, {cal_cnr0[-1]:g}] x "
+                   f"{n_runs_cal} runs, seeds 1 + i (cache {cal_path.name})")
     write_report(cells, args.model, geometry["n_frames"], n_runs,
-                 geometry["t_max"], args.floor, design_floor, txt_path)
+                 geometry["t_max"], args.floor, design_floor, txt_path, calibration)
     make_figure(cells, args.model, design_floor, png_path)
 
 

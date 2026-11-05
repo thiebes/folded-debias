@@ -4,6 +4,8 @@ Subdiffusive-alpha recovery -- folded-normal, gaussian fit
 bed: AnomalousExperiment, MSD = 2 D t^alpha, matched end-point MSD = 0.12 sigma0^2 (L_D/FWHM_0 ~ 0.15)
 per-frame CNR = cnr0 * exp(-t/tau); floor cut at CNR >= 1.0; design floor cnr0 >= exp(t_max/tau) = 20.1
 2000 runs/cell; bias = exponent of the mean trajectory; 1-shot = per-realisation corrected exponent (precision)
+calibration: D-free (calibrate_d_free, D = 0), gaussian, 60 CNR0 in [2, 100] x 1500 runs, seeds 1 + i (cache calibration_subdiffusive.npz)
+evaluation seeds 20000 + 1000 a + c (exponent index a, CNR0 index c); resampling seed + 7, 200 resamples
 
 ------------------------------------------------------------------------------
 === true alpha = 0.60   (D = 0.03104 sigma0^2/tau^alpha) ===
@@ -50,9 +52,17 @@ per-frame CNR = cnr0 * exp(-t/tau); floor cut at CNR >= 1.0; design floor cnr0 >
      90 |   12/12 |  1.26 (0.02) |  1.26 (0.02)     |  1.25 (0.02) |  1.20 [0.73,2.00]      |    0.97
 
 ==============================================================================
-Mean |exponent(mean trajectory) - alpha_true| over cnr0 >= 20 (the design floor), with Monte Carlo SE:
-  true alpha | naive         | naive+cut     | corrected
-       0.60  | 0.180 (0.029) | 0.180 (0.029) | 0.030 (0.020)
-       0.80  | 0.191 (0.031) | 0.191 (0.031) | 0.018 (0.022)
-       1.00  | 0.183 (0.030) | 0.183 (0.030) | 0.046 (0.023)
-       1.20  | 0.299 (0.019) | 0.299 (0.019) | 0.100 (0.041)
+Signed exponent error, exponent(mean trajectory) - alpha_true, pooled over cnr0 >= 20 (the design floor) with inverse-variance weights: value (SE) [z] {cells pooled}
+(cells with the exponent within 0.01 of a fit bound (0.2, 2.0) are left out; SE excludes the shared calibration error)
+  true alpha | naive                     | naive+cut                 | corrected
+       0.60  | +0.032 (0.009) [ +3.8] {4} | +0.032 (0.009) [ +3.8] {4} | +0.004 (0.008) [ +0.5] {4}
+       0.80  | +0.024 (0.011) [ +2.2] {4} | +0.024 (0.011) [ +2.2] {4} | -0.011 (0.010) [ -1.0] {4}
+       1.00  | +0.065 (0.014) [ +4.7] {4} | +0.065 (0.014) [ +4.7] {4} | +0.019 (0.014) [ +1.4] {4}
+       1.20  | +0.081 (0.016) [ +4.9] {3} | +0.081 (0.016) [ +4.9] {3} | +0.049 (0.016) [ +3.0] {4}
+
+Mean |exponent(mean trajectory) - alpha_true| over cnr0 >= 20, with its Monte Carlo SE and the value Monte Carlo error alone gives (mean of sqrt(2/pi) x SE; about 0.8 SE, not 0, for an unbiased estimator):
+  true alpha | naive                 | naive+cut             | corrected
+       0.60  | 0.180 (0.029) null 0.034 | 0.180 (0.029) null 0.034 | 0.030 (0.020) null 0.025
+       0.80  | 0.191 (0.031) null 0.038 | 0.191 (0.031) null 0.038 | 0.018 (0.022) null 0.029
+       1.00  | 0.183 (0.030) null 0.039 | 0.183 (0.030) null 0.039 | 0.046 (0.023) null 0.033
+       1.20  | 0.299 (0.019) null 0.025 | 0.299 (0.019) null 0.025 | 0.100 (0.041) null 0.052
