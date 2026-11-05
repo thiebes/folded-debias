@@ -137,6 +137,12 @@ def write_report(collapse: dict, dcurves: dict, deepest_at20: dict,
         "Multi-exponential decay: is the folded-normal correction invalidated?",
         "=" * 78,
         f"Fickian D = {D_FICKIAN} sigma0^2/tau; Gaussian fit; standard geometry.",
+        f"calibration: D-free (calibrate_d_free, D = 0), Gaussian, {len(CAL_CNR0)} "
+        f"CNR0 in [{CAL_CNR0[0]:g}, {CAL_CNR0[-1]:g}] x {N_RUNS_CAL} runs, seeds 1 + i "
+        f"(shared cache {CAL_PATH.name}).",
+        f"runs: {N_RUNS_DIAG} per CNR0 for the residual collapse, seeds 40000 + 5000 l "
+        f"+ 1000 k (decay law l, CNR0 index k); {N_RUNS_EVAL} per CNR0 for D "
+        "recovery, seeds 70000 + 5000 l + k.",
         "Claim: the correction keys on per-frame CNR, not the decay law.",
         "",
         "(1) Per-frame corrected residual collapses onto one curve vs per-frame "

@@ -26,8 +26,11 @@ snapshots are here.
 ## Key result + figure
 
 The per-frame corrected residual collapses onto one curve vs per-frame CNR
-(across-law spread <= 0.012 sigma0^2 for CNR >= 1); corrected `<D>/D_true` stays
-0.89-1.11 (the table prints no SE). The naive result is strongly decay-specific (19x at CNR0 = 8 for
+(across-law spread ≤ 0.012 σ₀² for CNR ≥ 1; the printed maximum of 0.162 σ₀²
+includes the 0.7 to 1.0 bin, below the floor); corrected ⟨D⟩/D_ref stays
+0.93 to 1.06 over CNR₀ 8 to 90 for all three decay laws (the table prints no
+SE). The D-free calibration is the shared `calibration_subdiffusive.npz`
+(Gaussian, 60 CNR₀ × 1500 runs), named with the seeds in the table header. The naive result is strongly decay-specific (19x at CNR0 = 8 for
 single-exponential vs ~1.3x bi-exponential), so any CNR0-indexed threshold is
 single-exponential-specific -- state thresholds in per-frame CNR. Figure:
 `multiexp_decay.png`; table `multiexp_decay.txt`.

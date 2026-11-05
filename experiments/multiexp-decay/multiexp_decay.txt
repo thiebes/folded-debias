@@ -2,6 +2,8 @@
 Multi-exponential decay: is the folded-normal correction invalidated?
 ==============================================================================
 Fickian D = 0.02 sigma0^2/tau; Gaussian fit; standard geometry.
+calibration: D-free (calibrate_d_free, D = 0), Gaussian, 60 CNR0 in [2, 100] x 1500 runs, seeds 1 + i (shared cache calibration_subdiffusive.npz).
+runs: 1500 per CNR0 for the residual collapse, seeds 40000 + 5000 l + 1000 k (decay law l, CNR0 index k); 800 per CNR0 for D recovery, seeds 70000 + 5000 l + k.
 Claim: the correction keys on per-frame CNR, not the decay law.
 
 (1) Per-frame corrected residual collapses onto one curve vs per-frame CNR.
@@ -18,14 +20,14 @@ Claim: the correction keys on per-frame CNR, not the decay law.
 
 (2) Corrected <D>/D_true vs CNR_0 stays ~1 for every decay law -- the corrected D is decay-robust.
   CNR_0 |         single exp (tau=1) |  bi-exp 0.5/0.5, tau=0.3,3 |  bi-exp 0.7/0.3, tau=0.5,5
-      8 |                      1.017 |                      1.033 |                      0.959
-     11 |                      0.893 |                      1.048 |                      1.066
-     16 |                      1.113 |                      0.965 |                      0.963
-     23 |                      0.914 |                      1.033 |                      1.014
-     32 |                      0.986 |                      1.010 |                      1.024
-     45 |                      0.993 |                      1.001 |                      1.021
-     64 |                      0.987 |                      1.011 |                      1.006
-     90 |                      0.983 |                      0.990 |                      0.994
+      8 |                      0.990 |                      1.056 |                      0.952
+     11 |                      0.929 |                      1.034 |                      1.043
+     16 |                      1.049 |                      0.985 |                      1.018
+     23 |                      0.979 |                      1.044 |                      1.016
+     32 |                      0.996 |                      1.005 |                      1.023
+     45 |                      1.013 |                      1.002 |                      1.006
+     64 |                      1.003 |                      0.997 |                      1.005
+     90 |                      1.006 |                      0.998 |                      1.004
 
 (3) Naive (uncorrected, all-frames) <D>/D_true vs CNR_0 -- the bias onset shifts with the decay law,
     so any CNR_0-indexed threshold is decay-specific.
