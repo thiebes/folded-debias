@@ -1,136 +1,141 @@
 Analytical floor of the folded-normal correction
-  Calibration: 30 log-spaced CNR_0 in (2.0, 100.0), 300 runs/cell
-  A = CNR^2 Var(sigma_hat^2) / 4, median over cells at CNR >= 8.0
+  Calibration: 30 log-spaced CNR_0 in (2.0, 100.0), 1000 runs/cell
+  A = CNR^2 Var(sigma_hat) from the Fisher information; Monte Carlo check CNR^2 Var(sigma_hat^2) / 4, median over cells at CNR >= 8.0
   var_bias pooled into 24 log-CNR bins; a bin is resolved if |mean| exceeds 3.0 SE
-  Floor criterion: resolved empirical/predicted outside [0.5, 2.0] by > 2.0 SE
+  Departure criterion: resolved empirical/predicted differs from 1 by > 3.0 SE
+  Seeds: 10^6 x shape index + 3000 + i
 
 
 === gaussian ===
-  A from the estimator spread (CNR >= 8.0): 0.0575 sigma_0^2  (cell-to-cell half-width 0.0051)
-  A from the resolved var_bias bins at CNR >= 1 (cross-check): 0.0797 sigma_0^2
-  Breakdown: var_bias / (A/CNR^2) leaves [0.5, 2.0] by > 2.0 SE at CNR ~ 0.85; lowest in-band resolved bin above it: CNR ~ 1.18
+  A from the Fisher information (leading_order_terms): 0.0564 sigma_0^2
+  A from the estimator spread (CNR >= 8.0, check): 0.0572 sigma_0^2  (ratio Fisher / MC 0.986; cell-to-cell half-width 0.0022)
+  A from the resolved var_bias bins at CNR >= 1 (cross-check): 0.0622 sigma_0^2
+  Departure: var_bias / (A/CNR^2) differs from 1 by > 3.0 SE at CNR ~ 1.18; lowest agreeing resolved bin above it: CNR ~ 1.61
 
       CNR   empirical        SE   predicted   ratio    +/-
-    0.118      6.4904    0.4138      4.1328    1.57   0.10
-    0.162      6.1115    0.5768      2.1852    2.80   0.26  <<<
-    0.212      6.0174    0.3326      1.2802    4.70   0.26  <<<
-    0.277      4.3819    0.5597      0.7474    5.86   0.75  <<<
-    0.363      3.9413    0.1888      0.4356    9.05   0.43  <<<
-    0.476      2.1833    0.1930      0.2537    8.61   0.76  <<<
-    0.624      0.9994    0.1090      0.1477    6.77   0.74  <<<
-    0.848      0.3029    0.0466      0.0799    3.79   0.58  <<<
-    1.176      0.0881    0.0096      0.0416    2.12   0.23
-    1.605      0.0346    0.0043      0.0223    1.55   0.19
-    2.105      0.0099    0.0027      0.0130    0.76   0.20
-    2.757      0.0081    0.0021      0.0076    1.07   0.28
-    3.611      0.0066    0.0015      0.0044    1.50   0.35
-    4.730      0.0033    0.0014      0.0026    1.30   0.53  (unresolved)
-    6.203      0.0024    0.0010      0.0015    1.59   0.65  (unresolved)
-    8.465      0.0013    0.0007      0.0008    1.56   0.83  (unresolved)
-   11.737      0.0005    0.0005      0.0004    1.30   1.19  (unresolved)
-   15.958      0.0006    0.0004      0.0002    2.82   1.77  (unresolved)
-   20.917      0.0004    0.0003      0.0001    3.26   2.15  (unresolved)
-   27.408     -0.0001    0.0003      0.0001   -1.07   4.20  (unresolved)
-   35.900      0.0000    0.0002      0.0000    0.17   5.21  (unresolved)
-   46.985      0.0002    0.0001      0.0000    7.01   5.43  (unresolved)
-   61.387      0.0000    0.0001      0.0000    1.25   7.79  (unresolved)
-   84.421      0.0001    0.0001      0.0000   12.79   7.45  (unresolved)
-  [gaussian: 167s]
+    0.118      6.8581    0.3341      4.0554    1.69   0.08  <<<
+    0.162      6.0701    0.3929      2.1443    2.83   0.18  <<<
+    0.212      6.0395    0.3900      1.2562    4.81   0.31  <<<
+    0.277      5.1599    0.2622      0.7334    7.04   0.36  <<<
+    0.363      3.4499    0.1898      0.4275    8.07   0.44  <<<
+    0.476      2.2224    0.1332      0.2490    8.93   0.54  <<<
+    0.624      0.9317    0.0595      0.1449    6.43   0.41  <<<
+    0.848      0.3657    0.0384      0.0784    4.67   0.49  <<<
+    1.176      0.0809    0.0085      0.0408    1.98   0.21  <<<
+    1.605      0.0270    0.0032      0.0219    1.23   0.14
+    2.105      0.0135    0.0011      0.0127    1.06   0.08
+    2.757      0.0069    0.0011      0.0074    0.93   0.15
+    3.611      0.0036    0.0006      0.0043    0.82   0.15
+    4.730      0.0015    0.0006      0.0025    0.61   0.22  (unresolved)
+    6.203      0.0011    0.0005      0.0015    0.76   0.32  (unresolved)
+    8.465      0.0006    0.0004      0.0008    0.73   0.48  (unresolved)
+   11.737      0.0003    0.0003      0.0004    0.77   0.63  (unresolved)
+   15.958      0.0005    0.0003      0.0002    2.13   1.46  (unresolved)
+   20.917      0.0002    0.0002      0.0001    1.47   1.57  (unresolved)
+   27.408     -0.0001    0.0002      0.0001   -1.96   2.24  (unresolved)
+   35.900     -0.0001    0.0002      0.0000   -1.78   3.52  (unresolved)
+   46.985      0.0000    0.0000      0.0000    1.16   1.56  (unresolved)
+   61.387      0.0000    0.0001      0.0000    0.57   3.41  (unresolved)
+   84.421      0.0001    0.0001      0.0000   17.87   8.34  (unresolved)
+  [gaussian: 373s]
 
 === voigt ===
-  A from the estimator spread (CNR >= 8.0): 0.0819 sigma_0^2  (cell-to-cell half-width 0.0064)
-  A from the resolved var_bias bins at CNR >= 1 (cross-check): 0.0854 sigma_0^2
-  No breakdown located: every resolved bin is within [0.5, 2.0]; the breakdown is below CNR ~ 0.28
+  A from the Fisher information (leading_order_terms): 0.0812 sigma_0^2
+  A from the estimator spread (CNR >= 8.0, check): 0.0814 sigma_0^2  (ratio Fisher / MC 0.998; cell-to-cell half-width 0.0037)
+  A from the resolved var_bias bins at CNR >= 1 (cross-check): 0.0722 sigma_0^2
+  Departure: var_bias / (A/CNR^2) differs from 1 by > 3.0 SE at CNR ~ 0.85; lowest agreeing resolved bin above it: CNR ~ 1.18
 
       CNR   empirical        SE   predicted   ratio    +/-
-    0.118     -0.1505    0.0934      5.8898   -0.03   0.02  (unresolved)
-    0.162      0.0945    0.1104      3.1142    0.03   0.04  (unresolved)
-    0.212      0.2681    0.1066      1.8244    0.15   0.06  (unresolved)
-    0.277      0.5785    0.1116      1.0651    0.54   0.10
-    0.363      0.5812    0.0673      0.6208    0.94   0.11
-    0.476      0.5489    0.0813      0.3616    1.52   0.22
-    0.624      0.3840    0.0466      0.2105    1.82   0.22
-    0.848      0.1491    0.0237      0.1138    1.31   0.21
-    1.176      0.0685    0.0074      0.0592    1.16   0.13
-    1.605      0.0346    0.0048      0.0318    1.09   0.15
-    2.105      0.0138    0.0030      0.0185    0.75   0.16
-    2.757      0.0102    0.0027      0.0108    0.95   0.25
-    3.611      0.0081    0.0018      0.0063    1.30   0.28
-    4.730      0.0042    0.0017      0.0037    1.15   0.46  (unresolved)
-    6.203      0.0031    0.0011      0.0021    1.46   0.54  (unresolved)
-    8.465      0.0015    0.0007      0.0011    1.33   0.64  (unresolved)
-   11.737      0.0007    0.0006      0.0006    1.21   0.99  (unresolved)
-   15.958      0.0010    0.0005      0.0003    2.99   1.56  (unresolved)
-   20.917      0.0005    0.0004      0.0002    2.81   2.05  (unresolved)
-   27.408     -0.0002    0.0004      0.0001   -2.09   3.77  (unresolved)
-   35.900     -0.0000    0.0003      0.0001   -0.54   5.01  (unresolved)
-   46.985      0.0002    0.0001      0.0000    5.61   3.36  (unresolved)
-   61.387      0.0000    0.0001      0.0000    0.07   5.85  (unresolved)
-   84.421      0.0000    0.0001      0.0000    0.51   6.42  (unresolved)
-  [voigt: 244s]
+    0.118     -0.0847    0.0679      5.8400   -0.01   0.01  (unresolved)
+    0.162      0.1889    0.0607      3.0879    0.06   0.02  <<<
+    0.212      0.1802    0.0456      1.8090    0.10   0.03  <<<
+    0.277      0.4598    0.0354      1.0561    0.44   0.03  <<<
+    0.363      0.6073    0.0379      0.6156    0.99   0.06
+    0.476      0.5194    0.0358      0.3585    1.45   0.10  <<<
+    0.624      0.3376    0.0247      0.2087    1.62   0.12  <<<
+    0.848      0.1711    0.0151      0.1129    1.52   0.13  <<<
+    1.176      0.0555    0.0070      0.0587    0.94   0.12
+    1.605      0.0239    0.0031      0.0315    0.76   0.10
+    2.105      0.0152    0.0016      0.0183    0.83   0.09
+    2.757      0.0107    0.0016      0.0107    1.00   0.15
+    3.611      0.0064    0.0008      0.0062    1.03   0.13
+    4.730      0.0024    0.0009      0.0036    0.67   0.24  (unresolved)
+    6.203      0.0013    0.0007      0.0021    0.64   0.32  (unresolved)
+    8.465      0.0015    0.0003      0.0011    1.30   0.30
+   11.737      0.0006    0.0005      0.0006    0.99   0.77  (unresolved)
+   15.958      0.0003    0.0003      0.0003    0.91   0.87  (unresolved)
+   20.917      0.0004    0.0003      0.0002    2.07   1.42  (unresolved)
+   27.408      0.0002    0.0002      0.0001    2.30   1.98  (unresolved)
+   35.900     -0.0000    0.0002      0.0001   -0.55   2.86  (unresolved)
+   46.985      0.0001    0.0002      0.0000    1.46   4.57  (unresolved)
+   61.387     -0.0000    0.0001      0.0000   -0.28   6.31  (unresolved)
+   84.421     -0.0000    0.0002      0.0000   -2.40  14.04  (unresolved)
+  [voigt: 508s]
 
 === generalized_gaussian_p1.5 ===
-  A from the estimator spread (CNR >= 8.0): 0.1017 sigma_0^2  (cell-to-cell half-width 0.0102)
-  A from the resolved var_bias bins at CNR >= 1 (cross-check): 0.1202 sigma_0^2
-  Breakdown: var_bias / (A/CNR^2) leaves [0.5, 2.0] by > 2.0 SE at CNR ~ 0.85; lowest in-band resolved bin above it: CNR ~ 1.18
+  A from the Fisher information (leading_order_terms): 0.1007 sigma_0^2
+  A from the estimator spread (CNR >= 8.0, check): 0.1001 sigma_0^2  (ratio Fisher / MC 1.006; cell-to-cell half-width 0.0047)
+  A from the resolved var_bias bins at CNR >= 1 (cross-check): 0.1050 sigma_0^2
+  Departure: var_bias / (A/CNR^2) differs from 1 by > 3.0 SE at CNR ~ 1.18; lowest agreeing resolved bin above it: CNR ~ 1.61
 
       CNR   empirical        SE   predicted   ratio    +/-
-    0.118      0.2668    0.1738      7.3078    0.04   0.02  (unresolved)
-    0.162      0.5404    0.1713      3.8640    0.14   0.04  <<<
-    0.212      0.6562    0.1255      2.2636    0.29   0.06  <<<
-    0.277      1.0406    0.1572      1.3215    0.79   0.12
-    0.363      1.2181    0.1184      0.7703    1.58   0.15
-    0.476      1.2867    0.1333      0.4486    2.87   0.30  <<<
-    0.624      0.9536    0.0917      0.2611    3.65   0.35  <<<
-    0.848      0.4249    0.0637      0.1412    3.01   0.45  <<<
-    1.176      0.1177    0.0134      0.0735    1.60   0.18
-    1.605      0.0482    0.0069      0.0395    1.22   0.18
-    2.105      0.0173    0.0040      0.0229    0.75   0.17
-    2.757      0.0141    0.0028      0.0134    1.05   0.21
-    3.611      0.0111    0.0023      0.0078    1.42   0.29
-    4.730      0.0056    0.0018      0.0045    1.22   0.39
-    6.203      0.0034    0.0013      0.0026    1.28   0.50  (unresolved)
-    8.465      0.0024    0.0009      0.0014    1.70   0.61  (unresolved)
-   11.737      0.0008    0.0007      0.0007    1.03   0.98  (unresolved)
-   15.958      0.0008    0.0006      0.0004    2.08   1.43  (unresolved)
-   20.917      0.0007    0.0003      0.0002    3.20   1.50  (unresolved)
-   27.408     -0.0001    0.0004      0.0001   -0.48   3.03  (unresolved)
-   35.900      0.0001    0.0003      0.0001    1.34   3.57  (unresolved)
-   46.985      0.0003    0.0002      0.0000    6.00   3.85  (unresolved)
-   61.387      0.0000    0.0002      0.0000    1.17   6.62  (unresolved)
-   84.421      0.0001    0.0001      0.0000    7.81   8.53  (unresolved)
-  [generalized_gaussian_p1.5: 315s]
+    0.118      0.5958    0.1537      7.2405    0.08   0.02  <<<
+    0.162      0.8438    0.1257      3.8284    0.22   0.03  <<<
+    0.212      0.9194    0.0749      2.2428    0.41   0.03  <<<
+    0.277      1.1484    0.0903      1.3093    0.88   0.07
+    0.363      1.1006    0.0825      0.7632    1.44   0.11  <<<
+    0.476      1.1995    0.0657      0.4445    2.70   0.15  <<<
+    0.624      0.9286    0.0405      0.2587    3.59   0.16  <<<
+    0.848      0.4329    0.0404      0.1399    3.09   0.29  <<<
+    1.176      0.1222    0.0152      0.0728    1.68   0.21  <<<
+    1.605      0.0400    0.0057      0.0391    1.02   0.15
+    2.105      0.0251    0.0017      0.0227    1.10   0.08
+    2.757      0.0131    0.0011      0.0132    0.99   0.08
+    3.611      0.0080    0.0012      0.0077    1.04   0.15
+    4.730      0.0029    0.0008      0.0045    0.65   0.17
+    6.203      0.0024    0.0007      0.0026    0.93   0.28
+    8.465      0.0013    0.0004      0.0014    0.94   0.27
+   11.737      0.0004    0.0004      0.0007    0.59   0.53  (unresolved)
+   15.958      0.0005    0.0003      0.0004    1.22   0.71  (unresolved)
+   20.917     -0.0000    0.0002      0.0002   -0.04   1.02  (unresolved)
+   27.408     -0.0000    0.0003      0.0001   -0.08   2.05  (unresolved)
+   35.900     -0.0001    0.0002      0.0001   -1.09   3.17  (unresolved)
+   46.985      0.0001    0.0001      0.0000    1.42   2.26  (unresolved)
+   61.387      0.0001    0.0002      0.0000    2.13   6.87  (unresolved)
+   84.421      0.0001    0.0001      0.0000    7.70   4.96  (unresolved)
+  [generalized_gaussian_p1.5: 624s]
 
 === generalized_gaussian_p4 ===
-  A from the estimator spread (CNR >= 8.0): 0.0190 sigma_0^2  (cell-to-cell half-width 0.0016)
-  A from the resolved var_bias bins at CNR >= 1 (cross-check): nan sigma_0^2
-  Breakdown: var_bias / (A/CNR^2) leaves [0.5, 2.0] by > 2.0 SE at CNR ~ 0.36; lowest in-band resolved bin above it: CNR ~ 3.61
+  A from the Fisher information (leading_order_terms): 0.0191 sigma_0^2
+  A from the estimator spread (CNR >= 8.0, check): 0.0190 sigma_0^2  (ratio Fisher / MC 1.001; cell-to-cell half-width 0.0009)
+  A from the resolved var_bias bins at CNR >= 1 (cross-check): 0.0221 sigma_0^2
+  Departure: var_bias / (A/CNR^2) differs from 1 by > 3.0 SE at CNR ~ 1.18; lowest agreeing resolved bin above it: CNR ~ 2.11
 
       CNR   empirical        SE   predicted   ratio    +/-
-    0.118     -0.3844    0.0154      1.3639   -0.28   0.01  <<<
-    0.162     -0.3248    0.0499      0.7211   -0.45   0.07  <<<
-    0.212     -0.1983    0.0290      0.4225   -0.47   0.07  <<<
-    0.277     -0.0483    0.0387      0.2466   -0.20   0.16  (unresolved)
-    0.363     -0.0748    0.0225      0.1438   -0.52   0.16  <<<
-    0.476      0.0197    0.0189      0.0837    0.23   0.23  (unresolved)
-    0.624     -0.0189    0.0182      0.0487   -0.39   0.37  (unresolved)
-    0.848     -0.0187    0.0101      0.0264   -0.71   0.38  (unresolved)
-    1.176     -0.0043    0.0040      0.0137   -0.31   0.29  (unresolved)
-    1.605      0.0017    0.0021      0.0074    0.24   0.29  (unresolved)
-    2.105      0.0006    0.0016      0.0043    0.13   0.38  (unresolved)
-    2.757      0.0018    0.0014      0.0025    0.71   0.56  (unresolved)
-    3.611      0.0027    0.0008      0.0015    1.84   0.53
-    4.730      0.0010    0.0007      0.0008    1.23   0.85  (unresolved)
-    6.203      0.0014    0.0005      0.0005    2.78   1.10  (unresolved)
-    8.465      0.0002    0.0004      0.0003    0.89   1.57  (unresolved)
-   11.737      0.0003    0.0003      0.0001    2.29   1.84  (unresolved)
-   15.958      0.0003    0.0002      0.0001    4.69   2.27  (unresolved)
-   20.917      0.0001    0.0002      0.0000    1.32   5.19  (unresolved)
-   27.408     -0.0001    0.0002      0.0000   -2.91   7.83  (unresolved)
-   35.900     -0.0001    0.0001      0.0000   -6.30  10.11  (unresolved)
-   46.985      0.0001    0.0001      0.0000    9.07   7.80  (unresolved)
-   61.387     -0.0000    0.0001      0.0000   -0.11  21.68  (unresolved)
-   84.421      0.0001    0.0000      0.0000   21.23  13.97  (unresolved)
-  [generalized_gaussian_p4: 176s]
+    0.118     -0.3494    0.0272      1.3707   -0.25   0.02  <<<
+    0.162     -0.2615    0.0222      0.7247   -0.36   0.03  <<<
+    0.212     -0.2299    0.0120      0.4246   -0.54   0.03  <<<
+    0.277     -0.1280    0.0177      0.2479   -0.52   0.07  <<<
+    0.363     -0.0811    0.0148      0.1445   -0.56   0.10  <<<
+    0.476     -0.0215    0.0119      0.0841   -0.26   0.14  (unresolved)
+    0.624     -0.0146    0.0087      0.0490   -0.30   0.18  (unresolved)
+    0.848     -0.0250    0.0046      0.0265   -0.94   0.18  <<<
+    1.176     -0.0194    0.0030      0.0138   -1.41   0.22  <<<
+    1.605     -0.0034    0.0016      0.0074   -0.46   0.21  (unresolved)
+    2.105      0.0036    0.0011      0.0043    0.83   0.24
+    2.757      0.0033    0.0006      0.0025    1.31   0.22
+    3.611      0.0023    0.0006      0.0015    1.57   0.40
+    4.730      0.0006    0.0004      0.0009    0.74   0.43  (unresolved)
+    6.203      0.0005    0.0003      0.0005    0.98   0.55  (unresolved)
+    8.465      0.0002    0.0002      0.0003    0.72   0.94  (unresolved)
+   11.737     -0.0001    0.0001      0.0001   -0.93   0.91  (unresolved)
+   15.958     -0.0001    0.0002      0.0001   -0.73   2.44  (unresolved)
+   20.917     -0.0000    0.0002      0.0000   -0.06   3.75  (unresolved)
+   27.408      0.0001    0.0001      0.0000    5.52   4.28  (unresolved)
+   35.900     -0.0000    0.0001      0.0000   -1.28   6.70  (unresolved)
+   46.985     -0.0000    0.0001      0.0000   -5.62   9.63  (unresolved)
+   61.387      0.0000    0.0000      0.0000    6.96   4.91  (unresolved)
+   84.421      0.0001    0.0001      0.0000   24.03  18.85  (unresolved)
+  [generalized_gaussian_p4: 355s]
 
-[total 15.0 min]
+[total 31.0 min]
