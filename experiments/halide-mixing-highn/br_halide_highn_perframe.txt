@@ -1,25 +1,52 @@
 ============================================================================
-High-N Br-I per-frame figure: CNR0 = 15, 800 seeds, dense joint calibration, iterated key
-floor CNR 1.3; residuals in nm^2 against the noise-free fit; D SE from 200 resamples of the seeds
+High-N Br-I per-frame figure: CNR0 = 15, 800 seeds, iterated key; corrected arms: dense joint calibration (the figure) and the Fisher-anchored calibration with a width table (2000 runs/cell), calibrated at sigma_0 (pre-specified) and at 75 nm (post hoc, the median width of the frames at per-frame CNR below 3)
+floor CNR 1.3; residuals in nm^2 against the noise-free fit; D SE: (seeds, from 200 resamples; calibration, from 200 draws of the lookup's own error)
 ============================================================================
 
 x = 0.25: 20 usable frames, t <= 0.95 ns, CNR down to 1.36
-  residual vs noise-free fit: mean |naive| 124, mean |corrected| 39 nm^2; signed +123 -> +8 nm^2
+  residual vs noise-free fit, mean |.| and signed (nm^2): naive 124, +123
+    joint grid                     39, +8
+    Fisher, sigma_0 cal            1194, -1180
+    Fisher, 75 nm cal (post hoc)   37, +8
   carrier gap (noise-free fit - reference) over the band: mean -111 nm^2
-  short-window D / D_ref:      naive 1.026 (0.007), corrected 0.993 (0.007)
-  short-window D / D_noisefree: naive 1.034 (0.007), corrected 1.002 (0.007)
+  short-window D / D_ref: naive 1.026 (0.007)
+    joint grid                     0.993 (0.007; calibration 0.001)
+    Fisher, sigma_0 cal            0.589 (0.006; calibration 0.034)
+    Fisher, 75 nm cal (post hoc)   0.994 (0.007; calibration 0.004)
+  short-window D / D_noisefree: naive 1.034 (0.007)
+    joint grid                     1.002 (0.007; calibration 0.001)
+    Fisher, sigma_0 cal            0.594 (0.006; calibration 0.034)
+    Fisher, 75 nm cal (post hoc)   1.002 (0.007; calibration 0.004)
   D_ref = 6265 nm^2/ns; D of the noise-free fit = 6212 nm^2/ns
 
 x = 0.5: 26 usable frames, t <= 1.25 ns, CNR down to 1.37
-  residual vs noise-free fit: mean |naive| 107, mean |corrected| 38 nm^2; signed +106 -> +25 nm^2
+  residual vs noise-free fit, mean |.| and signed (nm^2): naive 107, +106
+    joint grid                     38, +25
+    Fisher, sigma_0 cal            1552, -1544
+    Fisher, 75 nm cal (post hoc)   32, +18
   carrier gap (noise-free fit - reference) over the band: mean -132 nm^2
-  short-window D / D_ref:      naive 1.005 (0.006), corrected 0.971 (0.006)
-  short-window D / D_noisefree: naive 1.049 (0.007), corrected 1.013 (0.007)
+  short-window D / D_ref: naive 1.005 (0.006)
+    joint grid                     0.971 (0.006; calibration 0.001)
+    Fisher, sigma_0 cal            0.355 (0.004; calibration 0.024)
+    Fisher, 75 nm cal (post hoc)   0.968 (0.006; calibration 0.003)
+  short-window D / D_noisefree: naive 1.049 (0.007)
+    joint grid                     1.013 (0.007; calibration 0.001)
+    Fisher, sigma_0 cal            0.370 (0.004; calibration 0.025)
+    Fisher, 75 nm cal (post hoc)   1.010 (0.007; calibration 0.003)
   D_ref = 2650 nm^2/ns; D of the noise-free fit = 2539 nm^2/ns
 
 x = 0.75: 28 usable frames, t <= 1.35 ns, CNR down to 1.35
-  residual vs noise-free fit: mean |naive| 140, mean |corrected| 63 nm^2; signed +139 -> +53 nm^2
+  residual vs noise-free fit, mean |.| and signed (nm^2): naive 140, +139
+    joint grid                     63, +53
+    Fisher, sigma_0 cal            1638, -1632
+    Fisher, 75 nm cal (post hoc)   59, +48
   carrier gap (noise-free fit - reference) over the band: mean -117 nm^2
-  short-window D / D_ref:      naive 1.018 (0.006), corrected 0.984 (0.006)
-  short-window D / D_noisefree: naive 1.060 (0.006), corrected 1.025 (0.006)
+  short-window D / D_ref: naive 1.018 (0.006)
+    joint grid                     0.984 (0.006; calibration 0.001)
+    Fisher, sigma_0 cal            0.335 (0.005; calibration 0.026)
+    Fisher, 75 nm cal (post hoc)   0.982 (0.006; calibration 0.003)
+  short-window D / D_noisefree: naive 1.060 (0.006)
+    joint grid                     1.025 (0.006; calibration 0.001)
+    Fisher, sigma_0 cal            0.349 (0.005; calibration 0.027)
+    Fisher, 75 nm cal (post hoc)   1.023 (0.006; calibration 0.003)
   D_ref = 2352 nm^2/ns; D of the noise-free fit = 2257 nm^2/ns

@@ -14,11 +14,15 @@ a 1-D D-aware calibration keyed on CNR alone (``daware``, kept for
 reproducing that table); because the spot's variance grows ~64x over the
 usable band, that lookup mis-subtracted in the late frames above the floor and
 raised the per-frame mean |residual| after correction (see
-``cnr_sigma2_calibration``).
+``cnr_sigma2_calibration``). ``fisher`` uses the Fisher-anchored 1-D
+calibration with a width table instead (``fisher_calibration``), which rescales
+one sigma_0 calibration to each frame's width; ``fisher_late`` calibrates the
+same way at the width of the frames the correction acts on (post hoc; see
+``FISHER_LATE_SIGMA_NM``).
 
 Run from the repository root (needs the pshare)::
 
-    .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py [cnr_sigma2|daware] [CNR0]
+    .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_perframe.py [cnr_sigma2|daware|fisher|fisher_late] [CNR0]
 
 Outputs ``output/br_halide_highn_perframe[_daware][_cnr0<N>].{png,txt}`` and
 caches the calibrations under ``output/``.
@@ -38,6 +42,8 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from width_debias import (CalibrationGrid, GaussianModel,  # noqa: E402
                            calibrate_cnr_sigma2)
+from width_debias.calibration import calibrate_cells  # noqa: E402
+from width_debias.fisher import leading_order_terms  # noqa: E402
 from width_debias.simulate import Experiment  # noqa: E402
 from width_debias.bias_lookup import BiasLookup  # noqa: E402
 from width_debias.validate import calibrate  # noqa: E402
@@ -97,6 +103,23 @@ SIGMA_GRID_NM = np.linspace(20.0, 220.0, 26)
 CAL2_CNR = np.concatenate([np.geomspace(1.0, 3.0, 20, endpoint=False),
                            np.geomspace(3.0, 60.0, 20)])
 N_RUNS_CAL2 = int(os.environ.get("HIGHN_CAL2_RUNS", 4000))
+# Fisher-anchored calibration: the library's default cell grid at sigma_0, with
+# more runs per cell than its default 300 because this bed reads the lookup
+# down to the floor; the width table spans the joint grid's sigma range (20 to
+# 220 nm) with margin, below the fit's cap at 144 sigma_0^2.
+FISHER_CNR = np.geomspace(0.25, 90.0, 84)
+N_RUNS_FISHER = int(os.environ.get("HIGHN_FISHER_RUNS", 2000))
+FISHER_WIDTH_Q = np.geomspace(0.25, 81.0, 49)   # table widths, in units of sigma_0^2
+# Post hoc calibration width for the Fisher arm, chosen after the sigma_0 arm
+# over-subtracted: at sigma_0 the low-CNR fits wander toward the 300 nm cap in
+# the 3000 nm window, so the sigma_0 residual is set by the window (25 to 100x
+# the Fisher term at CNR 1 to 2.5 in the dense joint grid), and the width table
+# carries that window term up to the wide frames, where the residual is only 1
+# to 2x Fisher. Calibrating at the width of the frames the correction acts on
+# keeps the residual those frames read close to their own. Rule: the median
+# noise-free width of the frames with per-frame CNR in [floor, 3), pooled over
+# the three maps and the CNR0 of the table (per-map medians 60 to 123 nm).
+FISHER_LATE_SIGMA_NM = 75.0
 
 
 def daware_calibration(d_true: float, frac: str, n_frames: int) -> BiasLookup:
@@ -149,6 +172,62 @@ def cnr_sigma2_calibration(pixel_x: np.ndarray) -> BiasLookup:
     return BiasLookup.from_calibration(grid)
 
 
+def fisher_calibration(pixel_x: np.ndarray, workers: int | None = None,
+                       sigma_cal_nm: float = SIGMA0_HINT_NM) -> BiasLookup:
+    """Fisher-anchored 1-D calibration with a width table, on the data's pixel grid; cached.
+
+    The alternative to the joint grid: calibrate once at one width and rescale
+    to each frame's width. The leading bias is the width's Fisher variance,
+    exact on this pixel grid at every width, so the width table carries how it
+    scales (about as sigma, not sigma^2, at fixed peak CNR); single-frame Monte
+    Carlo cells at ``sigma_cal_nm`` supply only the smoothed higher-order
+    residual (``BiasLookup.from_cells``). The fit uses the same ``max_var``
+    cap as the data. This bed, where sigma^2 grows ~64x, is where that
+    rescaling is tested against the joint grid, which measures every width
+    directly. The pre-specified arm calibrates at sigma_0; the post hoc arm at
+    ``FISHER_LATE_SIGMA_NM``, with its own seed. The width table spans the same
+    absolute widths for both.
+    """
+    at_sigma0 = sigma_cal_nm == SIGMA0_HINT_NM
+    path = OUTPUT / (f"cal_highn_fisher_g{int(G_MAX)}_n{N_RUNS_FISHER}"
+                     + ("" if at_sigma0 else f"_s{sigma_cal_nm:g}") + ".npz")
+    if path.exists():
+        trunc = BiasLookup.load(path)
+        if trunc.pixel_x is None or not np.allclose(trunc.pixel_x, pixel_x):
+            raise RuntimeError(f"{path.name} was built on a different pixel grid")
+        return trunc
+    model = GaussianModel(max_var=MAX_VAR)
+    variance_cal = sigma_cal_nm ** 2
+    cells = calibrate_cells(FISHER_CNR, model=model, pixel_x=pixel_x,
+                            variance_cal=variance_cal, n_runs=N_RUNS_FISHER,
+                            seed=5151 if at_sigma0 else 5152,
+                            workers=workers, verbose=True)
+    terms = leading_order_terms(model, pixel_x, variance_cal,
+                                SIGMA0_HINT_NM ** 2 * FISHER_WIDTH_Q)
+    trunc = BiasLookup.from_cells(cells, terms)
+    trunc.save(path)
+    return trunc
+
+
+def _width_aware(trunc) -> bool:
+    return trunc.is_2d or trunc.is_width_scaled
+
+
+def direct_bias(trunc, cnrf, key):
+    """The bias read directly at a width key, with no fixed-point inversion.
+
+    Joint grid: bilinear in (CNR, sigma^2). Width table: the sigma_0 curve read
+    at the equivalent CNR and rescaled to the key's width, as in
+    ``BiasLookup.var_bias``. The key is clipped to the grid or table.
+    """
+    from width_debias.bias_lookup import _bilinear
+    if trunc.is_2d:
+        k = np.clip(key, trunc.variance_grid[0], trunc.variance_grid[-1])
+        return _bilinear(trunc.cnr_grid, trunc.variance_grid, trunc.varbias_2d, cnrf, k)
+    scale, cnr_eq = trunc._width_lookup_point(cnrf, key)
+    return scale * np.interp(cnr_eq, trunc.cnr_grid, trunc.varbias_grid)
+
+
 def per_frame_means(case, trunc, cnr0, n_seeds):
     """Mean raw and corrected fitted variance per frame over many seeds + per-frame CNR."""
     peak0 = float(case.profiles[0].max())
@@ -162,16 +241,16 @@ def per_frame_means(case, trunc, cnr0, n_seeds):
         noisy = case.profiles + rng.normal(0.0, ns, case.profiles.shape)
         vh = fit_each_row(case.x, noisy)
         raw[s] = vh
-        if KEY == "smoothed" and trunc.is_2d:
+        if KEY == "smoothed" and _width_aware(trunc):
             cor[s] = vh - trunc.var_bias(cnrf, smoothed_key(case.t, vh, cnrf))
-        elif KEY == "iterated" and trunc.is_2d:
+        elif KEY == "iterated" and _width_aware(trunc):
             cor[s] = iterated_key_correction(case.t, vh, cnrf, trunc)
         else:
             cor[s] = corrected_variance("subtract", vh, cnrf, trunc)
     return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnrf
 
 
-def iterated_key_correction(t, vh, cnrf, trunc, n_iter=8):
+def iterated_key_correction(t, vh, cnrf, trunc, n_iter=8, return_key=False):
     """Corrected variances with a measurement-level key refitted to the corrected values.
 
     Starts from the smoothed key (a robust line through the raw sigma_hat^2),
@@ -179,23 +258,19 @@ def iterated_key_correction(t, vh, cnrf, trunc, n_iter=8):
     changing, so the key estimates the true sigma^2(t) rather than the inflated
     raw one. The final bias is read directly at the key, with no further
     inversion. ``key_sensitivity.py`` compares this key with the exact one.
+    Works with the joint grid or a width-table model (``direct_bias``);
+    ``return_key`` also returns the final key.
     """
-    from width_debias.bias_lookup import _bilinear
     use = (cnrf >= FLOOR_CNR) & np.isfinite(vh)
-
-    def bias_at(key):
-        k = np.clip(key, trunc.variance_grid[0], trunc.variance_grid[-1])
-        return _bilinear(trunc.cnr_grid, trunc.variance_grid, trunc.varbias_2d,
-                         cnrf, k)
-
     key = smoothed_key(t, vh, cnrf)
     for _ in range(n_iter):
-        new = smoothed_key(t, vh - bias_at(key), cnrf)
+        new = smoothed_key(t, vh - direct_bias(trunc, cnrf, key), cnrf)
         done = np.allclose(new[use], key[use], rtol=1e-4)
         key = new
         if done:
             break
-    return vh - bias_at(key)
+    corrected = vh - direct_bias(trunc, cnrf, key)
+    return (corrected, key) if return_key else corrected
 
 
 def smoothed_key(t, vh, cnrf):
@@ -235,11 +310,13 @@ def main():
     # reproduces the earlier 1-D D-aware lookup, which mis-subtracts here (see
     # cnr_sigma2_calibration).
     mode = sys.argv[1] if len(sys.argv) > 1 else "cnr_sigma2"
-    if mode not in ("cnr_sigma2", "daware"):
-        sys.exit("usage: br_halide_highn_perframe.py [cnr_sigma2|daware]")
-    tag = "" if mode == "cnr_sigma2" else "_daware"
+    if mode not in ("cnr_sigma2", "daware", "fisher", "fisher_late"):
+        sys.exit("usage: br_halide_highn_perframe.py [cnr_sigma2|daware|fisher|fisher_late]")
+    tag = "" if mode == "cnr_sigma2" else f"_{mode}"
     if mode == "cnr_sigma2":
         tag += f"_n{N_RUNS_CAL2}" + ("" if KEY == "perseed" else f"_{KEY}")
+    elif mode in ("fisher", "fisher_late"):
+        tag += f"_n{N_RUNS_FISHER}" + ("" if KEY == "perseed" else f"_{KEY}")
     global CNR0
     if len(sys.argv) > 2:
         CNR0 = float(sys.argv[2])
@@ -248,9 +325,14 @@ def main():
     if not cases:
         print("No high-N maps found.")
         return
-    label = (f"joint (CNR, sigma^2) D-free calibration, {N_RUNS_CAL2} runs/cell, "
-             f"{KEY} key" if mode == "cnr_sigma2"
-             else "1-D D-aware calibration, CNR-only lookup")
+    label = {"cnr_sigma2": f"joint (CNR, sigma^2) D-free calibration, {N_RUNS_CAL2} "
+                           f"runs/cell, {KEY} key",
+             "daware": "1-D D-aware calibration, CNR-only lookup",
+             "fisher": f"Fisher-anchored calibration with a width table, {N_RUNS_FISHER} "
+                       f"runs/cell, {KEY} key",
+             "fisher_late": f"Fisher-anchored calibration at {FISHER_LATE_SIGMA_NM:g} nm "
+                            f"(post hoc) with a width table, {N_RUNS_FISHER} runs/cell, "
+                            f"{KEY} key"}[mode]
 
     lines = ["=" * 76,
              f"High-N Br-I: per-frame residual + short-window D ({label})",
@@ -263,6 +345,10 @@ def main():
         d_true, a_true = fit_msd_powerlaw(case.t, case.var_true)
         if mode == "cnr_sigma2":
             trunc = cnr_sigma2_calibration(case.x)
+        elif mode == "fisher":
+            trunc = fisher_calibration(case.x)
+        elif mode == "fisher_late":
+            trunc = fisher_calibration(case.x, sigma_cal_nm=FISHER_LATE_SIGMA_NM)
         else:
             trunc = daware_calibration(d_true, case.name.split("=")[-1],
                                        case.profiles.shape[0])

@@ -30,23 +30,58 @@ With the bound, the residual noise bias is modest. The figure
 (`br_halide_highn_perframe.png`, CNR0 = 15, 800 realizations; table
 `br_halide_highn_perframe.txt`) plots each frame's mean fitted variance minus
 the Gaussian fit of the noise-free profile, which isolates the noise bias. The
-short-window D, with standard errors of 0.006 to 0.007:
+short-window D over the usable band, divided by the D of the noise-free fit
+(the noise correction's target) and, in the last column, by D_ref:
 
-| Br fraction | naive / D of noise-free fit | corrected / D of noise-free fit | corrected / D_ref |
-| ------- | ------- | ------- | ------- |
-| 0.25 | 1.034 | 1.002 | 0.993 |
-| 0.5 | 1.049 | 1.013 | 0.971 |
-| 0.75 | 1.060 | 1.025 | 0.984 |
+| Br fraction | naive | joint grid | Fisher, σ₀ calibration | Fisher, 75 nm calibration (post hoc) | joint grid / D_ref |
+| ------- | ------- | ------- | ------- | ------- | ------- |
+| 0.25 | 1.034 | 1.002 | 0.594 | 1.002 | 0.993 |
+| 0.5 | 1.049 | 1.013 | 0.370 | 1.010 | 0.971 |
+| 0.75 | 1.060 | 1.025 | 0.349 | 1.023 | 0.984 |
 
-The correction uses the dense joint calibration with the iterated
-measurement-level key. The x = 0.75 remainder of 0.025 is resolved. The
-difference between the last two columns is the carrier gap.
+The SE over the 800 realizations is 0.004 to 0.007 in every column. Each
+corrected arm also carries a calibration SE, the spread of D over 200 draws of
+its lookup's own Monte Carlo error, which every measurement shares: 0.001 for
+the joint grid, 0.024 to 0.034 for the σ₀ Fisher calibration, and 0.003 to
+0.004 for the 75 nm one. Every corrected arm uses the iterated
+measurement-level key, and the figure shows the joint grid. The x = 0.75
+remainder of 0.025 is resolved. The difference between the two joint-grid
+columns is the carrier gap.
 
 The legacy 20k-walker maps do not show this effect because their narrow 150 nm
 window already bounds the wander. DICE is unaffected: it sizes its field of view
 relative to the FWHM, so its effective width bound already scales with the spot.
 The problem is specific to analysing fixed wide-window simulation maps with
 `span^2`.
+
+## One calibration rescaled by width
+
+The joint grid measures the bias at every width: 40 CNR points × 26 widths ×
+4000 runs, 4.2 million fits. The Fisher width table (`fisher_calibration`)
+calibrates at one width instead, with 84 CNR cells × 2000 runs (168,000 fits),
+and rescales the bias to each frame's width with the exact Fisher variance of
+the width fit on this pixel grid. The arm specified before the run calibrates
+at σ₀ = 25 nm. It over-subtracts on every map: the signed residual against the
+noise-free fit over the usable band is −1180 to −1632 nm² (joint grid +8 to
++53 nm²), and D falls to 0.35 to 0.59 of the noise-free fit's D.
+
+The cause is the window, not the Fisher scaling. At σ₀ in the 3000 nm window,
+low-CNR fits wander toward the 300 nm cap, so the bias the dense joint grid
+measures near σ₀ (σ ≈ 28 nm) is about 25 to 100 times the Fisher term at CNR
+1 to 2.5, against 1 to 2 times at σ ≥ 76 nm. Rescaling the σ₀ calibration
+carries that window-set term into the wide late frames, which are the frames
+the correction acts on.
+
+A second arm, added after the first failed and therefore post hoc, calibrates
+at 75 nm (`FISHER_LATE_SIGMA_NM`). The width was fixed by a rule before the
+run: the median noise-free width of the frames with per-frame CNR between the
+floor and 3, pooled over the three maps and CNR₀ 8, 15, and 30 (medians per map
+and CNR₀ 60 to 123 nm). It matches the joint grid to within 0.003 in D on every
+map, with a calibration SE of 0.003 to 0.004 from 1/25 of the joint grid's
+fits. On this bed, one calibration rescaled by the Fisher table works when it
+is made at the width of the frames that need the correction, and fails when it
+is made at a width where the window dominates the low-CNR fits. The rule is
+tested on this bed at CNR₀ 15 only.
 
 ## Per-frame residual: the CNR-only lookup and the reference offset
 
@@ -166,14 +201,16 @@ shorter effective window, which is the fair test).
   corrected alpha/D. Uses the 1-D D=0 calibration, which **under**-corrects here
   because the width grows 26-61x (the 2-D (CNR, sigma^2) D-free calibration is the
   deployable path).
-- `br_halide_highn_perframe.py [cnr_sigma2|daware] [CNR0]` -- the per-frame
-  residual (with a signed per-frame table), short-window D, and the figure.
-  Default calibration is the joint (CNR, sigma^2) one; `daware` is the 1-D
-  D-aware lookup. `HIGHN_KEY` selects the key: `perseed`, `smoothed`, or
-  `iterated`.
+- `br_halide_highn_perframe.py [cnr_sigma2|daware|fisher|fisher_late] [CNR0]` --
+  the per-frame residual (with a signed per-frame table), short-window D, and
+  the figure. Default calibration is the joint (CNR, sigma^2) one; `daware` is
+  the 1-D D-aware lookup; `fisher` and `fisher_late` are the Fisher width table
+  calibrated at σ₀ and at 75 nm. `HIGHN_KEY` selects the key: `perseed`,
+  `smoothed`, or `iterated`.
 - `render_perframe_figure.py` -- renders the figure and writes
-  `br_halide_highn_perframe.txt` (CNR0 = 15, dense joint calibration, iterated
-  key, 800 realizations).
+  `br_halide_highn_perframe.txt` (CNR0 = 15, iterated key, 800 realizations;
+  the joint grid, which the figure shows, and both Fisher width-table arms, each
+  with its calibration SE).
 - `key_sensitivity.py` -- the key-sensitivity comparison (`key_sensitivity.txt`).
 - `br_halide_highn_perframe.png` -- the figure (CNR0 = 15); caption in
   `br_halide_highn_perframe_caption.md`.
