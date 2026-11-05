@@ -1,13 +1,15 @@
-"""2-D per-frame calibration of the variance-fit bias -- experimental.
+"""Single-frame calibration cells and the 2-D per-frame calibration -- experimental.
 
 The recommended D-free calibration is :func:`folded_debias.calibrate_d_free`,
-a 1-D lookup that simply runs the original calibration at ``D = 0``. It
+a 1-D lookup that runs the CNR-sweep calibration at ``D = 0``. It
 captures the bias at ``sigma^2 = sigma_0^2``, which is the relevant region
 for the low-D regime where the truncation bias bites (sigma^2(t) barely
-changes across the measurement when D is small). Validated by Monte Carlo to
-recover D across the full D range of interest at no accuracy cost.
+changes across the measurement when D is small); see
+``experiments/dfree-calibration/validate_d_zero.py`` for its validation.
 
-The 2-D calibration in **this** module is a more general construction kept
+:func:`calibrate_cells` supplies the single-frame Monte Carlo cells that
+:func:`folded_debias.calibrate_fisher` smooths. The 2-D calibration
+(:func:`calibrate_cnr_sigma2`) is a more general construction kept
 for future work: it generates **single-frame** noisy profiles on a
 (CNR, variance) grid, so the lookup is keyed on both the per-frame CNR and
 the observed width. The intended use is **heterogeneous transport** where
@@ -19,9 +21,7 @@ noise per cell dominates the per-cell bias estimate and the resulting lookup
 is too noisy to use without substantial additional sample budget (n_runs
 >~ 5000 per cell, plus post-hoc smoothing). The fixed-point inversion in
 :meth:`TruncationModel.var_bias` compensates for the lookup-at-biased-sigma^2
-issue but cannot rescue the underlying MC noise. See
-``scripts/validate_d_free.py`` for a failing validation; for working D-free
-calibration see ``scripts/validate_d_zero.py``.
+issue but cannot rescue the underlying MC noise.
 """
 from __future__ import annotations
 
@@ -172,7 +172,7 @@ def _cell_worker(args):
 
     The bias estimate filters out broken-fit outliers (sigma_hat^2 above
     ``filter_threshold``) before computing the mean. The rel_variance
-    estimate is computed over ALL finite fits -- broken cells should report
+    estimate is computed over all finite fits -- broken cells should report
     high rel_variance so the downstream slope fit can downweight frames
     that land there.
 
@@ -205,7 +205,7 @@ def _cell_worker(args):
                       noise_model, background, read_noise, gain)
     good = np.isfinite(fits)
     if good.sum() > 1:
-        # rel_variance uses ALL finite fits (broken fits should drive this up).
+        # rel_variance uses all finite fits (broken fits should drive this up).
         rv = float(np.var(fits[good], ddof=1))
         # var_bias filters out broken fits (sigma_hat^2 above threshold).
         keep = good & (fits < filter_threshold)
@@ -276,10 +276,12 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
     seed : root random seed; each cell gets an independent stream.
     n_workers : number of worker processes. Defaults to ``os.cpu_count() - 1``.
         Set to 1 to run serially.
-    model_kwargs : kwargs to reconstruct the model in worker processes (e.g.
-        ``{"gamma": 0.01}`` for :class:`VoigtModel`). The model instance's
-        own attributes are not pickled across processes; we re-instantiate
-        from the name + these kwargs.
+    model_kwargs : kwargs to reconstruct the model in every cell, serial or
+        parallel (e.g. ``{"gamma": 0.01}`` for :class:`VoigtModel`,
+        ``{"shape": 1.5}`` for :class:`GeneralizedGaussianModel`). Each cell
+        re-instantiates the model from its name and these kwargs, so the
+        passed instance's own settings (shape exponent, ``gamma``,
+        ``max_var``) are lost unless they are repeated here.
     filter_threshold : per-cell, when computing the mean bias, discard any
         individual fit whose sigma_hat^2 exceeds this threshold. These are
         broken fits pegged at the fit's upper bound; their contribution to

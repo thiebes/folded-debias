@@ -39,14 +39,14 @@ from .simulate import Experiment, gaussian, noise_free_series as _gaussian_serie
 
 
 # --------------------------------------------------------------------------
-# Gaussian -- the baseline model (delegates to the existing implementation)
+# Gaussian -- the baseline model (delegates to folded_debias.fit)
 # --------------------------------------------------------------------------
 class GaussianModel:
-    """Pure Gaussian profile; the model the original POC was built on.
+    """Pure Gaussian profile; the baseline model.
 
     ``max_var`` is the optional upper bound on the fitted variance, forwarded to
-    :func:`folded_debias.fit.fit_variance`. The default (``None``) keeps the
-    historical ``span^2`` bound; pass a physical cap ``(G * sigma0) ** 2`` when
+    :func:`folded_debias.fit.fit_variance`. The default (``None``) uses the
+    ``span^2`` bound (the full field of view); pass a physical cap ``(G * sigma0) ** 2`` when
     the output window is far wider than the spot, so the low-CNR fit cannot
     wander out to the window scale. It must match between calibration and
     application (see :func:`folded_debias.fit.fit_variance`).

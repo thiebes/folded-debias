@@ -31,8 +31,8 @@ def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
     """Per-frame statistics from a Monte Carlo CNR sweep.
 
     Returns one :class:`~folded_debias.truncation.FrameStats` per CNR_0.  This
-    is the raw material both for the truncation model and for the diagnostic
-    panel of the POC figure, so callers can reuse it instead of resampling.
+    is the raw material both for the truncation model and for per-frame
+    diagnostics, so callers can reuse it instead of resampling.
     ``model`` selects the profile model (see :mod:`folded_debias.models`);
     ``noise_model`` selects the noise law (see :mod:`folded_debias.noise`,
     ``None`` = white).
@@ -69,21 +69,27 @@ def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
 
     Generates the calibration profile sequence at ``D = 0``, so every frame's
     true variance is ``sigma_0^2`` and the resulting 1-D ``var_bias(CNR)``
-    lookup is keyed on per-frame CNR alone. Application code (the slope fit
-    in :func:`folded_debias.weights.msd_and_weights`) consumes the same
-    lookup it always has -- no change to the deployment interface.
+    lookup is keyed on per-frame CNR alone. The slope fit in
+    :func:`folded_debias.weights.msd_and_weights` consumes it like any 1-D
+    lookup.
 
     Use this whenever the application's D is unknown (real data), variable
     across measurements, or itself heterogeneous (a mixed-D population). In
     the low-D regime where the truncation bias bites, the per-frame variance
     barely changes from ``sigma_0^2`` over the measurement window, so the
     bias calibrated at ``sigma^2 = sigma_0^2`` is the bias the application
-    actually sees. Validated by Monte Carlo across D in [0.005, 0.1]; see
-    ``scripts/validate_d_zero.py``.
+    actually sees. Tested by Monte Carlo at D = 0.005 to 0.1 sigma_0^2/tau on
+    four profile shapes (``experiments/dfree-calibration``): with the
+    calibration's own Monte Carlo error included, 4 of 96 cells lie beyond two
+    combined standard errors of the reference. Quote a corrected D with the
+    combined SE, the fit's own and
+    :func:`~folded_debias.weights.calibration_D_se`.
 
     All parameters except ``cnr0_grid`` describe the experimental geometry
-    (pixel grid, frame count, lifetime); the calibration MUST match the
-    geometry of the data it will be applied to.
+    (pixel grid, frame count, lifetime); the calibration must match the
+    geometry of the data it will be applied to. Lengths are in the unit of
+    ``sigma0``: with the default ``sigma0 = 1``, the fitted variances passed to
+    the lookup must be in units of sigma_0^2.
     """
     cal_exp = Experiment(sigma0=sigma0, D=0.0, tau=tau, amplitude0=amplitude0,
                          half_window=half_window, n_pixels=n_pixels,
@@ -109,6 +115,10 @@ def calibrate_fisher(cnr_grid: np.ndarray | None = None, *, sigma0: float = 1.0,
     lookup to each frame's width; it is off by default, so the model's
     behaviour matches the D-free lookup's interface exactly. The geometry
     arguments must match the data, as for :func:`calibrate_d_free`.
+
+    Experimental, and not the recommended path: in its pre-registered test
+    against :func:`calibrate_d_free` its predicted calibration SE was too small
+    on the Voigt and p = 4 profiles (``experiments/fisher-calibration``).
     """
     from .calibration import calibrate_cells
     from .fisher import leading_order_terms
@@ -189,9 +199,7 @@ def per_frame_diagnostic(exp: Experiment, cnr0: float, model: TruncationModel,
     ``sigma^2_true(t)``.
 
     ``scheme`` should be a width-fitting scheme (``folded_normal``, ``mas``;
-    or ``ols`` / ``inverse_variance`` to see the uncorrected raw bias). The
-    cross-frame and joint-ML estimators do not fit a per-frame width and are
-    not covered by this diagnostic.
+    or ``ols`` / ``inverse_variance`` to see the uncorrected raw bias).
     """
     ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed,
                        model=profile_model)

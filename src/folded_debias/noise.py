@@ -1,6 +1,6 @@
 """Pluggable measurement-noise models for the Monte Carlo.
 
-The original pipeline adds white, signal-independent Gaussian noise at the
+The default pipeline adds white, signal-independent Gaussian noise at the
 profile level (constant standard deviation set by the requested CNR). That is
 the noise law the folded-normal calibration is built on. Real transient-
 microscopy detectors are dominated by *shot* (photon-counting) noise, whose
@@ -15,8 +15,8 @@ keys the correction. Both are parameterised by ``cnr0``, the initial peak CNR,
 so a single ``cnr0`` sweep means the same thing across noise laws: at frame 0 the
 peak contrast-to-noise equals ``cnr0`` in every model.
 
-``run_ensemble(..., noise_model=None)`` keeps the original inline white-noise
-path bit-for-bit, so existing callers are unaffected. Pass a model to swap the
+``run_ensemble(..., noise_model=None)`` draws white noise inline. Pass a model
+to swap the
 noise law; :class:`WhiteNoise` reproduces the default through this interface, so
 a white-vs-shot comparison runs through one code path with only the noise law
 changed.
@@ -35,11 +35,10 @@ def _peak0(clean: np.ndarray) -> float:
 
 @dataclass(frozen=True)
 class WhiteNoise:
-    """Constant-standard-deviation additive Gaussian noise (the original law).
+    """Constant-standard-deviation additive Gaussian noise (the default law).
 
     The noise RMS is ``peak0 / cnr0`` -- independent of position and time -- so
-    the per-frame CNR is just the (decaying, spreading) peak divided by that
-    fixed RMS. Reproduces the inline default in
+    the per-frame CNR is just the decaying peak divided by that fixed RMS. Reproduces the inline default in
     :func:`folded_debias.montecarlo.run_ensemble`.
     """
 

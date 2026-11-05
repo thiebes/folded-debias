@@ -16,9 +16,18 @@ fitted variance exceeds the true one by the estimation-noise variance,
 `E[sigma_hat^2] = sigma^2 + s^2`. The correction subtracts a Monte Carlo
 calibrated `s^2(CNR)` from each frame before the slope fit, keyed on the
 per-frame CNR. The calibration is built at D = 0, so it does not require a
-prior value of D. The derivation is in [`docs/DERIVATION.md`](docs/DERIVATION.md).
+prior value of D. The derivation is in
+[`docs/DERIVATION.md`](https://github.com/thiebes/folded-debias/blob/v0.4.0/docs/DERIVATION.md).
 
 ## Install
+
+```bash
+pip install folded-debias            # core: NumPy and SciPy
+pip install "folded-debias[cnr]"     # adds fft-cnr, for per-frame CNR from measured profiles
+```
+
+To run the experiments and tests, install from a clone of the
+[repository](https://github.com/thiebes/folded-debias):
 
 ```bash
 python -m venv .venv
@@ -26,9 +35,8 @@ python -m venv .venv
 pip install -e .[dev]           # core + matplotlib + pytest + fft-cnr
 ```
 
-The core depends only on NumPy and SciPy. `fft-cnr` (per-frame CNR from
-measured profiles) and `matplotlib` (figures) are optional extras. `uv.lock`
-records the exact environment that produced the committed results.
+`uv.lock` in the repository records the exact environment that produced the
+committed results.
 
 ## Quick start
 
@@ -49,9 +57,64 @@ print(r.mean_bias, se)                            # <D_est>/D_ref per CNR_0
 
 On a measurement, the per-frame CNR comes from `folded_debias.cnr.per_frame_cnr`
 (which wraps `fft-cnr`), the corrected MSD and weights from
-`weights.msd_and_weights("folded_normal", ...)`, the slope from `fit.fit_D`, and
-the calibration's contribution to the uncertainty from
-`weights.calibration_D_se`.
+`folded_debias.weights.msd_and_weights("folded_normal", ...)`, the slope from
+`folded_debias.fit.fit_D`, and the calibration's contribution to the
+uncertainty from `folded_debias.weights.calibration_D_se`:
+
+```python
+import numpy as np
+from folded_debias import calibrate_d_free
+from folded_debias.cnr import per_frame_cnr
+from folded_debias.fit import fit_D
+from folded_debias.weights import calibration_D_se, msd_and_weights
+
+# times (n_frames,); profiles (n_frames, n_pixels) cut to about +/-4 sigma_0
+# around the spot; variance (n_frames,) the fitted widths in px^2;
+# sigma0_px the t = 0 width in pixels
+n_pixels = profiles.shape[1]
+trunc = calibrate_d_free(cnr0, half_window=(n_pixels / 2) / sigma0_px,
+                         n_pixels=n_pixels)      # the data's grid, in units of sigma_0
+cnr = per_frame_cnr(profiles)
+msd, w = msd_and_weights("folded_normal", variance / sigma0_px**2, cnr, trunc)
+w = np.where(cnr >= 1.3, w, 0.0)                 # drop frames below the floor
+fit = fit_D(times, msd, w)
+D = fit.D * sigma0_px**2                         # px^2 per unit time
+se = np.hypot(fit.D_se, calibration_D_se(times, msd, w, cnr, trunc)) * sigma0_px**2
+```
+
+## On real data
+
+The validation keys the lookup on the exact per-frame CNR, uses a calibration
+built for the same geometry as the data, and drops frames below the floor. On a
+measurement each of these is a step for the user; the library does not check
+them.
+
+- **Match the calibration to the data.** `var_bias` is a variance in the length
+  unit of the calibration, and its size depends on the pixel grid, the profile
+  model and its fit bound, and the noise law. Work in units of the measured
+  t = 0 width sigma_0: divide the pixel axis by sigma_0 and the fitted
+  variances by sigma_0^2, build the calibration with the data's pixel count and
+  half-window in those units
+  (`calibrate_d_free(cnr0, half_window=(n_pixels / 2) / sigma0_px, n_pixels=n_pixels, model=..., noise_model=...)`),
+  and multiply the fitted D and its SE by sigma_0^2 at the end. A calibration in
+  units of sigma_0 applied to widths in micrometres subtracts a bias that is
+  off by the square of the unit ratio (16 for sigma_0 = 0.25 μm).
+- **Drop frames below the floor.** The correction holds above a per-frame CNR
+  of about 1 (0.7 to 1.5 depending on shape). `msd_and_weights` applies no
+  floor, and a CNR outside the calibrated grid takes the value at the nearest
+  grid edge. The validations set the weight of frames below a per-frame CNR of
+  1.0 or 1.3 to zero before `fit_D`, as in the example above.
+- **The estimated CNR holds over a narrower range.** With the CNR estimated
+  from each frame by `fft-cnr` instead of known, the corrected mean D holds in
+  simulation only where every fitted frame stays well above the floor: from an
+  initial CNR of about 34 at D = 0.02 sigma_0^2/tau for the Gaussian profile
+  (about 55 for p = 1.5 and 13 for p = 4), and from about 21 at D >= 0.05.
+  Below that, the pooled Gaussian mean at D = 0.02 over initial CNR 8 to 90 is
+  1.9 of the reference (standard error 0.4). See
+  [`experiments/wse2-strobescat`](https://github.com/thiebes/folded-debias/tree/v0.4.0/experiments/wse2-strobescat).
+- **Estimate the CNR on the spot.** Cut each profile to about ±4 sigma_0 around
+  the spot before calling `per_frame_cnr`. Background and fringe structure in a
+  full line cut corrupts the spectral CNR estimate at low signal.
 
 ## What the validation shows
 
@@ -72,16 +135,19 @@ the calibration's contribution to the uncertainty from
 - It corrects the anomalous exponent of subdiffusive transport as well as D
   (`experiments/subdiffusive-alpha`, `experiments/nc-solid`).
 
-[`docs/REPO_MAP.md`](docs/REPO_MAP.md) lists every experiment set with its
-result, and each set's README gives the details and how to run it.
+[`docs/REPO_MAP.md`](https://github.com/thiebes/folded-debias/blob/v0.4.0/docs/REPO_MAP.md)
+lists every experiment set with its result, and each set's README gives the
+details and how to run it.
 
 ## Profile models
 
 The bias affects any non-negative width estimator, so the profile model is
 pluggable (`folded_debias.models`): `GaussianModel`, `VoigtModel` (a diffusing
 Gaussian convolved with a fixed Lorentzian point-spread function), and
-`GeneralizedGaussianModel` (shape exponent p; p = 2 is the Gaussian). Scripts
-take a model spec; name the generalized-Gaussian shape explicitly:
+`GeneralizedGaussianModel` (shape exponent p; p = 2 is the Gaussian).
+`model_from_spec("generalized_gaussian:1.5")` builds a model from a spec
+string. The experiment scripts in the repository take a model spec; name the
+generalized-Gaussian shape explicitly:
 
 ```bash
 python experiments/poc-bias-correction/poc_demo.py voigt
@@ -104,7 +170,9 @@ pytest
 | `src/folded_debias/fit.py` | per-frame width fit; MSD to D linear fit |
 | `src/folded_debias/montecarlo.py` | Monte Carlo ensembles |
 | `src/folded_debias/truncation.py` | per-frame statistics; `TruncationModel` lookups and their SE |
-| `src/folded_debias/calibration.py` | joint (CNR, sigma^2) calibration |
+| `src/folded_debias/calibration.py` | single-frame calibration cells; joint (CNR, sigma^2) calibration |
+| `src/folded_debias/fisher.py` | Fisher-information width variance, leading-order bias, CRLB on D |
+| `src/folded_debias/smoothing.py` | P-spline smoother for the calibration residual |
 | `src/folded_debias/weights.py` | the four schemes; calibration SE of D |
 | `src/folded_debias/validate.py` | calibration and evaluation sweeps |
 | `src/folded_debias/cnr.py` | per-frame CNR from measured profiles via `fft-cnr` |
@@ -121,4 +189,4 @@ pytest
 
 ## License
 
-MIT, see [`LICENSE`](LICENSE).
+MIT, see [`LICENSE`](https://github.com/thiebes/folded-debias/blob/v0.4.0/LICENSE).

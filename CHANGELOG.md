@@ -5,7 +5,9 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.4.0] - 2026-11-03
+## [0.4.0] - 2026-11-06
+
+The first release.
 
 ### Added
 
@@ -25,8 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the bias to each frame's width (it grows as sigma at a fixed pixel grid and
   peak CNR). It is not yet the recommended path.
 - `msd_and_weights`, `corrected_variance`, and `calibration_D_se` take an
-  optional `key_variance`, a measurement-level width key; the weights are
-  width-scaled only with such a key.
+  optional `key_variance`, a measurement-level width key. A 1-D model with a
+  width table scales its weights only with such a key; a joint (CNR, sigma^2)
+  model keys its weights on each frame's own fitted variance.
 - `TruncationModel.save` and `TruncationModel.load`.
 
 ### Changed
@@ -41,15 +44,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   degenerate generalized-Gaussian fits below CNR 1.
 - `license` uses the SPDX expression form (`"MIT"`) with `license-files`.
 
+### Documentation
+
+- The README gives the installation from PyPI, a worked example on a
+  measurement, and the conditions for real data: a calibration that matches the
+  data's geometry and units, the per-frame CNR floor, and the narrower range
+  over which an estimated CNR holds.
+- `docs/DERIVATION.md` states the leading-order bias as growing with sigma at a
+  fixed pixel grid and peak CNR, matching `folded_debias.fisher`.
+
 ## [0.3.0] - 2026-10-21
 
-The code the fft-cnr paper ran (its cases 27 to 30). The first tagged release.
+Not tagged or published; 0.4.0 is the first release. The code at commit
+2836e6c, on which the fft-cnr paper's cases 27 to 30 were first run.
 
 ### Added
 
 - Profile models (`GaussianModel`, `VoigtModel`, `GeneralizedGaussianModel`,
   `MomentModel`, `UnboundedGaussianModel`), the Monte Carlo ensemble
-  (`run_ensemble`), and the MSD slope fit (`fit_D`).
+  (`run_ensemble`), and the MSD slope fit (`fit_D`, with the covariance
+  standard error `DFit.D_se`).
+- Simulation beds: `Experiment`, `AnomalousExperiment` (subdiffusive spreading),
+  and `MultiExpExperiment` (multi-exponential decay), with the noise laws in
+  `folded_debias.noise` (`WhiteNoise`, `ShotNoise`).
+- `evaluate` (bias curves per scheme over a CNR sweep), `per_frame_diagnostic`,
+  and `cnr.per_frame_cnr` (per-frame CNR from measured profiles through
+  `fft-cnr`).
 - Four slope-fit schemes in `msd_and_weights`: `ols`, `inverse_variance`,
   `folded_normal`, and `mas`. `folded_normal` subtracts the calibrated per-frame
   variance bias `var_bias(CNR)` and weights each MSD point by its inverse

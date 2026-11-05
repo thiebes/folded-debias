@@ -1,15 +1,18 @@
 """Per-frame CNR estimation -- the input the whole weighting scheme rests on.
 
 For Monte Carlo validation the per-frame CNR is known exactly (it is set by the
-simulation; see :func:`folded_debias.simulate.cnr_per_frame`).  For *real*
+simulation; see ``Ensemble.cnr_frame`` from
+:func:`folded_debias.montecarlo.run_ensemble`).  For *real*
 measurements it must be estimated from each spatial profile, with no repeated
 frames and no separate background region available.  That is exactly what the
 ``fft-cnr`` package does: it separates slowly varying signal from rapid noise
 in the spatial frequency domain and returns a CNR estimate per 1-D profile.
 
 This module wraps ``fft-cnr`` behind a single function and degrades gracefully
-when the package is not installed, so the simulation-only POC has no hard
-dependency on it.
+when the package is not installed, so the simulation-only path has no hard
+dependency on it. Estimate the CNR on a window of about +/-4 sigma_0 around the
+spot: background and fringe structure in a full line cut corrupts the spectral
+estimate at low signal.
 
 The calibration is keyed on the exact CNR, and the estimate is not an unbiased
 stand-in for it near the floor: it reads slightly low at CNR 1 to 2 and about

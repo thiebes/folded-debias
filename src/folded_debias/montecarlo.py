@@ -6,8 +6,7 @@ the MSD curves derived from them, ready for the truncation and weighting
 analysis.
 
 The profile model (Gaussian / Voigt / generalized-Gaussian) is pluggable --
-see :mod:`folded_debias.models`.  The default is the Gaussian model, so
-existing callers are unaffected.
+see :mod:`folded_debias.models`.  The default is the Gaussian model.
 
 Realisations are independent, so the ensemble is embarrassingly parallel across
 runs.  ``run_ensemble`` can fan the per-realisation fits out over worker
@@ -75,8 +74,7 @@ def _fit_realisation(model, x: np.ndarray, clean: np.ndarray,
     heavy right tail that carries the bias).
 
     ``noise_model`` (see :mod:`folded_debias.noise`) swaps the noise law; when
-    it is ``None`` the original constant-sigma white-noise draw is used, so
-    existing callers are bit-for-bit unchanged.
+    it is ``None`` a constant-sigma white-noise draw is used.
     """
     if noise_model is None:
         noisy = clean + rng.normal(0.0, noise_sigma, size=clean.shape)
@@ -147,8 +145,8 @@ def run_ensemble(exp: Experiment, cnr0: float, n_runs: int = 600,
     profile shape.
 
     ``noise_model`` (see :mod:`folded_debias.noise`) swaps the measurement-
-    noise law (white vs shot). ``None`` keeps the original constant-sigma white
-    noise, so existing callers are unaffected; a model also supplies the
+    noise law (white vs shot). ``None`` draws constant-sigma white noise; a
+    model also supplies the
     per-frame CNR, which for shot noise differs from peak / RMS.
 
     ``workers`` controls process-level parallelism over realisations; see

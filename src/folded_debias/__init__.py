@@ -14,13 +14,27 @@ bias per frame, then weight by inverse variance. The per-frame CNR (from the
 
 Typical use::
 
-    from folded_debias import Experiment, calibrate, evaluate
     import numpy as np
+    from folded_debias import Experiment, calibrate_d_free, evaluate
+    from folded_debias.fit import fit_D
+    from folded_debias.weights import msd_and_weights
 
-    exp = Experiment(D=0.02)                 # short-L_D nanocrystal-solid regime
     cnr0 = np.array([5, 8, 13, 21, 34, 55, 90])
-    model = calibrate(exp, cnr0)
-    results = evaluate(exp, cnr0, model)     # bias curves: ols / inverse_variance / folded_normal
+    trunc = calibrate_d_free(cnr0)           # D-free lookup var_bias(CNR)
+
+    # Monte Carlo bias curves <D_est>/D_ref for ols, inverse_variance,
+    # folded_normal, and mas
+    results = evaluate(Experiment(D=0.02), cnr0, trunc)
+
+    # A measurement: fitted widths in units of sigma_0^2 and per-frame CNR
+    msd, w = msd_and_weights("folded_normal", variance, cnr, trunc)
+    w = np.where(cnr >= 1.3, w, 0.0)         # drop frames below the floor
+    D = fit_D(times, msd, w).D
+
+``folded_normal`` is the recommended scheme and :func:`calibrate_d_free` the
+recommended calibration. The README states the conditions for real data: a
+calibration that matches the data's geometry and units, and the per-frame CNR
+floor.
 """
 from .simulate import (AnomalousExperiment, Experiment, MultiExpExperiment,
                        cnr_per_frame, noisy_series)

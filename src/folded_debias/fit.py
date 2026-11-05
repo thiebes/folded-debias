@@ -48,7 +48,7 @@ def fit_variance(x: np.ndarray, y: np.ndarray,
     upper tail of the variance distribution is preserved, not silently pruned.
 
     ``max_var`` sets the upper bound on the fitted variance. The default
-    (``None``) keeps the historical ``span^2`` -- the full field of view, so the
+    (``None``) uses ``span^2`` -- the full field of view, so the
     fit may return a width as large as the whole window. That is too loose when
     the output window is sized far wider than the spot: at low CNR the optimiser
     walks out to the bound on noise, the fitted-variance distribution becomes

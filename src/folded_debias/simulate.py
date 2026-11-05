@@ -61,8 +61,9 @@ class Experiment:
     def amplitude(self) -> np.ndarray:
         """Peak amplitude at each frame (exponential decay only).
 
-        Diffusive spreading also lowers the peak, but for CNR bookkeeping we
-        track the decay term explicitly and let the noise floor be constant.
+        The simulated profiles hold this peak as they spread (see
+        :func:`noise_free_series`), and the noise floor is constant, so the
+        per-frame CNR falls with the decay alone.
         """
         return self.amplitude0 * np.exp(-self.times / self.tau)
 
@@ -91,7 +92,8 @@ class AnomalousExperiment(Experiment):
     a variance for ``t`` in units of ``tau``); it coincides with the Fickian
     ``sigma0^2 / tau`` only at ``alpha = 1``. To compare exponents at a matched
     diffusion length over the window, choose ``D`` per alpha to fix the
-    end-point MSD ``2 D t_max^alpha`` (see ``scripts/subdiffusive_alpha.py``).
+    end-point MSD ``2 D t_max^alpha`` (see
+    ``experiments/subdiffusive-alpha/subdiffusive_alpha.py``).
     """
 
     alpha: float = 1.0           # MSD ~ t^alpha; 1 = Fickian, <1 subdiffusive
@@ -160,11 +162,14 @@ def noise_sigma_for_cnr0(exp: Experiment, cnr0: float) -> float:
 
 
 def cnr_per_frame(exp: Experiment, noise_sigma: float) -> np.ndarray:
-    """True per-frame contrast-to-noise ratio.
+    """Per-frame contrast-to-noise ratio of an area-conserving profile.
 
-    Uses the *current* peak height of the broadened, decayed profile so that
-    both decay and diffusive spreading lower the contrast -- this is the
-    quantity the per-frame weighting must respond to.
+    The peak falls with the decay and, as ``sigma0 / sigma(t)``, with diffusive
+    spreading. The simulated profiles hold the peak at ``amplitude`` instead
+    (see :func:`noise_free_series`), so this is not the CNR of a simulated
+    frame; for that, use ``Ensemble.cnr_frame`` from
+    :func:`~folded_debias.montecarlo.run_ensemble`, which the calibration is
+    keyed on.
     """
     peak = exp.amplitude * (exp.sigma0 / np.sqrt(exp.true_variance))
     return peak / noise_sigma

@@ -127,7 +127,7 @@ def leading_order_terms(model, x: np.ndarray, variance_cal: float,
 
 
 # --------------------------------------------------------------------------
-# Whole-sequence Fisher information (moved from experiments/crlb-precision)
+# Whole-sequence Fisher information
 # --------------------------------------------------------------------------
 def sequence_fisher_information(model, exp: Experiment,
                                 noise_sigma: float) -> np.ndarray:

@@ -221,15 +221,15 @@ class TruncationModel:
         (always present; the 2-D path also fills them with the variance-grid
         mean of each row so 1-D queries still work).
     variance_grid, varbias_2d, relvar_2d : the 2-D lookups (``None`` for a
-        legacy 1-D calibration).
+        1-D calibration).
     varbias_se_grid, varbias_se_2d : Monte Carlo SE of each var_bias point
         (``None`` for a model built or saved without it). They give the
         calibration's own error, which :func:`~folded_debias.weights.calibration_D_se`
         propagates into D.
     framevar_grid : per-frame ``Var(sigma_hat^2)`` on ``cnr_grid`` (1-D
         models from :meth:`from_stats`; ``None`` for models built or saved
-        without it, which keep the older ``relvar_grid`` weights). See
-        :meth:`frame_variance`.
+        without it, which weight by the ``relvar_grid`` MSD-point variance).
+        See :meth:`frame_variance`.
     varbias_cov_factor : (n_grid, p) factor F of the covariance F F^T of the
         smoothed ``varbias_grid`` (models from :meth:`from_cells`). Smoothed
         values are correlated, so the calibration SE of D needs the full
@@ -239,9 +239,12 @@ class TruncationModel:
         ``calibration_variance`` and equal CNR (:meth:`from_cells` with a width
         table). When present, a variance passed to :meth:`var_bias` rescales
         the lookup to that width; see :meth:`_width_lookup_point`.
-    cnr_floor : the lowest calibrated CNR; lookups below it are clamped.
+    cnr_floor : the lowest calibrated CNR, for provenance. Every lookup takes
+        the edge value outside ``cnr_grid``.
     pixel_x, model_spec : the calibration's pixel grid and profile model, for
-        provenance; an application must match both.
+        provenance; an application must match both. Only :meth:`from_cells`
+        records these three; :func:`~folded_debias.validate.calibrate_d_free`
+        leaves them ``None``, so the match is the caller's to keep.
     """
 
     cnr_grid: np.ndarray
@@ -269,7 +272,7 @@ class TruncationModel:
     # ------------------------------------------------------------------
     @classmethod
     def from_stats(cls, stats_list: list[FrameStats]) -> "TruncationModel":
-        """Legacy 1-D calibration from a CNR sweep of full experiments."""
+        """1-D calibration from a CNR sweep of full experiments (``calibrate_d_free``'s path)."""
         cnr = np.concatenate([s.cnr for s in stats_list])
         p = np.concatenate([s.trunc_fraction for s in stats_list])
         rv = np.concatenate([s.rel_variance for s in stats_list])
@@ -546,7 +549,8 @@ class TruncationModel:
         fixed-point estimate of sigma^2_true that :meth:`var_bias` uses.
         A smoothed model (:meth:`from_cells`) takes the SE from its covariance
         factor, which also covers the correlation between grid neighbours.
-        Returns NaN when the model carries no SE (older saved calibrations).
+        Returns NaN when the model carries no SE (a model built or saved
+        without it).
         """
         cnr_arr = np.asarray(cnr, float)
         if self.varbias_cov_factor is not None:
@@ -596,10 +600,12 @@ class TruncationModel:
     def rel_variance(self, cnr, variance=None):
         """Interpolated variance of the (fitted-variance) point.
 
-        With a 1-D calibration this is the MSD-point variance
-        ``Var(sigma_hat^2(t) - sigma_hat^2(0))`` empirically measured per CNR.
-        With a 2-D calibration this is the per-frame ``Var(sigma_hat^2)``, which
-        :mod:`folded_debias.weights` uses directly as each frame's weight.
+        With a 1-D calibration from :meth:`from_stats` this is the MSD-point
+        variance ``Var(sigma_hat^2(t) - sigma_hat^2(0))`` empirically measured
+        per CNR; from :meth:`from_cells` it is the per-frame ``Var(sigma_hat^2)``
+        (a copy of ``framevar_grid``). With a 2-D calibration it is the
+        per-frame ``Var(sigma_hat^2)``, which :mod:`folded_debias.weights` uses
+        directly as each frame's weight.
         """
         if variance is None or not self.is_2d:
             return np.interp(cnr, self.cnr_grid, self.relvar_grid,

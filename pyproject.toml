@@ -14,12 +14,29 @@ license-files = ["LICENSE"]
 authors = [
     { name = "Joseph J. Thiebes", email = "joseph@thiebes.org" },
 ]
+keywords = ["diffusion", "mean-squared displacement", "bias correction",
+            "contrast-to-noise ratio", "transient microscopy"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Physics",
+]
 # A library's metadata carries compatible ranges; the exact, hashed versions
 # that produced the committed results are in uv.lock.
 dependencies = [
     "numpy>=1.24,<3",
     "scipy>=1.10,<2",
 ]
+
+[project.urls]
+Source = "https://github.com/thiebes/folded-debias"
+Changelog = "https://github.com/thiebes/folded-debias/blob/master/CHANGELOG.md"
+Issues = "https://github.com/thiebes/folded-debias/issues"
 
 [project.optional-dependencies]
 # fft-cnr supplies per-frame CNR estimates from single 1-D profiles.

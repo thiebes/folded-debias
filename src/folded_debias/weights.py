@@ -3,18 +3,20 @@
 Four schemes are compared:
 
 * ``ols``               -- ordinary least squares; every frame weighted equally.
-* ``inverse_variance``  -- the field-standard scheme, w_i = 1 / Var(MSD_i).
+* ``inverse_variance``  -- the field-standard scheme, w_i = 1 / Var(sigma_hat_i^2).
                            It corrects for the unequal noise across frames but
                            leaves the boundary-induced bias intact.
-* ``folded_normal``     -- the derived scheme. It subtracts the additive
-                           variance bias s^2 from each frame before forming the
-                           MSD, then weights by inverse variance.
+* ``folded_normal``     -- the derived scheme and the recommended one. It
+                           subtracts the additive variance bias s^2 from each
+                           frame before forming the MSD, then weights by
+                           inverse variance.
 * ``mas``               -- a Plaszczynski-MAS-style variant of ``folded_normal``.
                            The subtraction is smoothly gated so it vanishes,
                            rather than overshooting, when a frame is noise
                            dominated -- it cannot drive the corrected variance
-                           below zero. This removes the deep-regime
-                           overcorrection ``folded_normal`` can show.
+                           below zero. The gate also switches the correction
+                           off below an initial CNR of about 4, where ``mas``
+                           leaves the raw inflation in place.
 
 The folded-normal model (see ``docs/DERIVATION.md``) shows that the fitted
 variance carries an additive upward bias equal to the estimation-noise
@@ -123,12 +125,12 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     whose points are independent. That fit reaches the Cramer-Rao bound on D
     (0.98 to 1.08 x sqrt(CRLB) from CNR_0 21 on four shapes;
     ``experiments/crlb-precision/efficiency_check.py``), and ``fit_D``'s
-    covariance SE is then the right one. The former weights,
-    ``1 / (Var_i + Var_0)`` with frame 0 at weight 0, treated the points as
-    independent and left the best-measured frame out of the slope: 1.30 to
+    covariance SE is then the right one. MSD-point weights,
+    ``1 / (Var_i + Var_0)`` with frame 0 at weight 0, treat the points as
+    independent and leave the best-measured frame out of the slope: 1.30 to
     1.43 x sqrt(CRLB). ``ols`` keeps unit weights on the MSD points with frame
-    0 at weight 0, and a 1-D model saved without a ``framevar_grid`` keeps its
-    former weights (no per-frame variance to weight by).
+    0 at weight 0, and a 1-D model saved without a ``framevar_grid`` uses the
+    MSD-point weights (it has no per-frame variance to weight by).
 
     ``key_variance`` (a measurement-level estimate of each frame's true width)
     keys both the bias and, for a 1-D model with a width table, the weights.
