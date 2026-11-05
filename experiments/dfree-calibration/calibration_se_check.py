@@ -22,6 +22,11 @@ alone. Per cell it reports observed / predicted variance for three arms:
   (the term calibration_D_se propagates);
 * ``weights`` -- the pooled var_bias with the draw's own weights.
 
+The slope weights come from the per-frame variance (``framevar_grid``), so every
+arm's model carries one; a model built without it falls back to the MSD-point
+weights with frame 0 at weight 0, and an arm on that fallback would be compared
+with a prediction made for the per-frame weights.
+
 It also checks the per-point SE (variance of each grid point over the draws
 against its recorded SE squared) and the correlation of the fitted variances
 between frames of one calibration ensemble.
@@ -177,17 +182,20 @@ def analyse() -> None:
     # 3. Per-cell spread of the corrected mean over the draws.
     pooled = BiasLookup(cnr_grid=grid, p_grid=models[0].p_grid,
                              relvar_grid=rv.mean(axis=0), varbias_grid=vb.mean(axis=0),
-                             varbias_se_grid=np.sqrt(np.mean(se ** 2, axis=0)))
+                             varbias_se_grid=np.sqrt(np.mean(se ** 2, axis=0)),
+                             framevar_grid=np.mean([m.framevar_grid for m in models], axis=0))
     arms = {
         "full": lambda m: m,
         "bias": lambda m: BiasLookup(cnr_grid=grid, p_grid=m.p_grid,
                                           relvar_grid=pooled.relvar_grid,
                                           varbias_grid=m.varbias_grid,
-                                          varbias_se_grid=m.varbias_se_grid),
+                                          varbias_se_grid=m.varbias_se_grid,
+                                          framevar_grid=pooled.framevar_grid),
         "weights": lambda m: BiasLookup(cnr_grid=grid, p_grid=m.p_grid,
                                              relvar_grid=m.relvar_grid,
                                              varbias_grid=pooled.varbias_grid,
-                                             varbias_se_grid=m.varbias_se_grid),
+                                             varbias_se_grid=m.varbias_se_grid,
+                                             framevar_grid=m.framevar_grid),
     }
     with np.load(OUT / f"eval_runs{EVAL_RUNS}.npz") as z:
         evar, ecnr = z["variance"], z["cnr"]
@@ -234,9 +242,11 @@ def analyse() -> None:
         print(f"  {d:6.3f}  " + "".join(f"{v:8.3f}" for v in np.sqrt(p2[di])))
 
     # 4. The t = 0 grid points (rel_variance 0) pull the interpolated weight up
-    # for an evaluation frame whose CNR lies next to a calibration CNR_0.
+    # for an evaluation frame whose CNR lies next to a calibration CNR_0. This
+    # concerns the MSD-point weights, which the per-frame weights replace; they
+    # remain the fallback for a model saved without framevar_grid.
     print("\nInterpolated rel_variance with / without the t = 0 points "
-          "(D = 0.02, frames with CNR >= 1 after t = 0)")
+          "(fallback MSD-point weights; D = 0.02, frames with CNR >= 1 after t = 0)")
     for ci, c0 in enumerate(CNR0_VALUES):
         c = ecnr[2, ci]
         keep = (c >= FLOOR) & (np.arange(c.size) > 0)
@@ -248,11 +258,16 @@ def analyse() -> None:
 
 
 def paper_triple(models, full_means, p2, ecnr, evar) -> None:
-    """Rank the fft-cnr paper's three Gaussian calibrations (seeds 1, 101, 201)."""
-    paper = Path(__file__).resolve().parents[3] / "fft-cnr-paper" / "validation" / "results"
+    """Rank the fft-cnr paper's three Gaussian calibrations (seeds 1, 101, 201).
+
+    The paper's validation code lives in the sibling ``fft_cnr_validation``
+    repository; its case 27 calibrations carry ``framevar_grid``, so they are
+    scored with the same per-frame weights as the draws here.
+    """
+    paper = Path(__file__).resolve().parents[3] / "fft_cnr_validation" / "validation" / "results"
     paths = [paper / f"case27_calibration_gaussian_seed{s}.npz" for s in (101, 201)]
     if not all(p.exists() for p in paths):
-        print("\n(fft-cnr-paper calibrations not found; paper triple skipped)")
+        print("\n(fft-cnr paper calibrations not found; paper triple skipped)")
         return
     from itertools import combinations
     grid = models[0].cnr_grid
@@ -261,9 +276,13 @@ def paper_triple(models, full_means, p2, ecnr, evar) -> None:
     for p in paths:
         with np.load(p) as d:
             assert np.allclose(d["cnr_grid"], grid)
+            if "framevar_grid" not in d:
+                print(f"\n({p.name} has no framevar_grid; paper triple skipped)")
+                return
             m = BiasLookup(cnr_grid=grid, p_grid=d["p_grid"],
                                 relvar_grid=d["relvar_grid"],
-                                varbias_grid=d["varbias_grid"], varbias_se_grid=se)
+                                varbias_grid=d["varbias_grid"], varbias_se_grid=se,
+                                framevar_grid=d["framevar_grid"])
         extra.append([[_cell_means(m, evar[di, ci], ecnr[di, ci], d_true)[0]
                        for ci in range(len(CNR0_VALUES))]
                       for di, d_true in enumerate(D_VALUES)])

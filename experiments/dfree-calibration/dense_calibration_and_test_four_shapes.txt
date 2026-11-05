@@ -1,0 +1,261 @@
+Dense parallel D-free calibration and test
+  D_true = 0.02 sigma_0^2/tau   (L_D/FWHM_0 ~ 0.085)
+  workers = 7
+
+======================================================================
+=== gaussian  (n_workers = 7) ===
+======================================================================
+  Dense calibration: cached (dense_gaussian_runs5000_seed1000.npz)
+  Calibration ready [0s]; lookup spans per-frame CNR 0.100 -> 100.0 (1200 data points)
+
+  Test: 100 random log-distributed CNR_0 in [2.0, 100.0], 1000 runs/cell, seeds 50000 + i
+    [test] 10/100 ( 10%)  elapsed   237s  ETA 2132s
+    [test] 20/100 ( 20%)  elapsed   360s  ETA 1442s
+    [test] 30/100 ( 30%)  elapsed   567s  ETA 1322s
+    [test] 40/100 ( 40%)  elapsed   658s  ETA  987s
+    [test] 50/100 ( 50%)  elapsed   811s  ETA  811s
+    [test] 60/100 ( 60%)  elapsed   882s  ETA  588s
+    [test] 70/100 ( 70%)  elapsed   952s  ETA  408s
+    [test] 80/100 ( 80%)  elapsed  1092s  ETA  273s
+    [test] 90/100 ( 90%)  elapsed  1161s  ETA  129s
+    [test] 100/100 (100%)  elapsed  1259s  ETA    0s
+  Test done [1259s]
+
+  Decile report (mean(D_hat) / D_true, averaged within each log-CNR_0 decile):
+  CNR_0 range              n         OLS   inv-var    folded       mas
+  [ 2.00,  2.96]     8      71.145     4.339     0.989     2.135
+  [ 2.96,  4.37]    16      60.425     2.279     0.932     1.208
+  [ 4.37,  6.47]    11      42.793     1.773     1.105     1.176
+  [ 6.47,  9.56]     8      20.757     1.385     1.043     1.060
+  [ 9.56, 14.14]     6       8.420     1.128     0.951     0.954
+  [14.14, 20.91]    10       2.343     1.097     0.997     0.999
+  [20.91, 30.92]     9       1.402     1.066     1.009     1.009
+  [30.92, 45.73]     7       1.126     1.023     1.000     0.999
+  [45.73, 67.62]    11       1.074     1.012     1.001     1.001
+  [67.62, 100.00]    14       1.034     1.007     1.001     1.001
+
+  folded_normal: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  -0.0463 +/- 0.1532 (eval) +/- 0.1537 (cal); -0.21 SE
+    [ 2.96,  4.37]  -0.0483 +/- 0.0595 (eval) +/- 0.0830 (cal); -0.47 SE
+    [ 4.37,  6.47]  +0.0643 +/- 0.0440 (eval) +/- 0.0519 (cal); +0.95 SE
+    [ 6.47,  9.56]  +0.0284 +/- 0.0287 (eval) +/- 0.0269 (cal); +0.72 SE
+    [ 9.56, 14.14]  -0.0427 +/- 0.0197 (eval) +/- 0.0165 (cal); -1.66 SE
+    [14.14, 20.91]  -0.0058 +/- 0.0101 (eval) +/- 0.0111 (cal); -0.39 SE
+    [20.91, 30.92]  +0.0115 +/- 0.0072 (eval) +/- 0.0078 (cal); +1.08 SE
+    [30.92, 45.73]  +0.0019 +/- 0.0052 (eval) +/- 0.0049 (cal); +0.27 SE
+    [45.73, 67.62]  +0.0008 +/- 0.0029 (eval) +/- 0.0034 (cal); +0.17 SE
+    [67.62, 100.00]  +0.0011 +/- 0.0017 (eval) +/- 0.0024 (cal); +0.38 SE
+    all points    +0.0012 +/- 0.0014 (eval) +/- 0.0034 (cal); +0.33 SE
+
+  mas: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  +0.8436 +/- 0.1531 (eval) +/- 0.1537 (cal); +3.89 SE
+    [ 2.96,  4.37]  +0.1859 +/- 0.0595 (eval) +/- 0.0830 (cal); +1.82 SE
+    [ 4.37,  6.47]  +0.1316 +/- 0.0440 (eval) +/- 0.0519 (cal); +1.93 SE
+    [ 6.47,  9.56]  +0.0448 +/- 0.0287 (eval) +/- 0.0269 (cal); +1.14 SE
+    [ 9.56, 14.14]  -0.0397 +/- 0.0197 (eval) +/- 0.0165 (cal); -1.54 SE
+    [14.14, 20.91]  -0.0044 +/- 0.0101 (eval) +/- 0.0111 (cal); -0.29 SE
+    [20.91, 30.92]  +0.0111 +/- 0.0072 (eval) +/- 0.0078 (cal); +1.05 SE
+    [30.92, 45.73]  +0.0011 +/- 0.0052 (eval) +/- 0.0049 (cal); +0.16 SE
+    [45.73, 67.62]  +0.0002 +/- 0.0029 (eval) +/- 0.0034 (cal); +0.04 SE
+    [67.62, 100.00]  +0.0005 +/- 0.0017 (eval) +/- 0.0024 (cal); +0.17 SE
+    all points    +0.0010 +/- 0.0014 (eval) +/- 0.0034 (cal); +0.27 SE
+
+  Overall mean |mean(D_hat)/D_true - 1| across all test points (and the value Monte Carlo error alone gives, corrected schemes):
+                     ols: 21.935  (median 2.164)
+        inverse_variance: 0.615  (median 0.119)
+           folded_normal: 0.080  (median 0.025)  null 0.095
+                     mas: 0.174  (median 0.032)  null 0.095
+
+======================================================================
+=== voigt  (n_workers = 7) ===
+======================================================================
+  Dense calibration: cached (dense_voigt_runs5000_seed1001000.npz)
+  Calibration ready [0s]; lookup spans per-frame CNR 0.100 -> 100.0 (1200 data points)
+
+  Test: 100 random log-distributed CNR_0 in [2.0, 100.0], 1000 runs/cell, seeds 1050000 + i
+    [test] 10/100 ( 10%)  elapsed   364s  ETA 3272s
+    [test] 20/100 ( 20%)  elapsed   559s  ETA 2238s
+    [test] 30/100 ( 30%)  elapsed   854s  ETA 1992s
+    [test] 40/100 ( 40%)  elapsed   985s  ETA 1478s
+    [test] 50/100 ( 50%)  elapsed  1196s  ETA 1196s
+    [test] 60/100 ( 60%)  elapsed  1290s  ETA  860s
+    [test] 70/100 ( 70%)  elapsed  1379s  ETA  591s
+    [test] 80/100 ( 80%)  elapsed  1538s  ETA  385s
+    [test] 90/100 ( 90%)  elapsed  1616s  ETA  180s
+    [test] 100/100 (100%)  elapsed  1736s  ETA    0s
+  Test done [1736s]
+
+  Decile report (mean(D_hat) / D_true, averaged within each log-CNR_0 decile):
+  CNR_0 range              n         OLS   inv-var    folded       mas
+  [ 2.00,  2.96]     7       1.130     2.556     0.486     1.241
+  [ 2.96,  4.37]    17       4.539     2.304     0.840     1.265
+  [ 4.37,  6.47]     9       5.882     1.839     0.990     1.179
+  [ 6.47,  9.56]    10       5.826     1.398     0.976     1.029
+  [ 9.56, 14.14]     7       3.738     1.210     0.986     1.000
+  [14.14, 20.91]     3       1.948     1.109     0.992     0.994
+  [20.91, 30.92]    16       1.314     1.076     1.010     1.011
+  [30.92, 45.73]     7       1.191     1.037     1.011     1.010
+  [45.73, 67.62]    12       1.093     1.018     1.003     1.002
+  [67.62, 100.00]    12       1.038     1.005     1.000     0.999
+
+  folded_normal: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  -0.5565 +/- 0.1407 (eval) +/- 0.1362 (cal); -2.84 SE
+    [ 2.96,  4.37]  -0.1461 +/- 0.0587 (eval) +/- 0.0861 (cal); -1.40 SE
+    [ 4.37,  6.47]  +0.0170 +/- 0.0523 (eval) +/- 0.0566 (cal); +0.22 SE
+    [ 6.47,  9.56]  -0.0118 +/- 0.0297 (eval) +/- 0.0331 (cal); -0.27 SE
+    [ 9.56, 14.14]  -0.0206 +/- 0.0224 (eval) +/- 0.0199 (cal); -0.69 SE
+    [14.14, 20.91]  -0.0141 +/- 0.0217 (eval) +/- 0.0127 (cal); -0.56 SE
+    [20.91, 30.92]  +0.0115 +/- 0.0066 (eval) +/- 0.0092 (cal); +1.02 SE
+    [30.92, 45.73]  +0.0099 +/- 0.0061 (eval) +/- 0.0054 (cal); +1.22 SE
+    [45.73, 67.62]  +0.0025 +/- 0.0033 (eval) +/- 0.0041 (cal); +0.47 SE
+    [67.62, 100.00]  -0.0001 +/- 0.0021 (eval) +/- 0.0026 (cal); -0.02 SE
+    all points    +0.0016 +/- 0.0016 (eval) +/- 0.0040 (cal); +0.37 SE
+
+  mas: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  +0.1948 +/- 0.1397 (eval) +/- 0.1362 (cal); +1.00 SE
+    [ 2.96,  4.37]  +0.2578 +/- 0.0585 (eval) +/- 0.0862 (cal); +2.48 SE
+    [ 4.37,  6.47]  +0.1852 +/- 0.0522 (eval) +/- 0.0566 (cal); +2.41 SE
+    [ 6.47,  9.56]  +0.0356 +/- 0.0297 (eval) +/- 0.0331 (cal); +0.80 SE
+    [ 9.56, 14.14]  -0.0080 +/- 0.0224 (eval) +/- 0.0199 (cal); -0.27 SE
+    [14.14, 20.91]  -0.0125 +/- 0.0217 (eval) +/- 0.0127 (cal); -0.50 SE
+    [20.91, 30.92]  +0.0128 +/- 0.0066 (eval) +/- 0.0092 (cal); +1.13 SE
+    [30.92, 45.73]  +0.0088 +/- 0.0061 (eval) +/- 0.0054 (cal); +1.09 SE
+    [45.73, 67.62]  +0.0017 +/- 0.0033 (eval) +/- 0.0041 (cal); +0.31 SE
+    [67.62, 100.00]  -0.0009 +/- 0.0021 (eval) +/- 0.0026 (cal); -0.28 SE
+    all points    +0.0017 +/- 0.0016 (eval) +/- 0.0040 (cal); +0.39 SE
+
+  Overall mean |mean(D_hat)/D_true - 1| across all test points (and the value Monte Carlo error alone gives, corrected schemes):
+                     ols: 1.923  (median 0.531)
+        inverse_variance: 0.482  (median 0.118)
+           folded_normal: 0.111  (median 0.027)  null 0.090
+                     mas: 0.112  (median 0.030)  null 0.090
+
+======================================================================
+=== generalized_gaussian:1.5  (n_workers = 7) ===
+======================================================================
+  Dense calibration: cached (dense_generalized_gaussian_p1.5_runs5000_seed2001000.npz)
+  Calibration ready [0s]; lookup spans per-frame CNR 0.100 -> 100.0 (1200 data points)
+
+  Test: 100 random log-distributed CNR_0 in [2.0, 100.0], 1000 runs/cell, seeds 2050000 + i
+    [test] 10/100 ( 10%)  elapsed   559s  ETA 5033s
+    [test] 20/100 ( 20%)  elapsed   744s  ETA 2975s
+    [test] 30/100 ( 30%)  elapsed   899s  ETA 2097s
+    [test] 40/100 ( 40%)  elapsed  1039s  ETA 1559s
+    [test] 50/100 ( 50%)  elapsed  1137s  ETA 1137s
+    [test] 60/100 ( 60%)  elapsed  1234s  ETA  823s
+    [test] 70/100 ( 70%)  elapsed  1311s  ETA  562s
+    [test] 80/100 ( 80%)  elapsed  1405s  ETA  351s
+    [test] 90/100 ( 90%)  elapsed  1461s  ETA  162s
+    [test] 100/100 (100%)  elapsed  1528s  ETA    0s
+  Test done [1528s]
+
+  Decile report (mean(D_hat) / D_true, averaged within each log-CNR_0 decile):
+  CNR_0 range              n         OLS   inv-var    folded       mas
+  [ 2.00,  2.96]     5       6.334     6.082     0.556     3.769
+  [ 2.96,  4.37]     3      12.127     2.432     0.806     1.370
+  [ 4.37,  6.47]     9      14.548     1.895     1.026     1.235
+  [ 6.47,  9.56]     8      11.884     1.474     1.020     1.082
+  [ 9.56, 14.14]    12       7.826     1.266     1.020     1.036
+  [14.14, 20.91]    11       3.253     1.123     0.988     0.992
+  [20.91, 30.92]    10       1.507     1.094     1.019     1.019
+  [30.92, 45.73]     6       1.229     1.054     1.013     1.014
+  [45.73, 67.62]    18       1.129     1.023     1.002     1.002
+  [67.62, 100.00]    18       1.040     1.010     1.002     1.001
+
+  folded_normal: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  -0.4204 +/- 0.2843 (eval) +/- 0.2210 (cal); -1.17 SE
+    [ 2.96,  4.37]  -0.2007 +/- 0.1667 (eval) +/- 0.1062 (cal); -1.02 SE
+    [ 4.37,  6.47]  +0.0589 +/- 0.0574 (eval) +/- 0.0625 (cal); +0.69 SE
+    [ 6.47,  9.56]  +0.0160 +/- 0.0387 (eval) +/- 0.0409 (cal); +0.28 SE
+    [ 9.56, 14.14]  +0.0278 +/- 0.0198 (eval) +/- 0.0237 (cal); +0.90 SE
+    [14.14, 20.91]  -0.0161 +/- 0.0130 (eval) +/- 0.0150 (cal); -0.81 SE
+    [20.91, 30.92]  +0.0181 +/- 0.0090 (eval) +/- 0.0100 (cal); +1.35 SE
+    [30.92, 45.73]  +0.0140 +/- 0.0075 (eval) +/- 0.0061 (cal); +1.45 SE
+    [45.73, 67.62]  +0.0026 +/- 0.0032 (eval) +/- 0.0047 (cal); +0.47 SE
+    [67.62, 100.00]  +0.0011 +/- 0.0020 (eval) +/- 0.0030 (cal); +0.31 SE
+    all points    +0.0026 +/- 0.0016 (eval) +/- 0.0043 (cal); +0.57 SE
+
+  mas: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  +2.7145 +/- 0.2813 (eval) +/- 0.2210 (cal); +7.59 SE
+    [ 2.96,  4.37]  +0.3587 +/- 0.1663 (eval) +/- 0.1062 (cal); +1.82 SE
+    [ 4.37,  6.47]  +0.2386 +/- 0.0573 (eval) +/- 0.0625 (cal); +2.81 SE
+    [ 6.47,  9.56]  +0.0740 +/- 0.0387 (eval) +/- 0.0409 (cal); +1.31 SE
+    [ 9.56, 14.14]  +0.0420 +/- 0.0198 (eval) +/- 0.0237 (cal); +1.36 SE
+    [14.14, 20.91]  -0.0125 +/- 0.0130 (eval) +/- 0.0150 (cal); -0.63 SE
+    [20.91, 30.92]  +0.0180 +/- 0.0090 (eval) +/- 0.0100 (cal); +1.34 SE
+    [30.92, 45.73]  +0.0142 +/- 0.0075 (eval) +/- 0.0061 (cal); +1.47 SE
+    [45.73, 67.62]  +0.0019 +/- 0.0032 (eval) +/- 0.0047 (cal); +0.34 SE
+    [67.62, 100.00]  +0.0007 +/- 0.0020 (eval) +/- 0.0030 (cal); +0.19 SE
+    all points    +0.0027 +/- 0.0016 (eval) +/- 0.0043 (cal); +0.59 SE
+
+  Overall mean |mean(D_hat)/D_true - 1| across all test points (and the value Monte Carlo error alone gives, corrected schemes):
+                     ols: 3.853  (median 0.728)
+        inverse_variance: 0.480  (median 0.092)
+           folded_normal: 0.084  (median 0.019)  null 0.074
+                     mas: 0.199  (median 0.020)  null 0.074
+
+======================================================================
+=== generalized_gaussian:4  (n_workers = 7) ===
+======================================================================
+  Dense calibration: cached (dense_generalized_gaussian_p4_runs5000_seed3001000.npz)
+  Calibration ready [0s]; lookup spans per-frame CNR 0.100 -> 100.0 (1200 data points)
+
+  Test: 100 random log-distributed CNR_0 in [2.0, 100.0], 1000 runs/cell, seeds 3050000 + i
+    [test] 10/100 ( 10%)  elapsed   266s  ETA 2394s
+    [test] 20/100 ( 20%)  elapsed   393s  ETA 1571s
+    [test] 30/100 ( 30%)  elapsed   599s  ETA 1398s
+    [test] 40/100 ( 40%)  elapsed   694s  ETA 1041s
+    [test] 50/100 ( 50%)  elapsed   849s  ETA  849s
+    [test] 60/100 ( 60%)  elapsed   918s  ETA  612s
+    [test] 70/100 ( 70%)  elapsed   978s  ETA  419s
+    [test] 80/100 ( 80%)  elapsed  1078s  ETA  269s
+    [test] 90/100 ( 90%)  elapsed  1127s  ETA  125s
+    [test] 100/100 (100%)  elapsed  1197s  ETA    0s
+  Test done [1197s]
+
+  Decile report (mean(D_hat) / D_true, averaged within each log-CNR_0 decile):
+  CNR_0 range              n         OLS   inv-var    folded       mas
+  [ 2.00,  2.96]    12      -3.078    -0.932     0.573    -0.904
+  [ 2.96,  4.37]    13      -1.977     0.213     0.794     0.229
+  [ 4.37,  6.47]     9      -0.653     0.799     0.925     0.784
+  [ 6.47,  9.56]    10       0.229     0.961     0.985     0.934
+  [ 9.56, 14.14]    11       0.562     1.003     0.999     0.979
+  [14.14, 20.91]     9       0.808     1.010     1.000     0.991
+  [20.91, 30.92]     5       0.968     1.017     1.007     1.004
+  [30.92, 45.73]    11       1.015     1.009     1.002     1.002
+  [45.73, 67.62]    12       1.023     1.005     1.001     1.001
+  [67.62, 100.00]     8       1.005     1.001     0.999     0.999
+
+  folded_normal: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  -0.4099 +/- 0.0499 (eval) +/- 0.0632 (cal); -5.09 SE
+    [ 2.96,  4.37]  -0.1924 +/- 0.0360 (eval) +/- 0.0448 (cal); -3.35 SE
+    [ 4.37,  6.47]  -0.0633 +/- 0.0248 (eval) +/- 0.0263 (cal); -1.75 SE
+    [ 6.47,  9.56]  -0.0137 +/- 0.0155 (eval) +/- 0.0176 (cal); -0.58 SE
+    [ 9.56, 14.14]  -0.0036 +/- 0.0093 (eval) +/- 0.0109 (cal); -0.26 SE
+    [14.14, 20.91]  -0.0004 +/- 0.0061 (eval) +/- 0.0065 (cal); -0.04 SE
+    [20.91, 30.92]  +0.0037 +/- 0.0053 (eval) +/- 0.0043 (cal); +0.54 SE
+    [30.92, 45.73]  +0.0015 +/- 0.0025 (eval) +/- 0.0027 (cal); +0.40 SE
+    [45.73, 67.62]  +0.0004 +/- 0.0015 (eval) +/- 0.0018 (cal); +0.17 SE
+    [67.62, 100.00]  -0.0009 +/- 0.0013 (eval) +/- 0.0012 (cal); -0.53 SE
+    all points    -0.0004 +/- 0.0009 (eval) +/- 0.0020 (cal); -0.19 SE
+
+  mas: pooled mean(D_hat)/D_true - 1 per decile (inverse combined variance; calibration SE as one shared systematic)
+    [ 2.00,  2.96]  -1.8267 +/- 0.0499 (eval) +/- 0.0632 (cal); -22.68 SE
+    [ 2.96,  4.37]  -0.7326 +/- 0.0360 (eval) +/- 0.0448 (cal); -12.74 SE
+    [ 4.37,  6.47]  -0.1915 +/- 0.0248 (eval) +/- 0.0263 (cal); -5.30 SE
+    [ 6.47,  9.56]  -0.0627 +/- 0.0155 (eval) +/- 0.0176 (cal); -2.67 SE
+    [ 9.56, 14.14]  -0.0226 +/- 0.0093 (eval) +/- 0.0109 (cal); -1.58 SE
+    [14.14, 20.91]  -0.0088 +/- 0.0061 (eval) +/- 0.0065 (cal); -0.99 SE
+    [20.91, 30.92]  +0.0018 +/- 0.0053 (eval) +/- 0.0043 (cal); +0.26 SE
+    [30.92, 45.73]  +0.0014 +/- 0.0025 (eval) +/- 0.0027 (cal); +0.37 SE
+    [45.73, 67.62]  +0.0001 +/- 0.0015 (eval) +/- 0.0018 (cal); +0.04 SE
+    [67.62, 100.00]  -0.0016 +/- 0.0013 (eval) +/- 0.0012 (cal); -0.92 SE
+    all points    -0.0024 +/- 0.0009 (eval) +/- 0.0020 (cal); -1.06 SE
+
+  Overall mean |mean(D_hat)/D_true - 1| across all test points (and the value Monte Carlo error alone gives, corrected schemes):
+                     ols: 1.180  (median 0.356)
+        inverse_variance: 0.366  (median 0.029)
+           folded_normal: 0.099  (median 0.020)  null 0.049
+                     mas: 0.363  (median 0.027)  null 0.049
+
+[total wall time: 95.3 min]
