@@ -2,26 +2,24 @@ folded-debias POC demo
   profile model: generalized_gaussian_p4
   experiment: D=0.02, tau=1.0, n_frames=12, L_D/FWHM_0=0.085
   CNR_0 sweep: [ 5.  8. 13. 21. 34. 55. 90.]
-  400 Monte Carlo runs per CNR_0
+  400 Monte Carlo runs per CNR_0; seeds: calibration 3000001 + i, evaluation 3020000 + i
 
-Calibrating truncation model ...
+Diagnostic sweep for panel (a) ...
+Calibrating (D-free) ...
 Evaluating schemes ...
 
-  <D_est> / D_true   (1.000 = unbiased; SE = Monte Carlo standard error)
+  <D_est> / D_true   (1.000 = unbiased; SE = evaluation and calibration combined)
   CNR_0     OLS     inv-var   folded-normal     SE
-       5   -0.375    0.751        1.385      0.208
-       8   -0.005    0.738        0.917      0.104
-      13    0.855    0.920        0.939      0.053
-      21    0.866    0.946        0.951      0.031
-      34    0.993    0.981        0.969      0.020
-      55    1.071    1.021        1.042      0.012
-      90    1.002    0.997        0.984      0.007
+       5    0.125    0.835        1.077      0.185
+       8   -0.173    1.084        1.124      0.103
+      13    0.386    1.022        1.016      0.054
+      21    0.855    0.999        0.960      0.034
+      34    0.992    1.018        1.027      0.020
+      55    1.008    1.011        1.016      0.012
+      90    0.985    0.998        0.998      0.008
 
-  mean |bias-1|  ols=0.39  inv-var=0.098  folded-normal=0.095
-  Reading: OLS is catastrophically biased at low CNR, and
-  inverse-variance weighting leaves a residual it cannot remove.
-  The folded-normal scheme subtracts the additive variance bias
-  (see docs/DERIVATION.md) and cuts the mean residual bias well
-  below inverse-variance; it can overcorrect in the deepest noise.
+  mean |bias-1|  ols=0.41  inv-var=0.043  folded-normal=0.043  (Monte Carlo error alone would give 0.047 for folded-normal)
+  folded-normal cells beyond 2 combined SE: 0 of 7
+  inverse-variance cells beyond 2 evaluation SE: 0 of 7
 
 Figure written to output\poc_demo_generalized_gaussian_p4.png

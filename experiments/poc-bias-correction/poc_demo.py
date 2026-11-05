@@ -37,10 +37,13 @@ from width_debias.bias_lookup import BiasLookup  # noqa: E402
 EXP = Experiment(sigma0=1.0, D=0.02, tau=1.0, n_frames=12, t_max=3.0)
 CNR0_GRID = np.array([5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 90.0])
 N_RUNS = 400
+# Seeds are offset by 10^6 per shape so the shapes see independent noise; any
+# other spec (such as the bare p = 2 "generalized_gaussian") takes the next offset.
+SHAPES = ("gaussian", "voigt", "generalized_gaussian:1.5", "generalized_gaussian:4")
 
 
 def _profile_model_from_argv():
-    """Profile model selected by an optional command-line argument.
+    """Profile model selected by an optional command-line argument, and its seed offset.
 
     ``generalized_gaussian:<p>`` sets the shape exponent; the bare
     ``generalized_gaussian`` is p = 2, a Gaussian profile fitted by scale.
@@ -50,11 +53,12 @@ def _profile_model_from_argv():
         model = model_from_spec(spec)
     except ValueError as err:
         sys.exit(str(err))
-    return spec_tag(spec), model
+    offset = 10 ** 6 * (SHAPES.index(spec) if spec in SHAPES else len(SHAPES))
+    return spec_tag(spec), model, offset
 
 
 def main() -> None:
-    model_name, pmodel = _profile_model_from_argv()
+    model_name, pmodel, offset = _profile_model_from_argv()
     fwhm = 2.3548 * EXP.sigma0
     ld = np.sqrt(2.0 * EXP.D * EXP.tau)
     print("width-debias POC demo")
@@ -62,13 +66,14 @@ def main() -> None:
     print(f"  experiment: D={EXP.D}, tau={EXP.tau}, n_frames={EXP.n_frames}, "
           f"L_D/FWHM_0={ld / fwhm:.3f}")
     print(f"  CNR_0 sweep: {CNR0_GRID}")
-    print(f"  {N_RUNS} Monte Carlo runs per CNR_0\n")
+    print(f"  {N_RUNS} Monte Carlo runs per CNR_0; seeds: calibration {1 + offset} + i, "
+          f"evaluation {20000 + offset} + i\n")
 
     # Panel (a) diagnostic sweep at the experiment's own D: the MSD sign
     # fraction and skewness need a nonzero true MSD, so this sweep cannot be
     # the D = 0 one. It is not used by the correction.
     print("Diagnostic sweep for panel (a) ...")
-    stats = sweep_stats(EXP, CNR0_GRID, n_runs=N_RUNS, seed=1, model=pmodel)
+    stats = sweep_stats(EXP, CNR0_GRID, n_runs=N_RUNS, seed=1 + offset, model=pmodel)
 
     # The correction's calibration is D-free: the same sweep at D = 0, so the
     # lookup never uses the D being estimated (docs/DERIVATION.md section 8).
@@ -76,12 +81,12 @@ def main() -> None:
     model: BiasLookup = calibrate_d_free(
         CNR0_GRID, sigma0=EXP.sigma0, tau=EXP.tau, half_window=EXP.half_window,
         n_pixels=EXP.n_pixels, n_frames=EXP.n_frames, t_max=EXP.t_max,
-        amplitude0=EXP.amplitude0, n_runs=N_RUNS, seed=1, model=pmodel)
+        amplitude0=EXP.amplitude0, n_runs=N_RUNS, seed=1 + offset, model=pmodel)
 
     # Independent evaluation sweep (different seed).
     print("Evaluating schemes ...")
     results = evaluate(EXP, CNR0_GRID, model, n_runs=N_RUNS,
-                       seed=20000, profile_model=pmodel)
+                       seed=20000 + offset, profile_model=pmodel)
 
     # --- summary table ---------------------------------------------------
     # The combined SE adds the calibration's own Monte Carlo error, which is
@@ -102,12 +107,19 @@ def main() -> None:
     f = np.isfinite(ols) & np.isfinite(iv) & np.isfinite(fn)
     print(f"\n  mean |bias-1|  ols={np.nanmean(np.abs(ols[f] - 1)):.2f}  "
           f"inv-var={np.nanmean(np.abs(iv[f] - 1)):.3f}  "
-          f"folded-normal={np.nanmean(np.abs(fn[f] - 1)):.3f}")
-    print("  Reading: OLS is catastrophically biased at low CNR, and")
-    print("  inverse-variance weighting leaves a residual it cannot remove.")
-    print("  The folded-normal scheme subtracts the additive variance bias")
-    print("  (see docs/DERIVATION.md) and cuts the mean residual bias well")
-    print("  below inverse-variance; it can overcorrect in the deepest noise.")
+          f"folded-normal={np.nanmean(np.abs(fn[f] - 1)):.3f}  "
+          f"(Monte Carlo error alone would give "
+          f"{np.sqrt(2 / np.pi) * np.nanmean(fn_se[f]):.3f} for folded-normal)")
+    # The verdict is computed, not written in: which scheme leaves a resolved
+    # bias depends on the shape (p = 4's raw bias is small enough that
+    # inverse-variance weighting alone is close to unbiased).
+    z = (fn - 1.0) / fn_se
+    iv_se = results["inverse_variance"].spread / np.sqrt(N_RUNS)
+    z_iv = (iv - 1.0) / iv_se
+    print(f"  folded-normal cells beyond 2 combined SE: {int(np.sum(np.abs(z[f]) > 2))} "
+          f"of {int(f.sum())}")
+    print(f"  inverse-variance cells beyond 2 evaluation SE: "
+          f"{int(np.sum(np.abs(z_iv[f]) > 2))} of {int(f.sum())}")
 
     _plot(stats, results, model_name)
 

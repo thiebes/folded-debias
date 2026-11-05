@@ -2,26 +2,24 @@ folded-debias POC demo
   profile model: voigt
   experiment: D=0.02, tau=1.0, n_frames=12, L_D/FWHM_0=0.085
   CNR_0 sweep: [ 5.  8. 13. 21. 34. 55. 90.]
-  400 Monte Carlo runs per CNR_0
+  400 Monte Carlo runs per CNR_0; seeds: calibration 1000001 + i, evaluation 1020000 + i
 
-Calibrating truncation model ...
+Diagnostic sweep for panel (a) ...
+Calibrating (D-free) ...
 Evaluating schemes ...
 
-  <D_est> / D_true   (1.000 = unbiased; SE = Monte Carlo standard error)
+  <D_est> / D_true   (1.000 = unbiased; SE = evaluation and calibration combined)
   CNR_0     OLS     inv-var   folded-normal     SE
-       5    9.278    3.293        2.466      0.427
-       8    4.114    1.165        0.667      0.211
-      13    3.962    1.129        0.923      0.110
-      21    1.427    0.982        0.857      0.067
-      34    1.176    1.010        0.999      0.040
-      55    1.142    1.027        1.044      0.024
-      90    1.035    1.000        0.984      0.015
+       5    4.613    2.242        1.350      0.385
+       8    7.393    1.468        1.163      0.211
+      13    2.807    1.107        1.050      0.119
+      21    1.563    1.062        1.008      0.068
+      34    1.205    1.057        1.054      0.042
+      55    1.032    1.014        0.981      0.026
+      90    0.966    1.004        0.990      0.015
 
-  mean |bias-1|  ols=2.16  inv-var=0.377  folded-normal=0.297
-  Reading: OLS is catastrophically biased at low CNR, and
-  inverse-variance weighting leaves a residual it cannot remove.
-  The folded-normal scheme subtracts the additive variance bias
-  (see docs/DERIVATION.md) and cuts the mean residual bias well
-  below inverse-variance; it can overcorrect in the deepest noise.
+  mean |bias-1|  ols=1.81  inv-var=0.279  folded-normal=0.093  (Monte Carlo error alone would give 0.099 for folded-normal)
+  folded-normal cells beyond 2 combined SE: 0 of 7
+  inverse-variance cells beyond 2 evaluation SE: 2 of 7
 
 Figure written to output\poc_demo_voigt.png

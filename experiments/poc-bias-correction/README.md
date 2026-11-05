@@ -34,20 +34,21 @@ folder are the current results.
 
 ## Key result + figure
 
-The committed tables below were produced with a D-aware calibration (the sweep
-run at the evaluation D = 0.02) and an evaluation-only SE. The script now
-calibrates D-free (`calibrate_d_free`, D = 0) and prints the combined SE
-(evaluation and calibration); the tables are to be regenerated with it.
-
-D = 0.02, 400 runs per CNR_0, each table with the folded-normal cell's Monte
-Carlo SE. Over CNR_0 13 to 90 the folded-normal mean `|mean(D_hat)/D_ref - 1|`
-is 0.052 (Gaussian), 0.056 (Voigt), 0.048 (generalized-Gaussian p = 1.5), and
-0.040 (p = 4). The CNR_0 5 and 8 cells depend on the calibration draw (this
-script's calibration is 7 CNR_0 points x 400 runs): the Gaussian CNR_0 5 cell is
-3.7 +/- 1.7 here, so the mean over the whole sweep (0.47 Gaussian, 0.30 Voigt,
-0.47 p = 1.5, 0.095 p = 4) is not a stable headline. OLS is inflated 46-fold at
-CNR_0 5 for the Gaussian; the p = 4 fit is barely biased (OLS mean 0.39) and
-reads low, not high, at CNR_0 <= 8.
+D = 0.02 σ₀²/τ, 400 runs per CNR₀. The calibration is D-free
+(`calibrate_d_free` at D = 0, 7 CNR₀ points × 400 runs), with calibration and
+evaluation seeds disjoint and offset by 10⁶ per shape. Each table gives the
+folded-normal cell's combined SE (evaluation and calibration). No folded-normal
+cell lies beyond 2 combined SE on any shape (0 of 7 each). Inverse-variance
+weighting leaves 1 (Gaussian), 2 (Voigt), 4 (p = 1.5), and 0 (p = 4) of 7 cells
+beyond 2 evaluation SE. The mean `|mean(D_hat)/D_ref - 1|` over the sweep is
+0.291 folded-normal against 0.368 inverse-variance (Gaussian), 0.093 against
+0.279 (Voigt), 0.081 against 0.261 (p = 1.5), and 0.043 against 0.043 (p = 4);
+Monte Carlo error alone would give 0.143, 0.099, 0.118, and 0.047 for
+folded-normal. The Gaussian mean is set by the CNR₀ 5 cell, 2.67 ± 0.86
+combined SE (1.9 SE from 1). OLS is inflated 46-fold at CNR₀ 5
+for the Gaussian. The p = 4 OLS fit reads low at CNR₀ ≤ 21 (0.13 at CNR₀ 5),
+and the p = 4 bias is small enough that inverse-variance weighting alone
+leaves no cell beyond 2 SE.
 
 Tables: `poc_demo_gaussian.txt`, `poc_demo_voigt.txt`,
 `poc_demo_generalized_gaussian_p1.5.txt`, `poc_demo_generalized_gaussian_p4.txt`.
