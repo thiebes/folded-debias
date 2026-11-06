@@ -161,7 +161,7 @@ avoid. The folded-normal correction's scope is distortion 1 only.
 
 - Estimators (width extraction): `models.py` (`GaussianModel`, `VoigtModel`,
   `GeneralizedGaussianModel`, and the non-truncated `MomentModel`).
-- Noise correction and its calibration: `weights.py`, `truncation.py`,
+- Noise correction and its calibration: `weights.py`, `bias_lookup.py`,
   `calibration.py`.
 - Per-frame and MSD-to-D fits, and the validation sweep: `fit.py`, `validate.py`.
 - Forward models (the emission-to-carrier mapping, for both simulation and the

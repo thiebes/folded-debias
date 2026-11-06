@@ -42,7 +42,7 @@ the floor, so the correction is inactive (naive ~ corrected). Figure:
 
 ## Depends on
 
-`folded_debias`. Local sibling loader `br_data.py`.
+`width_debias`. Local sibling loader `br_data.py`.
 
 ## See also
 

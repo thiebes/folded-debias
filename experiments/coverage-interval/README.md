@@ -9,7 +9,7 @@ analytical attribution for the de-biased folded-normal estimator.
 ## Contents
 
 - `coverage_check.py` -- sweeps CNR0 and reports empirical 95% coverage for
-  `folded_normal` (and the biased `inverse_variance` as the failing contrast),
+  `subtract` (and the biased `inverse_variance` as the failing contrast),
   plus the `corr_inflation = sqrt(Var_full/Var_diag)` attribution.
 
 ## Data
@@ -22,7 +22,7 @@ None. Fully synthetic. Reuses the cached `calibration_subdiffusive.npz`.
 .venv/Scripts/python.exe experiments/coverage-interval/coverage_check.py
 ```
 
-Set `FOLDED_DEBIAS_WORKERS=0`; ~5 min. Outputs to repo-root `output/`; committed
+Set `WIDTH_DEBIAS_WORKERS=0`; ~5 min. Outputs to repo-root `output/`; committed
 snapshots are here.
 
 ## Key result + figure
@@ -36,7 +36,7 @@ Figure: `coverage_check.png`; table `coverage_check.txt`.
 
 ## Depends on
 
-`folded_debias` (`fit.fit_D` returns `D_se`). No sibling-folder helpers.
+`width_debias` (`fit.fit_D` returns `D_se`). No sibling-folder helpers.
 
 ## See also
 

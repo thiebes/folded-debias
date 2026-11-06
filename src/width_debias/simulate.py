@@ -168,7 +168,7 @@ def cnr_per_frame(exp: Experiment, noise_sigma: float) -> np.ndarray:
     spreading. The simulated profiles hold the peak at ``amplitude`` instead
     (see :func:`noise_free_series`), so this is not the CNR of a simulated
     frame; for that, use ``Ensemble.cnr_frame`` from
-    :func:`~folded_debias.montecarlo.run_ensemble`, which the calibration is
+    :func:`~width_debias.montecarlo.run_ensemble`, which the calibration is
     keyed on.
     """
     peak = exp.amplitude * (exp.sigma0 / np.sqrt(exp.true_variance))

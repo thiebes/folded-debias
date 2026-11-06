@@ -30,9 +30,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (Experiment, GaussianModel, MomentModel,  # noqa: E402
+from width_debias import (Experiment, GaussianModel, MomentModel,  # noqa: E402
                             evaluate, sweep_stats)
-from folded_debias.truncation import TruncationModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
 
 EXP = Experiment(sigma0=1.0, D=0.02, tau=1.0, n_frames=12, t_max=3.0)
 CNR0_GRID = np.array([5.0, 8.0, 13.0, 21.0, 34.0, 55.0, 90.0])
@@ -42,7 +42,7 @@ N_RUNS = 400
 COLUMNS = [
     ("gauss+OLS",      "gaussian", "ols"),
     ("gauss+inv-var",  "gaussian", "inverse_variance"),
-    ("gauss+folded",   "gaussian", "folded_normal"),
+    ("gauss+folded",   "gaussian", "subtract"),
     ("gauss+MAS",      "gaussian", "mas"),
     ("moment+inv-var", "moment",   "inverse_variance"),
 ]
@@ -50,13 +50,13 @@ COLUMNS = [
 
 def _run(model, seed_cal, seed_eval):
     stats = sweep_stats(EXP, CNR0_GRID, n_runs=N_RUNS, seed=seed_cal, model=model)
-    trunc = TruncationModel.from_stats(stats)
+    trunc = BiasLookup.from_stats(stats)
     return evaluate(EXP, CNR0_GRID, trunc, n_runs=N_RUNS, seed=seed_eval,
                     profile_model=model)
 
 
 def main() -> None:
-    print("folded-debias method comparison")
+    print("width-debias method comparison")
     print(f"  experiment: D={EXP.D}, n_frames={EXP.n_frames}, {N_RUNS} runs/CNR_0\n")
 
     print("Running Gaussian-fit estimator ...")

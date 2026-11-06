@@ -8,7 +8,7 @@ the four validation shapes (Gaussian, Voigt, generalized-Gaussian p = 1.5 and
 p = 4).
 
 The Fisher matrix for a non-Gaussian shape is built numerically
-(``folded_debias.fisher``) from the model's own ``noise_free_series``
+(``width_debias.fisher``) from the model's own ``noise_free_series``
 (central differences in each frame's
 variance and centre; the amplitude enters linearly). The parameters are those
 the width fits estimate: sigma_0^2 and D, plus a per-frame peak amplitude and
@@ -18,7 +18,7 @@ checked against the analytic one in ``crlb.py``.
 Per cell (D, CNR_0) it reports the spread of the corrected D over realizations
 divided by sqrt(CRLB), for three arms:
 
-* ``library`` -- folded_normal with the library's weights (per-frame variance
+* ``library`` -- subtract with the library's weights (per-frame variance
   from the D-free calibration);
 * ``oracle``  -- the same corrected points weighted by the inverse per-frame
   CRLB, the weights the bound itself implies; the gap between the two arms is
@@ -47,7 +47,7 @@ this grid (``docs/DERIVATION.md`` section 8), so the comparison is fair.
 ``dfree-calibration/calibration_se_check.py`` when that cache exists);
 ``analyse`` prints the tables.
 
-    $env:FOLDED_DEBIAS_WORKERS = 0
+    $env:WIDTH_DEBIAS_WORKERS = 0
     .venv/Scripts/python.exe experiments/crlb-precision/efficiency_check.py generate
     .venv/Scripts/python.exe experiments/crlb-precision/efficiency_check.py analyse
 """
@@ -63,13 +63,13 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (Experiment, TruncationModel, calibrate_d_free,  # noqa: E402
+from width_debias import (Experiment, BiasLookup, calibrate_d_free,  # noqa: E402
                            model_from_spec, spec_tag)
-from folded_debias.fisher import (crlb_D, per_frame_crlb,  # noqa: E402
+from width_debias.fisher import (crlb_D, per_frame_crlb,  # noqa: E402
                                   sequence_fisher_information as fisher_information)
-from folded_debias.montecarlo import run_ensemble  # noqa: E402
-from folded_debias.simulate import noise_sigma_for_cnr0  # noqa: E402
-from folded_debias.weights import msd_and_weights  # noqa: E402
+from width_debias.montecarlo import run_ensemble  # noqa: E402
+from width_debias.simulate import noise_sigma_for_cnr0  # noqa: E402
+from width_debias.weights import msd_and_weights  # noqa: E402
 
 from crlb import fisher_information as gaussian_fisher  # noqa: E402
 
@@ -99,15 +99,15 @@ def _eval_path(spec: str) -> Path:
     return OUT / f"eval_{spec_tag(spec)}_runs{EVAL_RUNS}.npz"
 
 
-def calibration(spec: str) -> TruncationModel:
+def calibration(spec: str) -> BiasLookup:
     if spec == "gaussian" and GAUSS_CAL.exists():
         # Draw 0 of the calibration-SE check: the paper's seed-1, 1500-run lookup.
         sys.path.insert(0, str(ROOT / "experiments" / "dfree-calibration"))
         from calibration_se_check import _ensembles
-        from folded_debias.truncation import frame_stats
-        return TruncationModel.from_stats([frame_stats(e) for e in _ensembles(0)])
+        from width_debias.bias_lookup import frame_stats
+        return BiasLookup.from_stats([frame_stats(e) for e in _ensembles(0)])
     with np.load(_cal_path(spec)) as z:
-        return TruncationModel(**{k: z[k] for k in z.files})
+        return BiasLookup(**{k: z[k] for k in z.files})
 
 
 def generate() -> None:
@@ -191,7 +191,7 @@ def analyse() -> None:
                 var, cnr = evar[di, ci], ecnr[di, ci]
                 corrected = var - cal.var_bias(cnr)
                 msd = corrected - corrected[:, [0]]
-                _, w_lib = msd_and_weights("folded_normal", var[0], cnr, cal)
+                _, w_lib = msd_and_weights("subtract", var[0], cnr, cal)
                 w_orc = 1.0 / (pf + pf[0])
                 w_orc[0] = 0.0
                 for fi, floor in enumerate((0.0, FLOOR)):

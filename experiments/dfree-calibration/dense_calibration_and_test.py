@@ -8,7 +8,7 @@ What this does, per profile model:
    which puts substantially more data points at low per-frame CNR than the
    default 7-point sweep.
 
-2. Evaluate the four schemes (ols, inverse_variance, folded_normal, mas)
+2. Evaluate the four schemes (ols, inverse_variance, subtract, mas)
    on *random* log-distributed CNR_0 values, also 1000 runs per cell. Random
    test CNR_0 values let us see the bias curve as a continuous function
    rather than at the seven calibration points.
@@ -40,11 +40,11 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import Experiment, SCHEMES, model_from_spec  # noqa: E402
-from folded_debias.fit import fit_D  # noqa: E402
-from folded_debias.montecarlo import run_ensemble  # noqa: E402
-from folded_debias.truncation import TruncationModel, frame_stats  # noqa: E402
-from folded_debias.weights import msd_and_weights  # noqa: E402
+from width_debias import Experiment, SCHEMES, model_from_spec  # noqa: E402
+from width_debias.fit import fit_D  # noqa: E402
+from width_debias.montecarlo import run_ensemble  # noqa: E402
+from width_debias.bias_lookup import BiasLookup, frame_stats  # noqa: E402
+from width_debias.weights import msd_and_weights  # noqa: E402
 
 
 # --------------------------------------------------------------------------
@@ -141,7 +141,7 @@ def run_shape(model_name: str, rng: np.random.Generator) -> None:
                 for i, c in enumerate(cnr0_calib)]
     t0 = time.time()
     stats_list = _parallel_with_progress(_calib_one, cal_args, "calib")
-    trunc = TruncationModel.from_stats(stats_list)
+    trunc = BiasLookup.from_stats(stats_list)
     cal_time = time.time() - t0
     print(f"  Calibration done [{cal_time:.0f}s]; "
           f"lookup spans per-frame CNR {trunc.cnr_grid[0]:.3f} -> "
@@ -185,7 +185,7 @@ def run_shape(model_name: str, rng: np.random.Generator) -> None:
             means[scheme] = np.nanmean(vals)
         print(f"  [{edge_lo:5.2f}, {edge_hi:5.2f}]  {n_in:>4}  "
               f"{means['ols']:>10.3f}{means['inverse_variance']:>10.3f}"
-              f"{means['folded_normal']:>10.3f}{means['mas']:>10.3f}")
+              f"{means['subtract']:>10.3f}{means['mas']:>10.3f}")
 
     # Overall mean |bias - 1| across all test points
     print(f"\n  Overall mean |mean(D_hat)/D_true - 1| across all test points:")

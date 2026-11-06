@@ -54,10 +54,10 @@ sys.path.insert(0, os.path.join(_HERE, "..", "..", "src"))
 sys.path.insert(0, _HERE)
 
 import reaction_diffusion_saha as rd  # noqa: E402
-from folded_debias.calibration import CalibrationGrid  # noqa: E402
-from folded_debias.models import GaussianModel  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias.calibration import CalibrationGrid  # noqa: E402
+from width_debias.models import GaussianModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 # Measurement grid the emission is resampled onto (matches nonfickian_validation
 # and the 2-D Saha calibration geometry).
@@ -172,7 +172,7 @@ def build_bed(A: float, emission_power: int) -> Bed:
     )
 
 
-def stage1_measurements(bed: Bed, cnr0: float, model: TruncationModel | None,
+def stage1_measurements(bed: Bed, cnr0: float, model: BiasLookup | None,
                         n_runs: int = N_RUNS, seed: int = 0) -> dict:
     """Mean first-stage MSD and its MC error from each estimator under noise.
 
@@ -193,7 +193,7 @@ def stage1_measurements(bed: Bed, cnr0: float, model: TruncationModel | None,
         if model is not None:
             vr = np.array([GAUSS.fit_variance(PIXEL_X, noisy[f]).variance
                            for f in range(N_FRAMES)])
-            gf[r] = corrected_variance("folded_normal", vr, cnr_frame, model)
+            gf[r] = corrected_variance("subtract", vr, cnr_frame, model)
 
     def reduce(arr):
         mean = np.nanmean(arr, axis=0)
@@ -259,7 +259,7 @@ def forward_fit(model_grid: np.ndarray, msd_meas: np.ndarray,
                 chi2_red=chi2_min / dof)
 
 
-def load_model(path: str = CALIBRATION_PATH) -> TruncationModel | None:
+def load_model(path: str = CALIBRATION_PATH) -> BiasLookup | None:
     if not os.path.exists(path):
         return None
     calib = CalibrationGrid.load(path)
@@ -268,7 +268,7 @@ def load_model(path: str = CALIBRATION_PATH) -> TruncationModel | None:
         raise ValueError(
             f"calibration geometry in {path} does not match PIXEL_X; "
             "rebuild with --n-pixels 401 --half-window 4.0")
-    return TruncationModel.from_calibration(calib)
+    return BiasLookup.from_calibration(calib)
 
 
 def _report_fit(label: str, fit: dict, bed: Bed, A: float, power: int) -> None:

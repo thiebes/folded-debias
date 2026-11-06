@@ -17,7 +17,7 @@ a read floor of a few counts restores it.
 
 ## Data
 
-None. Fully synthetic (`folded_debias.noise` models).
+None. Fully synthetic (`width_debias.noise` models).
 
 ## Run
 
@@ -26,7 +26,7 @@ None. Fully synthetic (`folded_debias.noise` models).
 .venv/Scripts/python.exe experiments/noise-law/read_floor_sweep.py
 ```
 
-Set `FOLDED_DEBIAS_WORKERS=0`. The tables print to stdout (committed here as
+Set `WIDTH_DEBIAS_WORKERS=0`. The tables print to stdout (committed here as
 `shot_noise_validation.txt`, `read_floor_sweep.txt`, run with `SHOT_NCAL=1000
 SHOT_NEVAL=1000 SHOT_NGRID=8`); the figure goes to repo-root `output/`.
 
@@ -45,7 +45,7 @@ negative). Figures: `read_floor_sweep.png`, `fftcnr_white_vs_shot.png`.
 
 ## Depends on
 
-`folded_debias` (`noise`). No sibling-folder helpers.
+`width_debias` (`noise`). No sibling-folder helpers.
 
 ## See also
 

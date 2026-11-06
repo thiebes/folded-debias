@@ -6,7 +6,7 @@ the MSD curves derived from them, ready for the truncation and weighting
 analysis.
 
 The profile model (Gaussian / Voigt / generalized-Gaussian) is pluggable --
-see :mod:`folded_debias.models`.  The default is the Gaussian model.
+see :mod:`width_debias.models`.  The default is the Gaussian model.
 
 Realisations are independent, so the ensemble is embarrassingly parallel across
 runs.  ``run_ensemble`` can fan the per-realisation fits out over worker
@@ -73,7 +73,7 @@ def _fit_realisation(model, x: np.ndarray, clean: np.ndarray,
     failed fit's broad guess rather than dropping it (dropping would delete the
     heavy right tail that carries the bias).
 
-    ``noise_model`` (see :mod:`folded_debias.noise`) swaps the noise law; when
+    ``noise_model`` (see :mod:`width_debias.noise`) swaps the noise law; when
     it is ``None`` a constant-sigma white-noise draw is used.
     """
     if noise_model is None:
@@ -120,14 +120,14 @@ def _run_one(task):
 def _resolve_workers(workers, n_runs: int) -> int:
     """Resolve the worker count.
 
-    ``workers=None`` (the default) reads ``FOLDED_DEBIAS_WORKERS`` from the
+    ``workers=None`` (the default) reads ``WIDTH_DEBIAS_WORKERS`` from the
     environment, falling back to serial (1) when it is unset -- so every script
     that routes through ``run_ensemble`` parallelises just by exporting that
     variable, with no code change.  ``workers<=0`` (or the env var set to 0)
     uses every available core.  The count is clamped to ``n_runs``.
     """
     if workers is None:
-        env = os.environ.get("FOLDED_DEBIAS_WORKERS")
+        env = os.environ.get("WIDTH_DEBIAS_WORKERS")
         workers = int(env) if env else 1
     if workers <= 0:
         workers = os.cpu_count() or 1
@@ -139,12 +139,12 @@ def run_ensemble(exp: Experiment, cnr0: float, n_runs: int = 600,
                  noise_model=None) -> Ensemble:
     """Run ``n_runs`` independent noisy realisations of ``exp`` at ``cnr0``.
 
-    ``model`` is a profile model from :mod:`folded_debias.models`
-    (default :class:`~folded_debias.models.GaussianModel`).  The per-frame CNR
+    ``model`` is a profile model from :mod:`width_debias.models`
+    (default :class:`~width_debias.models.GaussianModel`).  The per-frame CNR
     is taken from the actual noise-free profile peak, so it is correct for any
     profile shape.
 
-    ``noise_model`` (see :mod:`folded_debias.noise`) swaps the measurement-
+    ``noise_model`` (see :mod:`width_debias.noise`) swaps the measurement-
     noise law (white vs shot). ``None`` draws constant-sigma white noise; a
     model also supplies the
     per-frame CNR, which for shot noise differs from peak / RMS.

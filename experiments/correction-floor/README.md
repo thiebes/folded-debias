@@ -31,7 +31,7 @@ None. Fully synthetic.
 .venv/Scripts/python.exe experiments/correction-floor/per_frame_in_diffusion_experiment.py
 ```
 
-Set `FOLDED_DEBIAS_WORKERS=0`; `per_profile_floor.py` runs ~45 min (Gaussian) to
+Set `WIDTH_DEBIAS_WORKERS=0`; `per_profile_floor.py` runs ~45 min (Gaussian) to
 ~3 h (Voigt). Outputs to repo-root `output/`; committed snapshots are here.
 
 ## Key result + figure
@@ -56,7 +56,7 @@ reference; `genGauss_p1.5`, `genGauss_p4`), `analytical_floor.txt`,
 
 ## Depends on
 
-`folded_debias`. No sibling-folder helpers.
+`width_debias`. No sibling-folder helpers.
 
 ## See also
 

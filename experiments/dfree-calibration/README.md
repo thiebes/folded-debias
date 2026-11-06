@@ -16,7 +16,7 @@ curves.
   Carlo SE.
 - `dense_calibration_and_test.py` -- dense (100 log-spaced CNR0) D-free
   calibration then a random log-distributed test, all four schemes (`ols`,
-  `inverse_variance`, `folded_normal`, `mas`). The default runs Gaussian,
+  `inverse_variance`, `subtract`, `mas`). The default runs Gaussian,
   Voigt, and p = 2; pass specs to run others. Wall time ~3 h per shape.
 - `calibration_se_check.py generate|analyse` -- tests `calibration_D_se`
   against 16 independent calibrations on the fft-cnr paper's grid (48 CNR0,
@@ -48,7 +48,7 @@ None. Fully synthetic.
 .venv/Scripts/python.exe experiments/dfree-calibration/dense_calibration_and_test.py
 ```
 
-Set `FOLDED_DEBIAS_WORKERS=0` for the dense run. Outputs to repo-root `output/`;
+Set `WIDTH_DEBIAS_WORKERS=0` for the dense run. Outputs to repo-root `output/`;
 committed snapshots are in this folder.
 
 ## Key result + figure
@@ -97,7 +97,7 @@ is a p = 2 draw kept for reference. The three shapes in
 
 ## Depends on
 
-`folded_debias`. No sibling-folder helpers.
+`width_debias`. No sibling-folder helpers.
 
 ## See also
 

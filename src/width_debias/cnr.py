@@ -2,7 +2,7 @@
 
 For Monte Carlo validation the per-frame CNR is known exactly (it is set by the
 simulation; see ``Ensemble.cnr_frame`` from
-:func:`folded_debias.montecarlo.run_ensemble`).  For *real*
+:func:`width_debias.montecarlo.run_ensemble`).  For *real*
 measurements it must be estimated from each spatial profile, with no repeated
 frames and no separate background region available.  That is exactly what the
 ``fft-cnr`` package does: it separates slowly varying signal from rapid noise
@@ -70,12 +70,12 @@ def per_frame_cnr(profiles: np.ndarray,
     ------
     ImportError
         If the optional ``fft-cnr`` dependency is not installed.  Install it
-        with ``pip install folded-debias[cnr]``.
+        with ``pip install width-debias[cnr]``.
     """
     if not HAVE_FFT_CNR:
         raise ImportError(
             "fft-cnr is required for CNR estimation from real data; "
-            "install it with `pip install folded-debias[cnr]`."
+            "install it with `pip install width-debias[cnr]`."
         )
     profiles = np.atleast_2d(np.asarray(profiles, float))
     return np.array(

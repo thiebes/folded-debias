@@ -26,9 +26,9 @@ physical terms needs the detector's photon budget: the floor here is in the same
 counts as the peak, which holds cnr0**2 counts at frame 0, so a floor of r counts
 matters most for the dim, low-CNR frames where peak counts are fewest.
 
-Run from the repository root (set FOLDED_DEBIAS_WORKERS to parallelise)::
+Run from the repository root (set WIDTH_DEBIAS_WORKERS to parallelise)::
 
-    FOLDED_DEBIAS_WORKERS=0 .venv/Scripts/python.exe scripts/read_floor_sweep.py
+    WIDTH_DEBIAS_WORKERS=0 .venv/Scripts/python.exe scripts/read_floor_sweep.py
 
 Sweep sizes follow the SHOT_* environment variables (small defaults for a quick
 serial smoke run; raise for the full run).
@@ -46,9 +46,9 @@ import matplotlib.pyplot as plt  # noqa: E402
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
-from folded_debias.simulate import Experiment  # noqa: E402
-from folded_debias.validate import calibrate_d_free, evaluate  # noqa: E402
+from width_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
+from width_debias.simulate import Experiment  # noqa: E402
+from width_debias.validate import calibrate_d_free, evaluate  # noqa: E402
 
 OUTPUT = os.path.join(os.path.dirname(__file__), "..", "..", "output")
 
@@ -77,7 +77,7 @@ def main() -> None:
     print(f"  calibration: {CAL_CNR0.size} CNR_0 in [2, 80], {N_CAL} runs/cell")
     print(f"  evaluation:  {EVAL_CNR0.size} CNR_0 in [3, 60], {N_EVAL} runs/cell")
     print(f"  read floors (counts): {READ_FLOORS.tolist()}")
-    print(f"  workers = {os.environ.get('FOLDED_DEBIAS_WORKERS', '(serial)')}")
+    print(f"  workers = {os.environ.get('WIDTH_DEBIAS_WORKERS', '(serial)')}")
 
     # The shipped default: a white-noise calibration. Used as the robustness
     # reference (applied to every read-floor case) and as the large-r limit.
@@ -95,8 +95,8 @@ def main() -> None:
         r_white = evaluate(exp, EVAL_CNR0, white_cal, n_runs=N_EVAL,
                            noise_model=model)
         ols.append(_mad(r_match["ols"].mean_bias))
-        folded_matched.append(_mad(r_match["folded_normal"].mean_bias))
-        folded_white.append(_mad(r_white["folded_normal"].mean_bias))
+        folded_matched.append(_mad(r_match["subtract"].mean_bias))
+        folded_white.append(_mad(r_white["subtract"].mean_bias))
         print(f"  OLS raw {ols[-1]:.3f} | folded matched {folded_matched[-1]:.3f} "
               f"| folded white-cal {folded_white[-1]:.3f}")
 
@@ -106,7 +106,7 @@ def main() -> None:
     r_w = evaluate(exp, EVAL_CNR0, white_cal, n_runs=N_EVAL,
                    noise_model=WhiteNoise())
     ols_white = _mad(r_w["ols"].mean_bias)
-    folded_white_white = _mad(r_w["folded_normal"].mean_bias)
+    folded_white_white = _mad(r_w["subtract"].mean_bias)
 
     ols = np.array(ols)
     folded_matched = np.array(folded_matched)

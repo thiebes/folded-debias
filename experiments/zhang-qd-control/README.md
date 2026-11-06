@@ -44,7 +44,7 @@ lookup, not a physical negative bias. Figure: `zhang_qd_panel.png`.
 
 ## Depends on
 
-`folded_debias`. The figure CSVs live beside the script (no external loader).
+`width_debias`. The figure CSVs live beside the script (no external loader).
 
 ## See also
 

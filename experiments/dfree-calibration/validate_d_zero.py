@@ -21,7 +21,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (Experiment, calibrate, evaluate,  # noqa: E402
+from width_debias import (Experiment, calibrate, evaluate,  # noqa: E402
                            model_from_spec, spec_tag)
 
 
@@ -61,13 +61,13 @@ def main() -> None:
         t1 = time.time()
         results = evaluate(exp, CNR0_GRID, trunc, n_runs=N_RUNS,
                            seed=20000 + k * 1000, profile_model=pmodel)
-        fn = results["folded_normal"].mean_bias
+        fn = results["subtract"].mean_bias
         fn_table[k] = fn
         # Monte Carlo standard error of each cell's mean ratio.
-        se_table[k] = results["folded_normal"].spread / np.sqrt(N_RUNS)
+        se_table[k] = results["subtract"].spread / np.sqrt(N_RUNS)
         # The calibration's own Monte Carlo error is common to every run in
         # the cell, so it does not shrink with N_RUNS (calibration_D_se).
-        cal_table[k] = results["folded_normal"].cal_se
+        cal_table[k] = results["subtract"].cal_se
         line = f"  {d_true:6.4f}  "
         for v in fn:
             line += f"{v:9.3f}"

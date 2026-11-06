@@ -26,9 +26,9 @@ import numpy as np
 # Allow running from a source checkout without installing the package.
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (Experiment, calibrate_d_free, evaluate,  # noqa: E402
+from width_debias import (Experiment, calibrate_d_free, evaluate,  # noqa: E402
                            model_from_spec, spec_tag, sweep_stats)
-from folded_debias.truncation import TruncationModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
 
 # Nanocrystal-solid regime: short diffusion length against the spot size.
 # D and tau are chosen so that L_D = sqrt(2 D tau) ~ 0.20 sigma0, i.e.
@@ -57,7 +57,7 @@ def main() -> None:
     model_name, pmodel = _profile_model_from_argv()
     fwhm = 2.3548 * EXP.sigma0
     ld = np.sqrt(2.0 * EXP.D * EXP.tau)
-    print("folded-debias POC demo")
+    print("width-debias POC demo")
     print(f"  profile model: {model_name}")
     print(f"  experiment: D={EXP.D}, tau={EXP.tau}, n_frames={EXP.n_frames}, "
           f"L_D/FWHM_0={ld / fwhm:.3f}")
@@ -73,7 +73,7 @@ def main() -> None:
     # The correction's calibration is D-free: the same sweep at D = 0, so the
     # lookup never uses the D being estimated (docs/DERIVATION.md section 8).
     print("Calibrating (D-free) ...")
-    model: TruncationModel = calibrate_d_free(
+    model: BiasLookup = calibrate_d_free(
         CNR0_GRID, sigma0=EXP.sigma0, tau=EXP.tau, half_window=EXP.half_window,
         n_pixels=EXP.n_pixels, n_frames=EXP.n_frames, t_max=EXP.t_max,
         amplitude0=EXP.amplitude0, n_runs=N_RUNS, seed=1, model=pmodel)
@@ -89,16 +89,16 @@ def main() -> None:
     print("\n  <D_est> / D_true   (1.000 = unbiased; SE = evaluation and "
           "calibration combined)")
     print("  CNR_0     OLS     inv-var   folded-normal     SE")
-    fn = results["folded_normal"]
+    fn = results["subtract"]
     fn_se = np.hypot(fn.spread / np.sqrt(N_RUNS), fn.cal_se)
     for i, c0 in enumerate(CNR0_GRID):
         print(f"  {c0:6.0f}  {results['ols'].mean_bias[i]:7.3f}  "
               f"{results['inverse_variance'].mean_bias[i]:7.3f}  "
-              f"{results['folded_normal'].mean_bias[i]:11.3f}  {fn_se[i]:9.3f}")
+              f"{results['subtract'].mean_bias[i]:11.3f}  {fn_se[i]:9.3f}")
 
     ols = results["ols"].mean_bias
     iv = results["inverse_variance"].mean_bias
-    fn = results["folded_normal"].mean_bias
+    fn = results["subtract"].mean_bias
     f = np.isfinite(ols) & np.isfinite(iv) & np.isfinite(fn)
     print(f"\n  mean |bias-1|  ols={np.nanmean(np.abs(ols[f] - 1)):.2f}  "
           f"inv-var={np.nanmean(np.abs(iv[f] - 1)):.3f}  "
@@ -119,7 +119,7 @@ def _plot(stats, results, model_name) -> None:
         import matplotlib.pyplot as plt
     except ImportError:
         print("\n[matplotlib not installed -- skipping figure; "
-              "install with `pip install folded-debias[plot]`]")
+              "install with `pip install width-debias[plot]`]")
         return
 
     cnr = np.concatenate([s.cnr for s in stats])
@@ -144,7 +144,7 @@ def _plot(stats, results, model_name) -> None:
     for scheme, color, label in [
         ("ols", "tab:gray", "OLS (unweighted)"),
         ("inverse_variance", "tab:orange", "inverse-variance (standard)"),
-        ("folded_normal", "tab:green", "folded-normal (derived)"),
+        ("subtract", "tab:green", "folded-normal (derived)"),
     ]:
         r = results[scheme]
         ax1.plot(r.cnr0, r.mean_bias, "o-", color=color, label=label)

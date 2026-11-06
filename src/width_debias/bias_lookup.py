@@ -1,8 +1,7 @@
-"""Characterising the truncation: the wall at zero.
+"""Per-frame statistics of the fitted widths, and the CNR-keyed bias lookup.
 
 For each frame, the Monte Carlo ensemble gives the sampling distribution of the
-fitted MSD increment.  Three quantities summarise how the wall at zero distorts
-that distribution:
+fitted MSD increment.  Three quantities summarise that distribution:
 
 * ``trunc_fraction`` -- the fraction of realisations with MSD <= 0, i.e. the
   probability mass that has crossed to the wrong side of the D >= 0 wall.
@@ -11,26 +10,26 @@ that distribution:
 * ``skew``           -- the sample skewness, a direct readout of the asymmetry
   that inverse-variance weighting wrongly assumes away.
 
-All three are monotone in per-frame CNR.  :class:`TruncationModel` packages
+All three are monotone in per-frame CNR.  :class:`BiasLookup` packages
 them against CNR so a weighting scheme can look them up from a per-frame CNR
 alone (measured, on real data, with the ``fft-cnr`` package).
 
 The class supports **two calibration modes** with the same API:
 
 * **1-D** (recommended when built at D = 0): built from :func:`frame_stats`
-  via :meth:`TruncationModel.from_stats`. Looks up ``var_bias`` and the
+  via :meth:`BiasLookup.from_stats`. Looks up ``var_bias`` and the
   per-frame width variance from CNR alone.
-  :func:`~folded_debias.validate.calibrate_d_free` builds it at D = 0, so the
+  :func:`~width_debias.validate.calibrate_d_free` builds it at D = 0, so the
   lookup carries no reference to the application's D;
-  :func:`~folded_debias.validate.calibrate` builds it at a given D (legacy,
+  :func:`~width_debias.validate.calibrate` builds it at a given D (legacy,
   D-aware) -- see ``docs/DERIVATION.md``.
 * **2-D, joint (CNR, sigma^2)** (experimental): built from a
-  :class:`~folded_debias.calibration.CalibrationGrid` via
-  :meth:`TruncationModel.from_calibration`. Looks up ``var_bias`` and
+  :class:`~width_debias.calibration.CalibrationGrid` via
+  :meth:`BiasLookup.from_calibration`. Looks up ``var_bias`` and
   per-frame ``rel_variance`` from (CNR, fitted-variance) jointly. Its low-CNR
   cells need far more Monte Carlo runs than the 1-D path, and keying each frame
   on its own fitted width under-corrects when the width grows several-fold
-  (see :meth:`var_bias`); see :mod:`folded_debias.calibration`.
+  (see :meth:`var_bias`); see :mod:`width_debias.calibration`.
 
 The selection between the two is automatic: pass a ``variance`` argument to
 :meth:`var_bias` or :meth:`rel_variance` to trigger the 2-D lookup when the
@@ -210,7 +209,7 @@ def _bilinear_se(x_grid: np.ndarray, y_grid: np.ndarray, se_table: np.ndarray,
 
 
 @dataclass
-class TruncationModel:
+class BiasLookup:
     """Per-frame CNR (+ optional variance) -> (p, rel_variance, var_bias).
 
     Two calibration modes share one API; see module docstring.
@@ -224,7 +223,7 @@ class TruncationModel:
         1-D calibration).
     varbias_se_grid, varbias_se_2d : Monte Carlo SE of each var_bias point
         (``None`` for a model built or saved without it). They give the
-        calibration's own error, which :func:`~folded_debias.weights.calibration_D_se`
+        calibration's own error, which :func:`~width_debias.weights.calibration_D_se`
         propagates into D.
     framevar_grid : per-frame ``Var(sigma_hat^2)`` on ``cnr_grid`` (1-D
         models from :meth:`from_stats`; ``None`` for models built or saved
@@ -243,7 +242,7 @@ class TruncationModel:
         the edge value outside ``cnr_grid``.
     pixel_x, model_spec : the calibration's pixel grid and profile model, for
         provenance; an application must match both. Only :meth:`from_cells`
-        records these three; :func:`~folded_debias.validate.calibrate_d_free`
+        records these three; :func:`~width_debias.validate.calibrate_d_free`
         leaves them ``None``, so the match is the caller's to keep.
     """
 
@@ -271,7 +270,7 @@ class TruncationModel:
     # Constructors
     # ------------------------------------------------------------------
     @classmethod
-    def from_stats(cls, stats_list: list[FrameStats]) -> "TruncationModel":
+    def from_stats(cls, stats_list: list[FrameStats]) -> "BiasLookup":
         """1-D calibration from a CNR sweep of full experiments (``calibrate_d_free``'s path)."""
         cnr = np.concatenate([s.cnr for s in stats_list])
         p = np.concatenate([s.trunc_fraction for s in stats_list])
@@ -293,13 +292,13 @@ class TruncationModel:
                    framevar_grid=fv)
 
     @classmethod
-    def from_calibration(cls, calib) -> "TruncationModel":
+    def from_calibration(cls, calib) -> "BiasLookup":
         """2-D, D-free calibration from a :class:`CalibrationGrid`.
 
         Stores the 2-D lookup directly; also computes a 1-D marginal (mean
         over the variance grid) so 1-D queries still work as a fallback.
         ``p_grid`` is set to zeros: the truncation-fraction quantity is a
-        relic of the 1-D mode and is unused by ``folded_normal`` / ``mas``.
+        relic of the 1-D mode and is unused by ``subtract`` / ``mas``.
         """
         cnr = np.asarray(calib.cnr_grid, float)
         var_g = np.asarray(calib.variance_grid, float)
@@ -331,11 +330,11 @@ class TruncationModel:
     @classmethod
     def from_cells(cls, cells, terms, *, knee_cnr: float = 6.0,
                    asymptote: float | None = 1.0, n_grid: int = 256,
-                   cnr_max: float = 1e3) -> "TruncationModel":
+                   cnr_max: float = 1e3) -> "BiasLookup":
         """Fisher-anchored, smoothed 1-D calibration from single-frame cells.
 
-        ``cells`` is a :class:`~folded_debias.calibration.CalibrationCells`;
-        ``terms`` the :class:`~folded_debias.fisher.LeadingOrderTerms` of the
+        ``cells`` is a :class:`~width_debias.calibration.CalibrationCells`;
+        ``terms`` the :class:`~width_debias.fisher.LeadingOrderTerms` of the
         same model and pixel grid. The bias is written var_bias = L(CNR)
         rho(CNR): L = ``terms.bias_coef`` / CNR^2 is the leading-order bias (the
         width's Fisher variance), and rho, the ratio of the Monte Carlo bias to
@@ -352,7 +351,7 @@ class TruncationModel:
         ``asymptote=None`` fits it instead. Pooling replaces one cell's Monte
         Carlo error with the error of a curve fitted to all cells; that error is
         correlated along the grid, so its covariance factor is stored for
-        :func:`~folded_debias.weights.calibration_D_se`. Lookups below the lowest
+        :func:`~width_debias.weights.calibration_D_se`. Lookups below the lowest
         cell clamp to it (``cnr_floor``); nothing is extrapolated.
         """
         from .smoothing import pspline_fit
@@ -580,7 +579,7 @@ class TruncationModel:
 
         The slope weights are ``1 / Var(sigma_hat_i^2)`` at the application's
         own frame CNR, frame 0 included (see
-        :func:`~folded_debias.weights.msd_and_weights`). The 1-D
+        :func:`~width_debias.weights.msd_and_weights`). The 1-D
         ``relvar_grid`` holds a different quantity, the MSD-point variance
         ``Var(sigma_hat_i^2) + Var(sigma_hat_0^2)`` measured inside each
         calibration ensemble, whose t = 0 frame sits at the calibration's
@@ -604,7 +603,7 @@ class TruncationModel:
         variance ``Var(sigma_hat^2(t) - sigma_hat^2(0))`` empirically measured
         per CNR; from :meth:`from_cells` it is the per-frame ``Var(sigma_hat^2)``
         (a copy of ``framevar_grid``). With a 2-D calibration it is the
-        per-frame ``Var(sigma_hat^2)``, which :mod:`folded_debias.weights` uses
+        per-frame ``Var(sigma_hat^2)``, which :mod:`width_debias.weights` uses
         directly as each frame's weight.
         """
         if variance is None or not self.is_2d:
@@ -629,7 +628,7 @@ class TruncationModel:
             if getattr(self, f.name) is not None})
 
     @classmethod
-    def load(cls, path) -> "TruncationModel":
+    def load(cls, path) -> "BiasLookup":
         """Load a model saved with :meth:`save` (or any archive of its fields)."""
         archive = np.load(str(path))
         known = {f.name for f in fields(cls)}

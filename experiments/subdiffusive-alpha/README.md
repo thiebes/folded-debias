@@ -23,7 +23,7 @@ reused by multiexp-decay and coverage-interval).
 .venv/Scripts/python.exe experiments/subdiffusive-alpha/subdiffusive_alpha.py
 ```
 
-Set `FOLDED_DEBIAS_WORKERS=0`; ~10 min first run, ~3 min cached. Outputs to
+Set `WIDTH_DEBIAS_WORKERS=0`; ~10 min first run, ~3 min cached. Outputs to
 repo-root `output/`; committed snapshots are here.
 
 ## Key result + figure
@@ -41,7 +41,7 @@ alpha = 0.6 the cut alone moves the naive exponent from 2.0 to 0.92 to 1.13). Fi
 
 ## Depends on
 
-`folded_debias` (`AnomalousExperiment`). No sibling-folder helpers.
+`width_debias` (`AnomalousExperiment`). No sibling-folder helpers.
 
 ## See also
 

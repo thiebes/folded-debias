@@ -227,43 +227,6 @@ wheels = [
 ]
 
 [[package]]
-name = "folded-debias"
-source = { editable = "." }
-dependencies = [
-    { name = "numpy" },
-    { name = "scipy" },
-]
-
-[package.optional-dependencies]
-cnr = [
-    { name = "fft-cnr" },
-]
-dev = [
-    { name = "curved-text" },
-    { name = "fft-cnr" },
-    { name = "matplotlib" },
-    { name = "pytest" },
-]
-plot = [
-    { name = "curved-text" },
-    { name = "matplotlib" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "curved-text", marker = "extra == 'dev'", specifier = ">=0.5,<1" },
-    { name = "curved-text", marker = "extra == 'plot'", specifier = ">=0.5,<1" },
-    { name = "fft-cnr", marker = "extra == 'cnr'", specifier = ">=0.3.3,<0.5" },
-    { name = "fft-cnr", marker = "extra == 'dev'", specifier = ">=0.3.3,<0.5" },
-    { name = "matplotlib", marker = "extra == 'dev'", specifier = ">=3.7,<4" },
-    { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.7,<4" },
-    { name = "numpy", specifier = ">=1.24,<3" },
-    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4" },
-    { name = "scipy", specifier = ">=1.10,<2" },
-]
-provides-extras = ["cnr", "plot", "dev"]
-
-[[package]]
 name = "fonttools"
 version = "4.67.0"
 source = { registry = "https://pypi.org/simple" }
@@ -844,3 +807,40 @@ sdist = { url = "https://files.pythonhosted.org/packages/94/e7/b2c673351809dca68
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b7/ce/149a00dd41f10bc29e5921b496af8b574d8413afcd5e30dfa0ed46c2cc5e/six-1.17.0-py2.py3-none-any.whl", hash = "sha256:4721f391ed90541fddacab5acf947aa0d3dc7d27b2e1e8eda2be8970586c3274", size = 11050, upload-time = "2024-12-04T17:35:26.475Z" },
 ]
+
+[[package]]
+name = "width-debias"
+source = { editable = "." }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+
+[package.optional-dependencies]
+cnr = [
+    { name = "fft-cnr" },
+]
+dev = [
+    { name = "curved-text" },
+    { name = "fft-cnr" },
+    { name = "matplotlib" },
+    { name = "pytest" },
+]
+plot = [
+    { name = "curved-text" },
+    { name = "matplotlib" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "curved-text", marker = "extra == 'dev'", specifier = ">=0.5,<1" },
+    { name = "curved-text", marker = "extra == 'plot'", specifier = ">=0.5,<1" },
+    { name = "fft-cnr", marker = "extra == 'cnr'", specifier = ">=0.3.3,<0.5" },
+    { name = "fft-cnr", marker = "extra == 'dev'", specifier = ">=0.3.3,<0.5" },
+    { name = "matplotlib", marker = "extra == 'dev'", specifier = ">=3.7,<4" },
+    { name = "matplotlib", marker = "extra == 'plot'", specifier = ">=3.7,<4" },
+    { name = "numpy", specifier = ">=1.24,<3" },
+    { name = "pytest", marker = "extra == 'dev'", specifier = ">=7.4" },
+    { name = "scipy", specifier = ">=1.10,<2" },
+]
+provides-extras = ["cnr", "plot", "dev"]

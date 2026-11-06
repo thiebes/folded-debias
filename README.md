@@ -1,33 +1,43 @@
-# folded-debias
+# width-debias
 
-**Folded-normal correction of the low-CNR bias in fitted widths, for
+**Correction of the noise bias in fitted profile widths, for
 mean-squared-displacement (MSD) diffusion measurements.**
 
-A fitted width cannot be negative. At low contrast-to-noise ratio (CNR), noise
-that would push a width fit below zero pushes it into a right-skewed positive
-tail instead, so the fitted variance is biased high. The bias carries through
-the MSD fit and inflates the diffusion coefficient D, most strongly in the
-late, dim frames of a measurement. Inverse-variance weighting corrects the
-unequal noise across frames but cannot remove a mean bias present in every
-point.
+A width fitted to a noisy profile scatters about the true width, and squaring
+it to form the variance turns that scatter into a bias. On average the fitted
+variance exceeds the true one by the width's estimation variance,
+`E[sigma_hat^2] = sigma^2 + Var(sigma_hat)`. To leading order Var(sigma_hat) is
+the Cramér-Rao value, which for a Gaussian profile at a fixed pixel spacing `dx`
+is `(2/sqrt(pi)) sigma dx / CNR^2`, so the bias grows as the contrast-to-noise
+ratio (CNR) falls. In a transient measurement the CNR falls frame by frame as
+the population decays, so the bias rises over time, tilts the MSD curve upward,
+and inflates the diffusion coefficient D. In simulation (Gaussian profile,
+D = 0.02 sigma_0^2/tau, initial CNR 34) an unweighted fit returns 1.20 times the
+reference D. Inverse-variance weighting corrects the unequal noise across
+frames but cannot remove a mean bias present in every point.
 
-A folded-normal model of the width estimate gives the size of the bias: the
-fitted variance exceeds the true one by the estimation-noise variance,
-`E[sigma_hat^2] = sigma^2 + s^2`. The correction subtracts a Monte Carlo
-calibrated `s^2(CNR)` from each frame before the slope fit, keyed on the
-per-frame CNR. The calibration is built at D = 0, so it does not require a
-prior value of D. The derivation is in
-[`docs/DERIVATION.md`](https://github.com/thiebes/folded-debias/blob/v0.4.0/docs/DERIVATION.md).
+The package corrects each profile's fitted width, and the MSD and D follow. It
+subtracts a Monte Carlo calibrated bias `var_bias(CNR)` from each frame's fitted
+variance before the slope fit, keyed on the per-frame CNR; in the same
+simulation the corrected fit returns 1.00 times the reference. The calibration
+is built at D = 0, so it does not require a prior value of D. Removing the
+fit's lower bound on the width does not help: above a per-frame CNR of about
+1.5 the bounded and unbounded fits are identical, and both carry the full bias.
+Below a per-frame CNR of about 1 the fits spread into a broad upper tail and the
+correction no longer holds (see [On real data](#on-real-data)). The derivation,
+which reaches the same additive form from a folded-normal model of the width
+estimate, is in
+[`docs/DERIVATION.md`](https://github.com/thiebes/width-debias/blob/v0.4.0/docs/DERIVATION.md).
 
 ## Install
 
 ```bash
-pip install folded-debias            # core: NumPy and SciPy
-pip install "folded-debias[cnr]"     # adds fft-cnr, for per-frame CNR from measured profiles
+pip install width-debias            # core: NumPy and SciPy
+pip install "width-debias[cnr]"     # adds fft-cnr, for per-frame CNR from measured profiles
 ```
 
 To run the experiments and tests, install from a clone of the
-[repository](https://github.com/thiebes/folded-debias):
+[repository](https://github.com/thiebes/width-debias):
 
 ```bash
 python -m venv .venv
@@ -42,44 +52,44 @@ committed results.
 
 ```python
 import numpy as np
-from folded_debias import Experiment, calibrate_d_free, evaluate
+from width_debias import Experiment, calibrate_d_free, evaluate
 
 cnr0 = np.array([5, 8, 13, 21, 34, 55, 90])
-trunc = calibrate_d_free(cnr0, n_runs=300)        # D-free lookup var_bias(CNR)
+lookup = calibrate_d_free(cnr0, n_runs=300)       # D-free lookup var_bias(CNR)
 
 exp = Experiment(D=0.02)                          # sigma_0^2/tau; L_D/FWHM_0 ~ 0.085
-results = evaluate(exp, cnr0, trunc, n_runs=300)
+results = evaluate(exp, cnr0, lookup, n_runs=300)
 
-r = results["folded_normal"]
+r = results["subtract"]
 se = np.hypot(r.spread / np.sqrt(300), r.cal_se)  # evaluation + calibration SE
 print(r.mean_bias, se)                            # <D_est>/D_ref per CNR_0
 ```
 
-On a measurement, the per-frame CNR comes from `folded_debias.cnr.per_frame_cnr`
+On a measurement, the per-frame CNR comes from `width_debias.cnr.per_frame_cnr`
 (which wraps `fft-cnr`), the corrected MSD and weights from
-`folded_debias.weights.msd_and_weights("folded_normal", ...)`, the slope from
-`folded_debias.fit.fit_D`, and the calibration's contribution to the
-uncertainty from `folded_debias.weights.calibration_D_se`:
+`width_debias.weights.msd_and_weights("subtract", ...)`, the slope from
+`width_debias.fit.fit_D`, and the calibration's contribution to the
+uncertainty from `width_debias.weights.calibration_D_se`:
 
 ```python
 import numpy as np
-from folded_debias import calibrate_d_free
-from folded_debias.cnr import per_frame_cnr
-from folded_debias.fit import fit_D
-from folded_debias.weights import calibration_D_se, msd_and_weights
+from width_debias import calibrate_d_free
+from width_debias.cnr import per_frame_cnr
+from width_debias.fit import fit_D
+from width_debias.weights import calibration_D_se, msd_and_weights
 
 # times (n_frames,); profiles (n_frames, n_pixels) cut to about +/-4 sigma_0
 # around the spot; variance (n_frames,) the fitted widths in px^2;
 # sigma0_px the t = 0 width in pixels
 n_pixels = profiles.shape[1]
-trunc = calibrate_d_free(cnr0, half_window=(n_pixels / 2) / sigma0_px,
-                         n_pixels=n_pixels)      # the data's grid, in units of sigma_0
+lookup = calibrate_d_free(cnr0, half_window=(n_pixels / 2) / sigma0_px,
+                          n_pixels=n_pixels)     # the data's grid, in units of sigma_0
 cnr = per_frame_cnr(profiles)
-msd, w = msd_and_weights("folded_normal", variance / sigma0_px**2, cnr, trunc)
+msd, w = msd_and_weights("subtract", variance / sigma0_px**2, cnr, lookup)
 w = np.where(cnr >= 1.3, w, 0.0)                 # drop frames below the floor
 fit = fit_D(times, msd, w)
 D = fit.D * sigma0_px**2                         # px^2 per unit time
-se = np.hypot(fit.D_se, calibration_D_se(times, msd, w, cnr, trunc)) * sigma0_px**2
+se = np.hypot(fit.D_se, calibration_D_se(times, msd, w, cnr, lookup)) * sigma0_px**2
 ```
 
 ## On real data
@@ -111,15 +121,17 @@ them.
   (about 55 for p = 1.5 and 13 for p = 4), and from about 21 at D >= 0.05.
   Below that, the pooled Gaussian mean at D = 0.02 over initial CNR 8 to 90 is
   1.9 of the reference (standard error 0.4). See
-  [`experiments/wse2-strobescat`](https://github.com/thiebes/folded-debias/tree/v0.4.0/experiments/wse2-strobescat).
+  [`experiments/wse2-strobescat`](https://github.com/thiebes/width-debias/tree/v0.4.0/experiments/wse2-strobescat).
 - **Estimate the CNR on the spot.** Cut each profile to about ±4 sigma_0 around
   the spot before calling `per_frame_cnr`. Background and fringe structure in a
   full line cut corrupts the spectral CNR estimate at low signal.
 
 ## What the validation shows
 
-- The width fit reflects rather than clips at the lower bound, so the
-  folded-normal route applies (`experiments/boundary-diagnostic`).
+- Above a per-frame CNR of about 1.5 the fit's lower bound does not bind: the
+  bounded and unbounded fits return the same widths and the same biased D
+  (`experiments/estimator-comparison`). Below it, the bounded fit reflects
+  rather than clips at the bound (`experiments/boundary-diagnostic`).
 - With the calibration's own Monte Carlo error included, 4 of 96 cells lie
   beyond two combined standard errors of the reference (Gaussian, Voigt, and
   generalized-Gaussian p = 1.5 and p = 4 profiles; D = 0.005, 0.02, and 0.1
@@ -129,20 +141,20 @@ them.
   initial CNR the combined SE is large, so those cells constrain the bias only
   loosely (`experiments/dfree-calibration`).
 - The correction holds above a per-frame CNR of about 1 (0.7 to 1.5 depending on
-  shape), where the folded-normal model itself breaks
-  (`experiments/correction-floor`). With single-exponential decay to
+  shape), where the leading-order bias model `var_bias = A / CNR^2` itself
+  breaks (`experiments/correction-floor`). With single-exponential decay to
   3 tau, every frame stays above the floor from an initial CNR of about 20.
 - It corrects the anomalous exponent of subdiffusive transport as well as D
   (`experiments/subdiffusive-alpha`, `experiments/nc-solid`).
 
-[`docs/REPO_MAP.md`](https://github.com/thiebes/folded-debias/blob/v0.4.0/docs/REPO_MAP.md)
+[`docs/REPO_MAP.md`](https://github.com/thiebes/width-debias/blob/v0.4.0/docs/REPO_MAP.md)
 lists every experiment set with its result, and each set's README gives the
 details and how to run it.
 
 ## Profile models
 
 The bias affects any non-negative width estimator, so the profile model is
-pluggable (`folded_debias.models`): `GaussianModel`, `VoigtModel` (a diffusing
+pluggable (`width_debias.models`): `GaussianModel`, `VoigtModel` (a diffusing
 Gaussian convolved with a fixed Lorentzian point-spread function), and
 `GeneralizedGaussianModel` (shape exponent p; p = 2 is the Gaussian).
 `model_from_spec("generalized_gaussian:1.5")` builds a model from a spec
@@ -164,18 +176,18 @@ pytest
 
 | Path | Role |
 | ------- | ------- |
-| `src/folded_debias/simulate.py` | profile geometry: diffusion, decay, noise |
-| `src/folded_debias/noise.py` | noise laws: white, shot, Poisson, read floor |
-| `src/folded_debias/models.py` | profile models and `model_from_spec` |
-| `src/folded_debias/fit.py` | per-frame width fit; MSD to D linear fit |
-| `src/folded_debias/montecarlo.py` | Monte Carlo ensembles |
-| `src/folded_debias/truncation.py` | per-frame statistics; `TruncationModel` lookups and their SE |
-| `src/folded_debias/calibration.py` | single-frame calibration cells; joint (CNR, sigma^2) calibration |
-| `src/folded_debias/fisher.py` | Fisher-information width variance, leading-order bias, CRLB on D |
-| `src/folded_debias/smoothing.py` | P-spline smoother for the calibration residual |
-| `src/folded_debias/weights.py` | the four schemes; calibration SE of D |
-| `src/folded_debias/validate.py` | calibration and evaluation sweeps |
-| `src/folded_debias/cnr.py` | per-frame CNR from measured profiles via `fft-cnr` |
+| `src/width_debias/simulate.py` | profile geometry: diffusion, decay, noise |
+| `src/width_debias/noise.py` | noise laws: white, shot, Poisson, read floor |
+| `src/width_debias/models.py` | profile models and `model_from_spec` |
+| `src/width_debias/fit.py` | per-frame width fit; MSD to D linear fit |
+| `src/width_debias/montecarlo.py` | Monte Carlo ensembles |
+| `src/width_debias/bias_lookup.py` | per-frame statistics; `BiasLookup` lookups and their SE |
+| `src/width_debias/calibration.py` | single-frame calibration cells; joint (CNR, sigma^2) calibration |
+| `src/width_debias/fisher.py` | Fisher-information width variance, leading-order bias, CRLB on D |
+| `src/width_debias/smoothing.py` | P-spline smoother for the calibration residual |
+| `src/width_debias/weights.py` | the four schemes; calibration SE of D |
+| `src/width_debias/validate.py` | calibration and evaluation sweeps |
+| `src/width_debias/cnr.py` | per-frame CNR from measured profiles via `fft-cnr` |
 | `experiments/` | one folder per experiment set (see `docs/REPO_MAP.md`) |
 | `illustrations/` | schematic figures |
 | `scripts/` | shared calibration tooling and figure rendering |
@@ -189,4 +201,4 @@ pytest
 
 ## License
 
-MIT, see [`LICENSE`](https://github.com/thiebes/folded-debias/blob/v0.4.0/LICENSE).
+MIT, see [`LICENSE`](https://github.com/thiebes/width-debias/blob/v0.4.0/LICENSE).

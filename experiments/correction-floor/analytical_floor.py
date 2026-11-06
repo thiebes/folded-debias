@@ -48,9 +48,9 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import Experiment, model_from_spec, spec_tag  # noqa: E402
-from folded_debias.montecarlo import run_ensemble  # noqa: E402
-from folded_debias.truncation import TruncationModel, frame_stats  # noqa: E402
+from width_debias import Experiment, model_from_spec, spec_tag  # noqa: E402
+from width_debias.montecarlo import run_ensemble  # noqa: E402
+from width_debias.bias_lookup import BiasLookup, frame_stats  # noqa: E402
 
 
 CNR0_RANGE = (2.0, 100.0)
@@ -89,7 +89,7 @@ def modest_calibrate(model_name: str):
     stats = [r[0] for r in results]
     spread_cnr = np.concatenate([s.cnr for s in stats])
     spread_var = np.concatenate([r[1] for r in results])
-    return TruncationModel.from_stats(stats), spread_cnr, spread_var
+    return BiasLookup.from_stats(stats), spread_cnr, spread_var
 
 
 def _bin_log_cnr(cnr: np.ndarray, vb: np.ndarray) -> tuple[np.ndarray, ...]:
@@ -116,7 +116,7 @@ def _bin_log_cnr(cnr: np.ndarray, vb: np.ndarray) -> tuple[np.ndarray, ...]:
     return np.array(centers), np.array(means), np.array(ses)
 
 
-def find_floor(model_name: str, trunc: TruncationModel,
+def find_floor(model_name: str, trunc: BiasLookup,
                spread_cnr: np.ndarray, spread_var: np.ndarray) -> dict:
     """Estimate A from the estimator spread; locate where var_bias departs.
 

@@ -13,7 +13,7 @@ script tests the prediction with many draws over the paper's grid.
 * one fixed evaluation set (D 0.005 to 0.1, CNR_0 2 to 90, 300 runs per cell).
 
 ``analyse`` applies every calibration to the same evaluation realizations
-(folded_normal, exact per-frame CNR key, frames below CNR 1 dropped, as in the
+(subtract, exact per-frame CNR key, frames below CNR 1 dropped, as in the
 paper), so the spread of a cell's mean over the draws is the calibration term
 alone. Per cell it reports observed / predicted variance for three arms:
 
@@ -26,7 +26,7 @@ It also checks the per-point SE (variance of each grid point over the draws
 against its recorded SE squared) and the correlation of the fitted variances
 between frames of one calibration ensemble.
 
-    $env:FOLDED_DEBIAS_WORKERS = 0
+    $env:WIDTH_DEBIAS_WORKERS = 0
     .venv/Scripts/python.exe experiments/dfree-calibration/calibration_se_check.py generate
     .venv/Scripts/python.exe experiments/dfree-calibration/calibration_se_check.py analyse
 """
@@ -41,10 +41,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import Experiment, TruncationModel  # noqa: E402
-from folded_debias.montecarlo import Ensemble, run_ensemble  # noqa: E402
-from folded_debias.truncation import frame_stats  # noqa: E402
-from folded_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
+from width_debias import Experiment, BiasLookup  # noqa: E402
+from width_debias.montecarlo import Ensemble, run_ensemble  # noqa: E402
+from width_debias.bias_lookup import frame_stats  # noqa: E402
+from width_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
 
 OUT = Path(__file__).resolve().parents[2] / "output" / "calibration-se-check"
 
@@ -111,13 +111,13 @@ def _ensembles(k: int) -> list[Ensemble]:
                 for i, c0 in enumerate(CAL_GRID)]
 
 
-def _cell_means(model: TruncationModel, var: np.ndarray, cnr: np.ndarray,
+def _cell_means(model: BiasLookup, var: np.ndarray, cnr: np.ndarray,
                 d_true: float):
     """Mean D/D_in over a cell's realizations and the mean predicted cal SE."""
     times = Experiment(D=d_true).times
     ratio, se = [], []
     for row in var:
-        msd, w = msd_and_weights("folded_normal", row, cnr, model)
+        msd, w = msd_and_weights("subtract", row, cnr, model)
         w = np.where(cnr >= FLOOR, w, 0.0)
         good = np.isfinite(msd) & (w > 0)
         if good.sum() < 2:
@@ -138,7 +138,7 @@ def analyse() -> None:
         ens = _ensembles(k)
         if ens0 is None:
             ens0 = ens
-        models.append(TruncationModel.from_stats([frame_stats(e) for e in ens]))
+        models.append(BiasLookup.from_stats([frame_stats(e) for e in ens]))
     grid = models[0].cnr_grid
     assert all(np.array_equal(m.cnr_grid, grid) for m in models)
     vb = np.array([m.varbias_grid for m in models])
@@ -175,16 +175,16 @@ def analyse() -> None:
           f"SD {offd.std():.4f} (independent: SD ~ {1 / np.sqrt(CAL_RUNS):.4f})")
 
     # 3. Per-cell spread of the corrected mean over the draws.
-    pooled = TruncationModel(cnr_grid=grid, p_grid=models[0].p_grid,
+    pooled = BiasLookup(cnr_grid=grid, p_grid=models[0].p_grid,
                              relvar_grid=rv.mean(axis=0), varbias_grid=vb.mean(axis=0),
                              varbias_se_grid=np.sqrt(np.mean(se ** 2, axis=0)))
     arms = {
         "full": lambda m: m,
-        "bias": lambda m: TruncationModel(cnr_grid=grid, p_grid=m.p_grid,
+        "bias": lambda m: BiasLookup(cnr_grid=grid, p_grid=m.p_grid,
                                           relvar_grid=pooled.relvar_grid,
                                           varbias_grid=m.varbias_grid,
                                           varbias_se_grid=m.varbias_se_grid),
-        "weights": lambda m: TruncationModel(cnr_grid=grid, p_grid=m.p_grid,
+        "weights": lambda m: BiasLookup(cnr_grid=grid, p_grid=m.p_grid,
                                              relvar_grid=m.relvar_grid,
                                              varbias_grid=pooled.varbias_grid,
                                              varbias_se_grid=m.varbias_se_grid),
@@ -261,7 +261,7 @@ def paper_triple(models, full_means, p2, ecnr, evar) -> None:
     for p in paths:
         with np.load(p) as d:
             assert np.allclose(d["cnr_grid"], grid)
-            m = TruncationModel(cnr_grid=grid, p_grid=d["p_grid"],
+            m = BiasLookup(cnr_grid=grid, p_grid=d["p_grid"],
                                 relvar_grid=d["relvar_grid"],
                                 varbias_grid=d["varbias_grid"], varbias_se_grid=se)
         extra.append([[_cell_means(m, evar[di, ci], ecnr[di, ci], d_true)[0]

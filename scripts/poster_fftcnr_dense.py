@@ -12,11 +12,11 @@ The clean profiles match case-11 exactly: a generalized-Gaussian family
 tail), and 4 (flat top), plus a true Voigt (Gaussian core + Lorentzian wings)
 that sits outside the generalized-Gaussian family and so tests genuine model
 mismatch. Each profile is estimated through ``fit_model="generalized_gaussian"``
--- the path folded-debias uses -- and the true CNR is amplitude / noise_std.
+-- the path width-debias uses -- and the true CNR is amplitude / noise_std.
 
 A noise mode is selected on the command line. ``white`` (the default) adds the
 constant-sigma Gaussian noise the calibration is built on; ``shot`` uses the
-project's photon-counting :class:`folded_debias.noise.ShotNoise` (pure Poisson,
+project's photon-counting :class:`width_debias.noise.ShotNoise` (pure Poisson,
 no read floor), whose variance follows the local signal. Under shot noise the
 true CNR is the peak SNR -- peak counts / sqrt(peak counts) -- so the frame-0
 peak holds ``cnr**2`` counts and the target CNR is recovered by construction;
@@ -42,7 +42,7 @@ from scipy.special import voigt_profile
 from fft_cnr import fft_cnr
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from folded_debias.noise import ShotNoise  # noqa: E402
+from width_debias.noise import ShotNoise  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[1] / "output"
 OUTPUT.mkdir(exist_ok=True)

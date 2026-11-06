@@ -48,7 +48,7 @@ Run from the repository root::
 
     .venv/Scripts/python.exe scripts/subdiffusive_alpha.py [profile_model] [--quick]
 
-Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores for the Monte Carlo.
+Set ``WIDTH_DEBIAS_WORKERS=0`` to use all cores for the Monte Carlo.
 Outputs ``output/subdiffusive_alpha[_<model>].{png,txt}``.
 """
 from __future__ import annotations
@@ -66,11 +66,11 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
 from scipy.optimize import curve_fit  # noqa: E402
 
-from folded_debias import AnomalousExperiment, calibrate_d_free  # noqa: E402
-from folded_debias.models import MODELS  # noqa: E402
-from folded_debias.montecarlo import run_ensemble  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias import AnomalousExperiment, calibrate_d_free  # noqa: E402
+from width_debias.models import MODELS  # noqa: E402
+from width_debias.montecarlo import run_ensemble  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
@@ -133,7 +133,7 @@ def fit_msd_powerlaw(t: np.ndarray, var: np.ndarray,
 
 
 def build_or_load_calibration(model, geometry: dict, cal_cnr0: np.ndarray,
-                              n_runs_cal: int, path: Path) -> TruncationModel:
+                              n_runs_cal: int, path: Path) -> BiasLookup:
     """D-free, geometry-matched 1-D calibration; cached after the first build.
 
     The lookup is built at D = 0, so it is keyed on per-frame CNR alone and is
@@ -141,7 +141,7 @@ def build_or_load_calibration(model, geometry: dict, cal_cnr0: np.ndarray,
     """
     if path.exists() and "framevar_grid" in np.load(path).files:
         d = np.load(path)
-        return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
+        return BiasLookup(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
                                varbias_grid=d["varbias_grid"],
                                framevar_grid=d["framevar_grid"])
@@ -183,7 +183,7 @@ class CellSamples:
 
 
 def recover_alpha(alpha_true: float, cnr0: float, model,
-                  trunc: TruncationModel, geometry: dict,
+                  trunc: BiasLookup, geometry: dict,
                   n_runs: int, seed: int, floor: float) -> CellSamples:
     """Recover the exponent at one operating point, naive vs corrected.
 
@@ -197,7 +197,7 @@ def recover_alpha(alpha_true: float, cnr0: float, model,
     t = exp.times
 
     corrected = np.array([
-        corrected_variance("folded_normal", ens.variance[r], ens.cnr_frame, trunc)
+        corrected_variance("subtract", ens.variance[r], ens.cnr_frame, trunc)
         for r in range(ens.n_runs)])
 
     # Bias: fit the mean trajectory (naive over all frames, corrected over the
@@ -241,7 +241,7 @@ def recover_alpha(alpha_true: float, cnr0: float, model,
         a_corr_samples=np.array(a_corr_samples))
 
 
-def run_sweep(model, trunc: TruncationModel, geometry: dict,
+def run_sweep(model, trunc: BiasLookup, geometry: dict,
               cnr0_grid, n_runs: int, floor: float) -> list[CellSamples]:
     cells = []
     for ai, alpha in enumerate(ALPHA_TRUE):

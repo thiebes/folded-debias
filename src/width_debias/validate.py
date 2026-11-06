@@ -3,7 +3,7 @@
 The validation has two stages, deliberately on independent random seeds:
 
 1. **Calibrate** -- run Monte Carlo ensembles across a CNR sweep and build a
-   :class:`~folded_debias.truncation.TruncationModel` mapping CNR to the
+   :class:`~width_debias.bias_lookup.BiasLookup` mapping CNR to the
    truncation fraction, the MSD-point variance, and the additive variance bias.
 2. **Evaluate** -- run fresh ensembles, fit D under each scheme using only the
    per-frame CNR plus the calibrated model, and report ``<D_est> / D_true`` as
@@ -21,7 +21,7 @@ import numpy as np
 from .fit import fit_D
 from .montecarlo import run_ensemble
 from .simulate import Experiment
-from .truncation import TruncationModel, frame_stats
+from .bias_lookup import BiasLookup, frame_stats
 from .weights import (SCHEMES, calibration_D_se, corrected_variance,
                       msd_and_weights)
 
@@ -30,11 +30,11 @@ def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
                 seed: int = 1, model=None, noise_model=None) -> list:
     """Per-frame statistics from a Monte Carlo CNR sweep.
 
-    Returns one :class:`~folded_debias.truncation.FrameStats` per CNR_0.  This
+    Returns one :class:`~width_debias.bias_lookup.FrameStats` per CNR_0.  This
     is the raw material both for the truncation model and for per-frame
     diagnostics, so callers can reuse it instead of resampling.
-    ``model`` selects the profile model (see :mod:`folded_debias.models`);
-    ``noise_model`` selects the noise law (see :mod:`folded_debias.noise`,
+    ``model`` selects the profile model (see :mod:`width_debias.models`);
+    ``noise_model`` selects the noise law (see :mod:`width_debias.noise`,
     ``None`` = white).
     """
     stats = []
@@ -46,7 +46,7 @@ def sweep_stats(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
 
 
 def calibrate(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
-              seed: int = 1, model=None, noise_model=None) -> TruncationModel:
+              seed: int = 1, model=None, noise_model=None) -> BiasLookup:
     """Build a truncation model from a Monte Carlo CNR sweep.
 
     The calibration uses ``exp.D`` to generate synthetic profile sequences, so
@@ -54,7 +54,7 @@ def calibrate(exp: Experiment, cnr0_grid: np.ndarray, n_runs: int = 400,
     calibration the recommended approach is :func:`calibrate_d_free`, which is
     a thin wrapper that calls this function with ``D = 0``.
     """
-    return TruncationModel.from_stats(
+    return BiasLookup.from_stats(
         sweep_stats(exp, cnr0_grid, n_runs=n_runs, seed=seed, model=model,
                     noise_model=noise_model))
 
@@ -64,13 +64,13 @@ def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
                      n_pixels: int = 241, n_frames: int = 12,
                      t_max: float = 3.0, amplitude0: float = 1.0,
                      n_runs: int = 400, seed: int = 1,
-                     model=None, noise_model=None) -> TruncationModel:
+                     model=None, noise_model=None) -> BiasLookup:
     """Build a truncation model **without reference to the application's D**.
 
     Generates the calibration profile sequence at ``D = 0``, so every frame's
     true variance is ``sigma_0^2`` and the resulting 1-D ``var_bias(CNR)``
     lookup is keyed on per-frame CNR alone. The slope fit in
-    :func:`folded_debias.weights.msd_and_weights` consumes it like any 1-D
+    :func:`width_debias.weights.msd_and_weights` consumes it like any 1-D
     lookup.
 
     Use this whenever the application's D is unknown (real data), variable
@@ -83,7 +83,7 @@ def calibrate_d_free(cnr0_grid: np.ndarray, *, sigma0: float = 1.0,
     calibration's own Monte Carlo error included, 4 of 96 cells lie beyond two
     combined standard errors of the reference. Quote a corrected D with the
     combined SE, the fit's own and
-    :func:`~folded_debias.weights.calibration_D_se`.
+    :func:`~width_debias.weights.calibration_D_se`.
 
     All parameters except ``cnr0_grid`` describe the experimental geometry
     (pixel grid, frame count, lifetime); the calibration must match the
@@ -102,7 +102,7 @@ def calibrate_fisher(cnr_grid: np.ndarray | None = None, *, sigma0: float = 1.0,
                      half_window: float = 6.0, n_pixels: int = 241,
                      model=None, n_runs: int | np.ndarray = 300, seed: int = 1,
                      width_scaling: bool = False, knee_cnr: float = 6.0,
-                     workers: int | None = None) -> TruncationModel:
+                     workers: int | None = None) -> BiasLookup:
     """Fisher-anchored D-free calibration: exact leading term, smoothed residual.
 
     Like :func:`calibrate_d_free`, this calibrates at sigma^2 = sigma_0^2 and
@@ -110,7 +110,7 @@ def calibrate_fisher(cnr_grid: np.ndarray | None = None, *, sigma0: float = 1.0,
     variance, comes from the profile model and pixel grid with no Monte Carlo
     error; single-frame Monte Carlo cells over ``cnr_grid`` (default 84
     log-spaced points over CNR 0.25 to 90) supply only the higher-order
-    residual, smoothed across all cells (:meth:`TruncationModel.from_cells`).
+    residual, smoothed across all cells (:meth:`BiasLookup.from_cells`).
     ``width_scaling`` adds a width table so that a variance key rescales the
     lookup to each frame's width; it is off by default, so the model's
     behaviour matches the D-free lookup's interface exactly. The geometry
@@ -135,7 +135,7 @@ def calibrate_fisher(cnr_grid: np.ndarray | None = None, *, sigma0: float = 1.0,
                             workers=workers)
     variance_grid = variance_cal * np.geomspace(0.25, 16.0, 41) if width_scaling else None
     terms = leading_order_terms(model, pixel_x, variance_cal, variance_grid)
-    return TruncationModel.from_cells(cells, terms, knee_cnr=knee_cnr)
+    return BiasLookup.from_cells(cells, terms, knee_cnr=knee_cnr)
 
 
 @dataclass
@@ -157,7 +157,7 @@ class SchemeResult:
 class FrameDiagnostic:
     """Per-frame residual bias of a width-fitting correction.
 
-    For ``folded_normal`` and ``mas`` the final D estimate is a deterministic
+    For ``subtract`` and ``mas`` the final D estimate is a deterministic
     linear functional of the corrected per-frame variances (the slope-fit
     weights are deterministic in CNR), so the per-frame residual
     ``mean_corrected - true_variance`` fully determines the bias in D. This
@@ -187,8 +187,8 @@ class FrameDiagnostic:
     n_runs_used: np.ndarray     # finite-fit count contributing to each frame
 
 
-def per_frame_diagnostic(exp: Experiment, cnr0: float, model: TruncationModel,
-                         scheme: str = "folded_normal", n_runs: int = 2000,
+def per_frame_diagnostic(exp: Experiment, cnr0: float, model: BiasLookup,
+                         scheme: str = "subtract", n_runs: int = 2000,
                          seed: int = 30000,
                          profile_model=None) -> FrameDiagnostic:
     """Per-frame residual bias of a correction scheme at a given CNR_0.
@@ -198,7 +198,7 @@ def per_frame_diagnostic(exp: Experiment, cnr0: float, model: TruncationModel,
     how well the corrected width ``E[sigma_tilde^2(t)]`` recovers
     ``sigma^2_true(t)``.
 
-    ``scheme`` should be a width-fitting scheme (``folded_normal``, ``mas``;
+    ``scheme`` should be a width-fitting scheme (``subtract``, ``mas``;
     or ``ols`` / ``inverse_variance`` to see the uncorrected raw bias).
     """
     ens = run_ensemble(exp, float(cnr0), n_runs=n_runs, seed=seed,
@@ -241,15 +241,15 @@ def per_frame_diagnostic(exp: Experiment, cnr0: float, model: TruncationModel,
                            n_runs_used=n_used)
 
 
-def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
+def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: BiasLookup,
              n_runs: int = 400, seed: int = 20000,
              profile_model=None, noise_model=None) -> dict[str, SchemeResult]:
     """Fit D under every scheme and return the bias curves.
 
-    ``model`` is the calibrated :class:`TruncationModel`; ``profile_model`` is
+    ``model`` is the calibrated :class:`BiasLookup`; ``profile_model`` is
     the profile model (Gaussian / Voigt / generalized-Gaussian) and must match
     the one used for calibration. ``noise_model`` selects the noise law (see
-    :mod:`folded_debias.noise`, ``None`` = white); to test robustness to a
+    :mod:`width_debias.noise`, ``None`` = white); to test robustness to a
     noise-law mismatch, pass a ``model`` calibrated under one law and a
     ``noise_model`` of another.
     """
@@ -272,7 +272,7 @@ def evaluate(exp: Experiment, cnr0_grid: np.ndarray, model: TruncationModel,
                 d = fit_D(times, msd, w)
                 if d.ok and np.isfinite(d.D):
                     ratios.append(d.D / exp.D)
-                    if scheme in ("folded_normal", "mas"):
+                    if scheme in ("subtract", "mas"):
                         cal.append(calibration_D_se(times, msd, w, ens.cnr_frame,
                                                     model, ens.variance[r]) / exp.D)
             ratios = np.asarray(ratios, float)

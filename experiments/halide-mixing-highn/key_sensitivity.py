@@ -29,7 +29,7 @@ measurements, is the extra uncertainty the smoothed key carries.
 
 Run from the repository root (needs the pshare and the dense calibration)::
 
-    FOLDED_DEBIAS_WORKERS=7 .venv/Scripts/python.exe experiments/halide-mixing-highn/key_sensitivity.py
+    WIDTH_DEBIAS_WORKERS=7 .venv/Scripts/python.exe experiments/halide-mixing-highn/key_sensitivity.py
 """
 from __future__ import annotations
 
@@ -80,7 +80,7 @@ def _raw_fits(args):
 
 def _keys(trunc, t, var_true, cnrf, raw, floor):
     """Corrected variance per seed for every key; plus the smoothed key's error."""
-    from folded_debias.truncation import _bilinear
+    from width_debias.bias_lookup import _bilinear
     use = cnrf >= floor
 
     def direct(key):
@@ -127,7 +127,7 @@ def main() -> None:
     trunc = hp.cnr_sigma2_calibration(case0.x)
 
     jobs = [(f, c) for f in ("0.25", "0.5", "0.75") for c in CNR0_LIST]
-    workers = int(os.environ.get("FOLDED_DEBIAS_WORKERS") or 1)
+    workers = int(os.environ.get("WIDTH_DEBIAS_WORKERS") or 1)
     with ProcessPoolExecutor(max_workers=max(1, workers)) as ex:
         results = list(ex.map(_raw_fits, jobs))
 

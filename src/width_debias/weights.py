@@ -5,12 +5,12 @@ Four schemes are compared:
 * ``ols``               -- ordinary least squares; every frame weighted equally.
 * ``inverse_variance``  -- the field-standard scheme, w_i = 1 / Var(sigma_hat_i^2).
                            It corrects for the unequal noise across frames but
-                           leaves the boundary-induced bias intact.
-* ``folded_normal``     -- the derived scheme and the recommended one. It
+                           leaves the bias intact.
+* ``subtract``          -- the derived scheme and the recommended one. It
                            subtracts the additive variance bias s^2 from each
                            frame before forming the MSD, then weights by
                            inverse variance.
-* ``mas``               -- a Plaszczynski-MAS-style variant of ``folded_normal``.
+* ``mas``               -- a Plaszczynski-MAS-style variant of ``subtract``.
                            The subtraction is smoothly gated so it vanishes,
                            rather than overshooting, when a frame is noise
                            dominated -- it cannot drive the corrected variance
@@ -18,23 +18,23 @@ Four schemes are compared:
                            off below an initial CNR of about 4, where ``mas``
                            leaves the raw inflation in place.
 
-The folded-normal model (see ``docs/DERIVATION.md``) shows that the fitted
-variance carries an additive upward bias equal to the estimation-noise
-variance, and that this bias -- not extra scatter -- is what inflates D. A
+The fitted variance carries an additive upward bias equal to the width's
+estimation variance (``docs/DERIVATION.md`` derives it from a folded-normal
+model), and that bias -- not extra scatter -- is what inflates D. A
 reweighting of the slope fit cannot remove a mean bias present in every point;
-only the per-frame subtraction in ``folded_normal`` / ``mas`` can. They differ
+only the per-frame subtraction in ``subtract`` / ``mas`` can. They differ
 from ``inverse_variance`` *only* by that subtraction, so the comparison
 isolates the effect of the bias correction.
 
 Every scheme takes the *per-frame CNR* as input. In the Monte Carlo validation
 the CNR is known exactly; on real data it is measured from each profile with
-the ``fft-cnr`` package (see :mod:`folded_debias.cnr`).
+the ``fft-cnr`` package (see :mod:`width_debias.cnr`).
 
-The ``model`` (a :class:`~folded_debias.truncation.TruncationModel`) can be
-a 1-D calibration (recommended: :func:`~folded_debias.validate.calibrate_d_free`,
+The ``model`` (a :class:`~width_debias.bias_lookup.BiasLookup`) can be
+a 1-D calibration (recommended: :func:`~width_debias.validate.calibrate_d_free`,
 built at D = 0, so it carries no reference to the application's D) or the
 experimental joint (CNR, sigma^2) calibration from
-:func:`~folded_debias.calibration.calibrate_cnr_sigma2`. With the joint
+:func:`~width_debias.calibration.calibrate_cnr_sigma2`. With the joint
 calibration the per-frame raw fitted variance is also passed into the lookup,
 so the correction is width-aware.
 """
@@ -42,26 +42,26 @@ from __future__ import annotations
 
 import numpy as np
 
-from .truncation import TruncationModel
+from .bias_lookup import BiasLookup
 
-SCHEMES = ("ols", "inverse_variance", "folded_normal", "mas")
+SCHEMES = ("ols", "inverse_variance", "subtract", "mas")
 
 
 def corrected_variance(scheme: str, variance_row: np.ndarray,
                        cnr_frame: np.ndarray,
-                       model: TruncationModel,
+                       model: BiasLookup,
                        key_variance: np.ndarray | None = None) -> np.ndarray:
     """Apply a scheme's per-frame bias correction to the fitted variances.
 
     Returns the corrected per-frame variances sigma_tilde^2(t). For ``ols``
     and ``inverse_variance`` this is the input unchanged -- those schemes do
-    not correct the points, only the weights. For ``folded_normal`` it is the
+    not correct the points, only the weights. For ``subtract`` it is the
     hard subtraction ``sigma_hat^2 - var_bias(CNR)``; for ``mas`` the smoothly
     gated subtraction (see module docstring).
 
     This is the single place the bias correction is applied.
     :func:`msd_and_weights` calls it to form the MSD, and
-    :func:`folded_debias.validate.per_frame_diagnostic` calls it to report
+    :func:`width_debias.validate.per_frame_diagnostic` calls it to report
     the per-frame residual bias. Because the slope fit is linear in these
     corrected variances and the weights are deterministic in CNR, the
     per-frame residual ``E[sigma_tilde^2] - sigma^2_true`` fully determines
@@ -77,12 +77,12 @@ def corrected_variance(scheme: str, variance_row: np.ndarray,
     key = variance_row if key_variance is None else np.asarray(key_variance, float)
     if scheme in ("ols", "inverse_variance"):
         return variance_row
-    if scheme == "folded_normal":
+    if scheme == "subtract":
         return variance_row - model.var_bias(cnr, key)
     if scheme == "mas":
         # Plaszczynski-MAS-style gated subtraction. The gate (1 - exp(-u)),
         # u = sigma_hat^2 / s^2, is ~1 when the frame is well above the noise
-        # (full s^2 subtraction, matching folded_normal) and ~0 when it is
+        # (full s^2 subtraction, matching subtract) and ~0 when it is
         # noise dominated (no subtraction). corrected = s^2 * (u - 1 + e^-u)
         # is >= 0 for all u >= 0 -- the correction can never overshoot.
         s2 = model.var_bias(cnr, key)
@@ -95,7 +95,7 @@ def corrected_variance(scheme: str, variance_row: np.ndarray,
 
 
 def msd_and_weights(scheme: str, variance_row: np.ndarray,
-                    cnr_frame: np.ndarray, model: TruncationModel,
+                    cnr_frame: np.ndarray, model: BiasLookup,
                     key_variance: np.ndarray | None = None):
     """Return ``(msd, weights)`` for one realisation's MSD-vs-t fit.
 
@@ -107,11 +107,11 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     cnr_frame : array, shape (n_frames,)
         Per-frame CNR (known in Monte Carlo; measured with ``fft-cnr`` on real
         data).
-    model : calibrated :class:`~folded_debias.truncation.TruncationModel`.
+    model : calibrated :class:`~width_debias.bias_lookup.BiasLookup`.
 
     Notes
     -----
-    ``folded_normal`` subtracts the calibrated additive variance bias
+    ``subtract`` subtracts the calibrated additive variance bias
     ``model.var_bias(CNR, sigma_hat^2)`` from each frame before differencing.
     ``mas`` subtracts the same bias through a smooth gate that switches the
     correction off in deep noise (so the corrected variance never crosses
@@ -151,7 +151,7 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
     # the 2-D calibration's rel_variance or the 1-D frame_variance. A 1-D
     # model without a frame_variance grid falls back to rel_variance, the
     # MSD-point variance measured inside each calibration ensemble (jagged in
-    # CNR; see TruncationModel.frame_variance), with frame 0 at weight 0.
+    # CNR; see BiasLookup.frame_variance), with frame 0 at weight 0.
     if scheme == "ols":
         w = np.ones_like(cnr)
         per_frame = False
@@ -174,12 +174,12 @@ def msd_and_weights(scheme: str, variance_row: np.ndarray,
 
 
 def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
-                     cnr_frame: np.ndarray, model: TruncationModel,
+                     cnr_frame: np.ndarray, model: BiasLookup,
                      variance_row: np.ndarray | None = None,
                      key_variance: np.ndarray | None = None) -> float:
     """SE of a corrected D from the calibration's own Monte Carlo error.
 
-    :func:`~folded_debias.fit.fit_D` is a weighted straight-line fit, so its
+    :func:`~width_debias.fit.fit_D` is a weighted straight-line fit, so its
     slope is a fixed linear combination of the MSD points, ``b = sum c_i m_i``
     with ``c_i = w_i (S_w t_i - S_wt) / (S_w S_wtt - S_wt^2)``. A calibration
     error ``e_i`` in frame i's subtracted bias moves ``m_i`` by
@@ -194,7 +194,7 @@ def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
     frame set matches, and ``variance_row`` (the raw fitted variances) when the
     model is a joint (CNR, sigma^2) calibration. Combine with the fit's own SE
     as ``sqrt(D_se**2 + calibration_D_se**2)``. This is exact for
-    ``folded_normal``; for ``mas`` it ignores the gate's dependence on the bias
+    ``subtract``; for ``mas`` it ignores the gate's dependence on the bias
     and is approximate. The weights' own dependence on the calibration is
     second order and not included. Sixteen independent calibrations on the
     fft-cnr paper's grid confirm the prediction: observed / predicted variance
@@ -204,10 +204,10 @@ def calibration_D_se(times: np.ndarray, msd: np.ndarray, weights: np.ndarray,
     CNR_0 3), and 0.89 over 16 draws with frame 0 weighted
     (``slope_fit_check.py``). Returns NaN when the model has no SE.
 
-    A smoothed model (:meth:`~folded_debias.truncation.TruncationModel.from_cells`)
+    A smoothed model (:meth:`~width_debias.bias_lookup.BiasLookup.from_cells`)
     correlates the biases of neighbouring frames, so the sum uses the full
     covariance, ``Var_cal(D) = (1/4) c^T M M^T c`` with M from
-    :meth:`~folded_debias.truncation.TruncationModel.var_bias_factor`.
+    :meth:`~width_debias.bias_lookup.BiasLookup.var_bias_factor`.
     ``key_variance`` is the width key passed to ``msd_and_weights``, if any.
     """
     t = np.asarray(times, float)

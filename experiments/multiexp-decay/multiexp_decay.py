@@ -29,7 +29,7 @@ Run from the repository root::
 
     .venv/Scripts/python.exe scripts/multiexp_decay.py
 
-Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores. Reuses the standard-geometry
+Set ``WIDTH_DEBIAS_WORKERS=0`` to use all cores. Reuses the standard-geometry
 D-free Gaussian calibration cached by ``subdiffusive_alpha.py``
 (``output/calibration_subdiffusive.npz``); builds it if absent.
 Outputs ``output/multiexp_decay.{png,txt}``.
@@ -45,9 +45,9 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from folded_debias import (Experiment, MultiExpExperiment, GaussianModel,  # noqa: E402
+from width_debias import (Experiment, MultiExpExperiment, GaussianModel,  # noqa: E402
                             calibrate_d_free, evaluate, per_frame_diagnostic)
-from folded_debias.truncation import TruncationModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
@@ -88,11 +88,11 @@ EVAL_CNR0 = np.geomspace(8.0, 90.0, 8)       # the corrected-D-vs-CNR0 panel
 N_RUNS_EVAL = 800
 
 
-def load_calibration() -> TruncationModel:
+def load_calibration() -> BiasLookup:
     """Load the shared D-free Gaussian calibration; build and cache if absent."""
     if CAL_PATH.exists() and "framevar_grid" in np.load(CAL_PATH).files:
         d = np.load(CAL_PATH)
-        return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
+        return BiasLookup(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
                                varbias_grid=d["varbias_grid"],
                                framevar_grid=d["framevar_grid"])
@@ -104,13 +104,13 @@ def load_calibration() -> TruncationModel:
     return trunc
 
 
-def residual_vs_cnr(exp, trunc: TruncationModel,
+def residual_vs_cnr(exp, trunc: BiasLookup,
                     seed0: int) -> tuple[np.ndarray, np.ndarray]:
     """Pool per-frame (per-frame CNR, corrected residual) over the diag CNR_0s."""
     cnr, residual = [], []
     for k, cnr0 in enumerate(DIAG_CNR0):
         diag = per_frame_diagnostic(exp, float(cnr0), trunc,
-                                    scheme="folded_normal", n_runs=N_RUNS_DIAG,
+                                    scheme="subtract", n_runs=N_RUNS_DIAG,
                                     seed=seed0 + 1000 * k,
                                     profile_model=GaussianModel())
         cnr.extend(diag.cnr.tolist())
@@ -119,7 +119,7 @@ def residual_vs_cnr(exp, trunc: TruncationModel,
     return np.array(cnr)[order], np.array(residual)[order]
 
 
-def d_recovery(exp, trunc: TruncationModel,
+def d_recovery(exp, trunc: BiasLookup,
                seed0: int) -> tuple[np.ndarray, np.ndarray]:
     """<D>/D_true vs CNR_0 for the corrected (folded-normal) and naive (OLS)
     fits. The corrected curve is decay-robust; the naive curve's bias onset
@@ -127,7 +127,7 @@ def d_recovery(exp, trunc: TruncationModel,
     decay-specific."""
     res = evaluate(exp, EVAL_CNR0, trunc, n_runs=N_RUNS_EVAL, seed=seed0,
                    profile_model=GaussianModel())
-    return res["folded_normal"].mean_bias, res["ols"].mean_bias
+    return res["subtract"].mean_bias, res["ols"].mean_bias
 
 
 def write_report(collapse: dict, dcurves: dict, deepest_at20: dict,

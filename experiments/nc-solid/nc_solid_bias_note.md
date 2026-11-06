@@ -1,6 +1,6 @@
 # Noise-induced bias in the measured transport exponent for disordered nanocrystal-solid diffusion maps
 
-Technical note on the folded-debias method applied to the disordered perovskite
+Technical note on the width-debias method applied to the disordered perovskite
 nanocrystal-solid simulations (Marc Meléndez's maps from the Solari et al.
 hopping model, made for this work; not the runs behind the paper's Fig. 5).
 Numbers and figures are produced by [`nc_solid_alpha_vs_cnr.py`](nc_solid_alpha_vs_cnr.py)
@@ -201,7 +201,7 @@ design rule into a statement about a real measurement:
   bias regime applies at all.
 
 A practical consequence follows for applying the correction to real data. The
-folded-debias folded-normal correction is calibrated on white noise and keyed
+width-debias folded-normal correction is calibrated on white noise and keyed
 on the spectral CNR. On shot-dominated data both assumptions are off — the
 bias-governing CNR is the peak-local member, and a white calibration
 over-corrects photon-limited data — so the correct order of operations is to
@@ -219,12 +219,12 @@ Gaussian as the bed's truth. The reconstruction conserves the population and
 makes the peak fall as 1/σ with spreading (the raw histogram `max` instead rises,
 biasing the per-frame CNR high). Its second moment is the ground truth σ²(t).
 Each per-frame width is then fit with the bounded Gaussian estimator
-([`folded_debias.fit`](../../src/folded_debias/fit.py)); the MSD uses the fitted
+([`width_debias.fit`](../../src/width_debias/fit.py)); the MSD uses the fitted
 t = 0 width, MSD = σ̂²(t) − σ̂²(0). The exponent and diffusion coefficient come
 from a nonlinear least-squares fit of MSD = 2D·t^α with α ∈ [0.2, 2]. The bias
 is the exponent of the mean MSD over 1000 noise realisations; the single-shot
 standard deviation is taken across per-realisation exponents. Noise laws are the
-pluggable models in [`folded_debias.noise`](../../src/folded_debias/noise.py):
+pluggable models in [`width_debias.noise`](../../src/width_debias/noise.py):
 white noise with standard deviation peak₀/CNR₀, and shot noise with Poisson
 counts and an optional read floor, whose per-frame CNR is
 peak / √(peak + read²). CNR₀ is the frame-0 peak CNR and means the same starting

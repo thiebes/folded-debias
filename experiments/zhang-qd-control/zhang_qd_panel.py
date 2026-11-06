@@ -40,7 +40,7 @@ where dCNR/dt sets the sign of the bias-induced D error.
 Widths/MSD are in the published nm^2; sigma0^2 = (172 nm)^2 from the t=0 width.
 D is in cm^2/s (MSD in nm^2 over time in fs: D = slope/2, 1 nm^2/fs = 10 cm^2/s).
 
-Set ``FOLDED_DEBIAS_WORKERS=1`` for the (cached) calibration build.
+Set ``WIDTH_DEBIAS_WORKERS=1`` for the (cached) calibration build.
 
 Usage::
 
@@ -59,9 +59,9 @@ from scipy.ndimage import gaussian_filter
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import fft_cnr  # noqa: E402
-from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
-from folded_debias.fit import fit_D, fit_variance  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
+from width_debias import GaussianModel, calibrate_d_free  # noqa: E402
+from width_debias.fit import fit_D, fit_variance  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
 
 RE = os.path.dirname(__file__)
 CALIB_CACHE = os.path.join("output", "calibration_zhang_qd.npz")
@@ -116,7 +116,7 @@ def build_or_load_calibration(sigma0_px, npix):
         if (int(z["npix"]) == npix and abs(float(z["sigma0_px"]) - sigma0_px) < 1.5
                 and "framevar_grid" in z.files):
             print(f"  loaded cached calibration {CALIB_CACHE}", flush=True)
-            return TruncationModel(cnr_grid=z["cnr_grid"], p_grid=z["p_grid"],
+            return BiasLookup(cnr_grid=z["cnr_grid"], p_grid=z["p_grid"],
                                    relvar_grid=z["relvar_grid"],
                                    varbias_grid=z["varbias_grid"],
                                    framevar_grid=z["framevar_grid"])

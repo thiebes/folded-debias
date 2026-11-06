@@ -4,7 +4,7 @@ Loads the per-frame profiles from ``reduce.py`` and a ``(CNR, sigma^2)``
 calibration built by ``scripts/build_calibration.py``, then reports the
 diffusion coefficient D under each weighting scheme -- the naive fits
 (``ols``, ``inverse_variance``) against the bias-corrected ones
-(``folded_normal``, ``mas``). The correction subtracts the per-frame variance
+(``subtract``, ``mas``). The correction subtracts the per-frame variance
 bias ``var_bias(CNR, sigma_hat^2)`` from each frame before the MSD slope fit.
 
 Example::
@@ -26,10 +26,10 @@ import sys
 import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from folded_debias.calibration import CalibrationGrid     # noqa: E402
-from folded_debias.truncation import TruncationModel       # noqa: E402
-from folded_debias.weights import msd_and_weights, SCHEMES  # noqa: E402
-from folded_debias.fit import fit_D                         # noqa: E402
+from width_debias.calibration import CalibrationGrid     # noqa: E402
+from width_debias.bias_lookup import BiasLookup       # noqa: E402
+from width_debias.weights import msd_and_weights, SCHEMES  # noqa: E402
+from width_debias.fit import fit_D                         # noqa: E402
 
 UM2_PER_NS_TO_CM2_PER_S = 10.0      # 1 um^2/ns = 10 cm^2/s
 
@@ -52,7 +52,7 @@ def main():
     x_um = d["x_um"]
 
     calib = CalibrationGrid.load(args.calibration)
-    model = TruncationModel.from_calibration(calib)
+    model = BiasLookup.from_calibration(calib)
 
     # geometry consistency checks (the lookup is conditional on the grid)
     if calib.pixel_x is not None:
@@ -89,10 +89,10 @@ def main():
         import matplotlib.pyplot as plt
         fig, ax = plt.subplots(figsize=(6, 5))
         naive = results["inverse_variance"][2]
-        corr = results["folded_normal"][2]
+        corr = results["subtract"][2]
         ax.plot(t_ns, naive, "o", color="0.5", label="naive (inverse-variance)")
         ax.plot(t_ns, corr, "o", color="C0", label="corrected (folded-normal)")
-        for scheme, color in (("inverse_variance", "0.5"), ("folded_normal", "C0")):
+        for scheme, color in (("inverse_variance", "0.5"), ("subtract", "C0")):
             d_um2ns = results[scheme][0] / UM2_PER_NS_TO_CM2_PER_S
             ax.plot(t_ns, 2 * d_um2ns * t_ns, "-", color=color)
         ax.set_xlabel("time (ns)"); ax.set_ylabel("MSD (um^2)")

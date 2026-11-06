@@ -11,9 +11,9 @@ The first release.
 
 ### Added
 
-- `TruncationModel.frame_variance` (with `framevar_grid` in cached 1-D
+- `BiasLookup.frame_variance` (with `framevar_grid` in cached 1-D
   calibrations) gives the per-frame width variance used for the slope weights.
-- `folded_debias.fisher` computes the leading-order bias of the fitted variance,
+- `width_debias.fisher` computes the leading-order bias of the fitted variance,
   the width's Fisher-information variance, from the profile model and pixel
   grid alone (`leading_order_terms`, `var_of_fitted_variance` with Cramer-Rao
   or least-squares-sandwich forms). The whole-sequence Fisher matrix and
@@ -21,8 +21,8 @@ The first release.
 - `calibrate_fisher` builds a D-free 1-D calibration from that exact leading
   term and a P-spline smooth of the higher-order residual over single-frame
   Monte Carlo cells (`calibrate_cells`, `CalibrationCells`,
-  `TruncationModel.from_cells`). The smoothed lookup carries the sampling
-  covariance of the smooth as a factor (`TruncationModel.var_bias_factor`,
+  `BiasLookup.from_cells`). The smoothed lookup carries the sampling
+  covariance of the smooth as a factor (`BiasLookup.var_bias_factor`,
   `var_bias_cov`), and `calibration_D_se` uses it. With `width_scaling=True` a width table rescales
   the bias to each frame's width (it grows as sigma at a fixed pixel grid and
   peak CNR). It is not yet the recommended path.
@@ -30,10 +30,18 @@ The first release.
   optional `key_variance`, a measurement-level width key. A 1-D model with a
   width table scales its weights only with such a key; a joint (CNR, sigma^2)
   model keys its weights on each frame's own fitted variance.
-- `TruncationModel.save` and `TruncationModel.load`.
+- `BiasLookup.save` and `BiasLookup.load`.
 
 ### Changed
 
+- The package is named for what it corrects, the noise bias in each fitted
+  profile width, from which the MSD and D corrections follow: the distribution
+  `folded-debias` is `width-debias` (import `width_debias`), the
+  `folded_normal` scheme is `subtract`, the `truncation` module and
+  `TruncationModel` are `bias_lookup` and `BiasLookup`, and
+  `FOLDED_DEBIAS_WORKERS` is `WIDTH_DEBIAS_WORKERS`. In the regime where the
+  correction holds, the fit's lower bound does not bind, and the bias is the
+  width's estimation variance; the folded-normal model is one derivation of it.
 - The weighted schemes weight every frame, t = 0 included, by
   `1 / Var(sigma_hat_i^2)`. The MSD fit is then the same as fitting the
   corrected widths against time and reaches the Cramer-Rao bound on D (0.98 to
@@ -51,7 +59,7 @@ The first release.
   data's geometry and units, the per-frame CNR floor, and the narrower range
   over which an estimated CNR holds.
 - `docs/DERIVATION.md` states the leading-order bias as growing with sigma at a
-  fixed pixel grid and peak CNR, matching `folded_debias.fisher`.
+  fixed pixel grid and peak CNR, matching `width_debias.fisher`.
 
 ## [0.3.0] - 2026-10-21
 

@@ -7,7 +7,7 @@ newer weights read ``framevar_grid`` (per-frame Var(sigma_hat^2)) and form
 Var(MSD_i) = v(CNR_i) + v(CNR_0) from the measurement's own frames.
 
 Uses the cached calibrations and evaluation set of ``calibration_se_check.py``
-(run its ``generate`` first). Per cell (folded_normal, exact per-frame CNR key,
+(run its ``generate`` first). Per cell (subtract, exact per-frame CNR key,
 frames below CNR 1 dropped) and per weighting it reports, averaged over the
 calibration draws:
 
@@ -28,22 +28,22 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import Experiment, TruncationModel  # noqa: E402
-from folded_debias.truncation import frame_stats  # noqa: E402
-from folded_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
+from width_debias import Experiment, BiasLookup  # noqa: E402
+from width_debias.bias_lookup import frame_stats  # noqa: E402
+from width_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
 
 from calibration_se_check import (CNR0_VALUES, D_VALUES, EVAL_RUNS, FLOOR,  # noqa: E402
                                   N_CAL, OUT, _cal_path, _ensembles)
 
 
-def cell(model: TruncationModel, var: np.ndarray, cnr: np.ndarray, d_true: float):
+def cell(model: BiasLookup, var: np.ndarray, cnr: np.ndarray, d_true: float):
     """(mean, SD over realizations, calibration SE) of D/D_in in one cell.
 
     With a 1-D model and the exact key the weights are the same for every
     realization, so the weighted slope is one linear map applied to all rows.
     """
     times = Experiment(D=d_true).times
-    _, w = msd_and_weights("folded_normal", var[0], cnr, model)
+    _, w = msd_and_weights("subtract", var[0], cnr, model)
     w = np.where(cnr >= FLOOR, w, 0.0)
     good = w > 0
     if good.sum() < 2:
@@ -61,7 +61,7 @@ def cell(model: TruncationModel, var: np.ndarray, cnr: np.ndarray, d_true: float
 
 def main() -> None:
     ks = [k for k in range(N_CAL) if _cal_path(k).exists()]
-    new = [TruncationModel.from_stats([frame_stats(e) for e in _ensembles(k)])
+    new = [BiasLookup.from_stats([frame_stats(e) for e in _ensembles(k)])
            for k in ks]
     variants = {"MSD-point lookup": [replace(m, framevar_grid=None) for m in new],
                 "per-frame":        new}

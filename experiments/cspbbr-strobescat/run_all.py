@@ -11,7 +11,7 @@ Stages, for every fluence subfolder under ``--sample-root``:
 3. **apply**     -- subtract the per-frame bias and fit corrected-vs-naive D.
 4. **summary**   -- collect D(fluence) for every scheme into a CSV and a plot.
 
-Heavy step is `calibrate`; it honours FOLDED_DEBIAS via `--workers`. Pick stages
+Heavy step is `calibrate`; it honours WIDTH_DEBIAS_WORKERS via `--workers`. Pick stages
 with `--stages` to resume (e.g. `--stages apply,summary` after a calibration run).
 
 Example::
@@ -159,7 +159,7 @@ def main():
             r = json.load(open(rj))
             rows.append((fl, label, r))
         rows.sort(key=lambda x: (np.isnan(x[0]), x[0]))
-        schemes = ["ols", "inverse_variance", "folded_normal", "mas"]
+        schemes = ["ols", "inverse_variance", "subtract", "mas"]
         csv = out / "cspbbr_D_vs_fluence.csv"
         with open(csv, "w") as fh:
             fh.write("fluence_uJ,label," + ",".join(
@@ -174,7 +174,7 @@ def main():
             import matplotlib.pyplot as plt
             x = [fl for fl, _, _ in rows]
             fig, ax = plt.subplots(figsize=(6, 5))
-            for s, c in (("inverse_variance", "0.5"), ("folded_normal", "C0")):
+            for s, c in (("inverse_variance", "0.5"), ("subtract", "C0")):
                 y = [r[s]["D_cm2s"] for _, _, r in rows]
                 e = [r[s]["D_se_cm2s"] for _, _, r in rows]
                 ax.errorbar(x, y, yerr=e, fmt="o-", color=c,

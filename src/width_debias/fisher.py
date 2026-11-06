@@ -13,10 +13,10 @@ nonlinear least-squares fit, evaluated numerically on this grid, confirms the
 premise for scale families (the Gaussian and the generalized-Gaussian at fixed
 p give var_bias = Var(sigma_hat) exactly); for the Voigt model with a fixed
 Lorentzian it is 0.91 of it, a difference the calibration's smoothed residual
-absorbs (see ``TruncationModel.from_cells``).
+absorbs (see ``BiasLookup.from_cells``).
 
 Everything here works on the model's own ``noise_free_series`` through a stand-in
-for :class:`~folded_debias.simulate.Experiment`, so every profile model is
+for :class:`~width_debias.simulate.Experiment`, so every profile model is
 supported without model-specific derivatives. Each frame is parameterised by its
 diffusive variance v, with peak amplitude and centre as nuisance parameters.
 

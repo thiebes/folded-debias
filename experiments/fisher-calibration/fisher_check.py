@@ -19,7 +19,7 @@ It reports chi^2 / dof per width over cells with CNR >= 1 and over all cells,
 and the ratio of measured bias to the leading term against the relative
 precision variable S = CNR sqrt(v / A(v)).
 
-    $env:FOLDED_DEBIAS_WORKERS = 0
+    $env:WIDTH_DEBIAS_WORKERS = 0
     .venv/Scripts/python.exe experiments/fisher-calibration/fisher_check.py generate
     .venv/Scripts/python.exe experiments/fisher-calibration/fisher_check.py analyse
 """
@@ -34,10 +34,10 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (CalibrationCells, Experiment, TruncationModel,  # noqa: E402
+from width_debias import (CalibrationCells, Experiment, BiasLookup,  # noqa: E402
                            calibrate_cells, leading_order_terms, model_from_spec,
                            spec_tag)
-from folded_debias.truncation import _interp_matrix  # noqa: E402
+from width_debias.bias_lookup import _interp_matrix  # noqa: E402
 
 from compare_calibrations import (N_FISHER_DRAWS, OUT, SPECS, WIDTH_GRID,  # noqa: E402
                                   _cells_path, _seed)
@@ -109,7 +109,7 @@ def _width_scaling(lines: list[str]) -> None:
             continue
         model = model_from_spec(spec)
         terms = leading_order_terms(model, x, 1.0, WIDTH_GRID)
-        lookup = TruncationModel.from_cells(cells, terms)
+        lookup = BiasLookup.from_cells(cells, terms)
         lines.append(f"=== {spec}")
         lines.append(f"  {'v/sigma0^2':>10}{'r(v)':>8}   chi2/dof (CNR >= 1):  none    lead   table"
                      f"   | all CNR:  none    lead   table")

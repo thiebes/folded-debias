@@ -53,7 +53,7 @@ The bed supports three technical results:
   what the calibration subtracts, frame by frame).
 - `forward_fit_validation.py` — stage-2 forward-fit validation: recovers the
   carrier transport by fitting the forward model, applying the folded-normal
-  correction to the low-CNR frames. Imports the `folded_debias` library.
+  correction to the low-CNR frames. Imports the `width_debias` library.
 - `distortion_figures.py` — illustration and diagnostic figures: the two gaps
   (carrier vs emission vs fit α) and the variance-trajectory mechanism.
 - `nonfickian_gaps.png`, `saha_second_moment_bias.png`, `poster_saha_nonfickian.png`

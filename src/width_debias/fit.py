@@ -120,7 +120,7 @@ def fit_D(times: np.ndarray, msd: np.ndarray, weights: np.ndarray) -> DFit:
     halved (D = slope / 2): ``Var(slope) = Sw / (Sw*Swtt - Swt^2)``. It is exact
     when the weights are the true inverse point-variances *and the points are
     independent*. The MSD points share the fitted ``sigma_hat^2(0)``, but with
-    frame 0 weighted (as :func:`~folded_debias.weights.msd_and_weights` does
+    frame 0 weighted (as :func:`~width_debias.weights.msd_and_weights` does
     for the weighted schemes) the slope equals that of the independent widths,
     so the SE applies. With frame 0 at weight 0 the shared offset makes it too
     narrow (the interval ``experiments/coverage-interval/coverage_check.py``

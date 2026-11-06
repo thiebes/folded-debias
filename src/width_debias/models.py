@@ -19,7 +19,7 @@ Every model exposes the same two-method interface used by ``montecarlo``:
 
 * ``noise_free_series(exp)`` -- the clean profile stack for an Experiment.
 * ``fit_variance(x, y)``     -- fit one noisy profile, return its diffusive
-  variance as a :class:`~folded_debias.fit.FrameFit`.
+  variance as a :class:`~width_debias.fit.FrameFit`.
 
 For every model the *diffusive variance* (the quantity that grows as
 sigma^2(t) = sigma_0^2 + 2 D t and enters MSD(t) = variance(t) - variance(0))
@@ -39,17 +39,17 @@ from .simulate import Experiment, gaussian, noise_free_series as _gaussian_serie
 
 
 # --------------------------------------------------------------------------
-# Gaussian -- the baseline model (delegates to folded_debias.fit)
+# Gaussian -- the baseline model (delegates to width_debias.fit)
 # --------------------------------------------------------------------------
 class GaussianModel:
     """Pure Gaussian profile; the baseline model.
 
     ``max_var`` is the optional upper bound on the fitted variance, forwarded to
-    :func:`folded_debias.fit.fit_variance`. The default (``None``) uses the
+    :func:`width_debias.fit.fit_variance`. The default (``None``) uses the
     ``span^2`` bound (the full field of view); pass a physical cap ``(G * sigma0) ** 2`` when
     the output window is far wider than the spot, so the low-CNR fit cannot
     wander out to the window scale. It must match between calibration and
-    application (see :func:`folded_debias.fit.fit_variance`).
+    application (see :func:`width_debias.fit.fit_variance`).
     """
 
     name = "gaussian"

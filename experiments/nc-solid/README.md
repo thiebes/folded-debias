@@ -41,7 +41,7 @@ large derived artifact kept in-repo.
 ```bash
 # regenerate the figure (needs the calibration in output/ first):
 cp experiments/nc-solid/calibration_nc_solid_gaussian.npz output/
-FOLDED_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/nc-solid/nc_solid_poster_figure.py
+WIDTH_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/nc-solid/nc_solid_poster_figure.py
 ```
 
 Rebuild the calibration with `run_nc_solid_calibration.sh` on a many-core Linux
@@ -58,7 +58,7 @@ only raises alpha, so it can mask subdiffusion but cannot manufacture it. Figure
 
 ## Depends on
 
-`folded_debias` (`GaussianModel`, `noise.WhiteNoise`, `truncation`, `validate`,
+`width_debias` (`GaussianModel`, `noise.WhiteNoise`, `truncation`, `validate`,
 `weights`). Local sibling modules `nc_data.py`, `nc_solid_sim.py`,
 `nc_solid_alpha_vs_cnr.py`. Optional `curved_text` (the figure's curved label;
 `pip install -e ../curved-text`).

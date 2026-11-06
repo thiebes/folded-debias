@@ -32,9 +32,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "crlb-precision"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import Experiment, TruncationModel  # noqa: E402
-from folded_debias.truncation import frame_stats  # noqa: E402
-from folded_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
+from width_debias import Experiment, BiasLookup  # noqa: E402
+from width_debias.bias_lookup import frame_stats  # noqa: E402
+from width_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
 
 import calibration_se_check as cse  # noqa: E402
 import efficiency_check as eff  # noqa: E402
@@ -44,10 +44,10 @@ VARIANTS = ("former", "current")
 
 
 def weights(variant: str, var0: np.ndarray, cnr: np.ndarray,
-            model: TruncationModel) -> np.ndarray:
+            model: BiasLookup) -> np.ndarray:
     """Slope weights for one cell (the exact key makes them the same per row)."""
     if variant == "current":
-        _, w = msd_and_weights("folded_normal", var0, cnr, model)
+        _, w = msd_and_weights("subtract", var0, cnr, model)
     else:
         v = model.frame_variance(cnr)
         w = 1.0 / (v + v[0])
@@ -75,7 +75,7 @@ def cell(model, var, cnr, d_true, variant):
 def main() -> None:
     # 1. Calibration SE over the 16 Gaussian draws.
     ks = [k for k in range(cse.N_CAL) if cse._cal_path(k).exists()]
-    models = [TruncationModel.from_stats([frame_stats(e) for e in cse._ensembles(k)])
+    models = [BiasLookup.from_stats([frame_stats(e) for e in cse._ensembles(k)])
               for k in ks]
     with np.load(cse.OUT / f"eval_runs{cse.EVAL_RUNS}.npz") as z:
         evar, ecnr = z["variance"], z["cnr"]

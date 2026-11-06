@@ -48,11 +48,11 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from scipy.optimize import curve_fit  # noqa: E402
 
-from folded_debias import CalibrationGrid  # noqa: E402
-from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
-from folded_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias import CalibrationGrid  # noqa: E402
+from width_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from width_debias.noise import ShotNoise, WhiteNoise  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 from nc_data import load_all, load_case  # noqa: E402
 
@@ -114,7 +114,7 @@ def fit_each_row(x, profiles):
 def compute_row(x, t, profiles, cnr0, n_seeds, trunc, noise_model, seed_base=0):
     """Apparent transport at one CNR_0 over n_seeds noise realisations.
 
-    The noise law is pluggable (``noise_model`` is a ``folded_debias.noise``
+    The noise law is pluggable (``noise_model`` is a ``width_debias.noise``
     model). ``cnr_frame`` is the per-frame contrast-to-noise the model reports
     -- for white noise the peak over a constant RMS, for shot noise the
     peak-local member ``peak / sqrt(peak + read^2)`` (the bias-governing CNR per
@@ -138,7 +138,7 @@ def compute_row(x, t, profiles, cnr0, n_seeds, trunc, noise_model, seed_base=0):
         rng = np.random.default_rng(seed_base + int(cnr0) * 100000 + s)
         noisy = noise_model.sample(profiles, cnr0, rng)
         var_hat = fit_each_row(x, noisy)
-        cor = corrected_variance("folded_normal", var_hat, cnr_frame, trunc)
+        cor = corrected_variance("subtract", var_hat, cnr_frame, trunc)
         raw_stack.append(var_hat); cor_stack.append(cor)
         _, aN = fit_powerlaw(t, var_hat)
         a_seed.append(aN)
@@ -159,7 +159,7 @@ _TRUNC = None
 
 def _init_worker(cal_path):
     global _TRUNC
-    _TRUNC = TruncationModel.from_calibration(CalibrationGrid.load(cal_path))
+    _TRUNC = BiasLookup.from_calibration(CalibrationGrid.load(cal_path))
 
 
 def _row_worker(packed):
@@ -169,7 +169,7 @@ def _row_worker(packed):
 
 
 def _n_workers():
-    env = os.environ.get("FOLDED_DEBIAS_WORKERS")
+    env = os.environ.get("WIDTH_DEBIAS_WORKERS")
     n = int(env) if env not in (None, "") else 1
     if n <= 0:
         n = os.cpu_count() or 1

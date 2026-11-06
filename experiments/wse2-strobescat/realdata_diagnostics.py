@@ -63,9 +63,9 @@ from scipy.ndimage import gaussian_filter1d
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
 import fft_cnr  # noqa: E402
-from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
-from folded_debias.fit import fit_D, fit_variance  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
+from width_debias import GaussianModel, calibrate_d_free  # noqa: E402
+from width_debias.fit import fit_D, fit_variance  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
 
 # outputs live with the experiment (this folder's diagnostics/ subtree); not
 # tracked, because they are derived from unpublished scans
@@ -269,14 +269,14 @@ def build_or_load_calibration(sigma0_px: float, npix: int, noise_law: str):
     if os.path.exists(cache) and "framevar_grid" in np.load(cache).files:
         z = np.load(cache)
         print(f"  loaded cached calibration {cache}", flush=True)
-        return TruncationModel(cnr_grid=z["cnr_grid"], p_grid=z["p_grid"],
+        return BiasLookup(cnr_grid=z["cnr_grid"], p_grid=z["p_grid"],
                                relvar_grid=z["relvar_grid"],
                                varbias_grid=z["varbias_grid"],
                                framevar_grid=z["framevar_grid"])
     half_window = (npix / 2.0) / sigma0_px
-    noise_model = None  # white. (Shot would pass folded_debias.noise.ShotNoise.)
+    noise_model = None  # white. (Shot would pass width_debias.noise.ShotNoise.)
     if noise_law == "shot":
-        from folded_debias.noise import ShotNoise
+        from width_debias.noise import ShotNoise
         noise_model = ShotNoise(read=1.0, poisson=True)
     print(f"  building calibration ({noise_law}, npix={npix}, "
           f"half_window={half_window:.1f}) ...", flush=True)

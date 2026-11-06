@@ -31,7 +31,7 @@ import numpy as np
 
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
-from folded_debias.fit import fit_D  # noqa: E402
+from width_debias.fit import fit_D  # noqa: E402
 from realdata_diagnostics import (MEASUREMENTS, _find_canonical,  # noqa: E402
                                   truncate_degraded_tail)
 

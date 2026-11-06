@@ -44,10 +44,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 from scipy.optimize import curve_fit  # noqa: E402
 
-from folded_debias import CalibrationGrid  # noqa: E402
-from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias import CalibrationGrid  # noqa: E402
+from width_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 from nc_data import load_all  # noqa: E402
 
@@ -98,7 +98,7 @@ def fit_each_row(x: np.ndarray, profiles: np.ndarray) -> np.ndarray:
     return out
 
 
-def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
+def validation_pass(case, trunc: BiasLookup, cnr0: float, n_seeds: int):
     peak0 = float(case.profiles[0].max())
     noise_sigma = peak0 / cnr0
     cnr_frame = case.profiles.max(axis=1) / noise_sigma
@@ -110,7 +110,7 @@ def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
         noisy = case.profiles + rng.normal(0.0, noise_sigma, case.profiles.shape)
         var_hat = fit_each_row(case.x, noisy)
         raw[s] = var_hat
-        cor[s] = corrected_variance("folded_normal", var_hat, cnr_frame, trunc)
+        cor[s] = corrected_variance("subtract", var_hat, cnr_frame, trunc)
     return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnr_frame
 
 
@@ -126,7 +126,7 @@ def main() -> None:
         print(f"Calibration not found: {CAL_PATH.name}. Build it with "
               "scripts/build_calibration.py (tag nc_solid_gaussian) first.")
         return
-    trunc = TruncationModel.from_calibration(CalibrationGrid.load(CAL_PATH))
+    trunc = BiasLookup.from_calibration(CalibrationGrid.load(CAL_PATH))
     cases = load_all()
     if not cases:
         print("No NC-solid maps found on the pshare; nothing to validate.")

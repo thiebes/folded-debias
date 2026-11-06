@@ -1,6 +1,6 @@
 """Single-frame calibration cells and the 2-D per-frame calibration -- experimental.
 
-The recommended D-free calibration is :func:`folded_debias.calibrate_d_free`,
+The recommended D-free calibration is :func:`width_debias.calibrate_d_free`,
 a 1-D lookup that runs the CNR-sweep calibration at ``D = 0``. It
 captures the bias at ``sigma^2 = sigma_0^2``, which is the relevant region
 for the low-D regime where the truncation bias bites (sigma^2(t) barely
@@ -8,7 +8,7 @@ changes across the measurement when D is small); see
 ``experiments/dfree-calibration/validate_d_zero.py`` for its validation.
 
 :func:`calibrate_cells` supplies the single-frame Monte Carlo cells that
-:func:`folded_debias.calibrate_fisher` smooths. The 2-D calibration
+:func:`width_debias.calibrate_fisher` smooths. The 2-D calibration
 (:func:`calibrate_cnr_sigma2`) is a more general construction kept
 for future work: it generates **single-frame** noisy profiles on a
 (CNR, variance) grid, so the lookup is keyed on both the per-frame CNR and
@@ -20,7 +20,7 @@ approximation breaks down.
 noise per cell dominates the per-cell bias estimate and the resulting lookup
 is too noisy to use without substantial additional sample budget (n_runs
 >~ 5000 per cell, plus post-hoc smoothing). The fixed-point inversion in
-:meth:`TruncationModel.var_bias` compensates for the lookup-at-biased-sigma^2
+:meth:`BiasLookup.var_bias` compensates for the lookup-at-biased-sigma^2
 issue but cannot rescue the underlying MC noise.
 """
 from __future__ import annotations
@@ -47,7 +47,7 @@ class CalibrationGrid:
     sample variance of those fits -- the per-frame ``Var(sigma_hat^2)``.
 
     The grids are 1-D and ascending; bilinear interpolation between cells is
-    handled by :class:`~folded_debias.truncation.TruncationModel`.
+    handled by :class:`~width_debias.bias_lookup.BiasLookup`.
 
     Also carries the calibration's pixel grid (``pixel_x``) so saved
     calibrations can be reloaded without re-deriving the geometry the lookup
@@ -244,7 +244,7 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
 
     The lookup needs a key for the unknown true sigma^2. Keying each frame on
     its own fitted sigma_hat^2 under-corrects when sigma^2 grows several-fold
-    over the measurement; see :meth:`TruncationModel.var_bias` ("Choice of
+    over the measurement; see :meth:`BiasLookup.var_bias` ("Choice of
     key") before applying this calibration to fast-spreading data.
 
     Cells are evaluated in parallel via :class:`ProcessPoolExecutor`. Each
@@ -253,8 +253,8 @@ def calibrate_cnr_sigma2(model=None, *, pixel_x: np.ndarray | None = None,
 
     Parameters
     ----------
-    model : profile model instance (see :mod:`folded_debias.models`).
-        Defaults to :class:`~folded_debias.models.GaussianModel`. The
+    model : profile model instance (see :mod:`width_debias.models`).
+        Defaults to :class:`~width_debias.models.GaussianModel`. The
         model's name is recorded; its class and ``model_kwargs`` are used to
         reconstruct the model inside worker processes.
     pixel_x : the spatial axis on which the fit will run. Must match the
@@ -382,7 +382,7 @@ class CalibrationCells:
     ``E[sigma_hat^2] - variance_cal`` over the finite fits of cell k and
     ``bias_sd[k]`` their standard deviation, so ``bias_sd**2`` is the frame's
     ``Var(sigma_hat^2)``. The cells are the raw material that
-    :meth:`~folded_debias.truncation.TruncationModel.from_cells` smooths.
+    :meth:`~width_debias.bias_lookup.BiasLookup.from_cells` smooths.
     """
 
     cnr: np.ndarray
@@ -446,10 +446,10 @@ def calibrate_cells(cnr_grid: np.ndarray, *, model=None,
     ``variance_cal`` and peak CNR ``cnr_grid[k]``. Unlike
     :func:`calibrate_cnr_sigma2`, no outlier filter is applied: the mean is the
     raw mean the application's subtraction must match, as in
-    :func:`~folded_debias.validate.calibrate_d_free`. Cells are seeded from one
+    :func:`~width_debias.validate.calibrate_d_free`. Cells are seeded from one
     :class:`numpy.random.SeedSequence`, so the result depends only on
-    ``(seed, n_runs)``; ``workers`` follows ``FOLDED_DEBIAS_WORKERS`` like
-    :func:`~folded_debias.montecarlo.run_ensemble`.
+    ``(seed, n_runs)``; ``workers`` follows ``WIDTH_DEBIAS_WORKERS`` like
+    :func:`~width_debias.montecarlo.run_ensemble`.
     """
     from .montecarlo import _resolve_workers
 

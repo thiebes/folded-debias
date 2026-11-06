@@ -20,7 +20,7 @@ at a given CNR_0 -- it does not adapt to the data.)
 For each CNR_0 the script reports, over many realisations:
 
 * empirical coverage of the 95% covariance interval (fraction containing
-  D_true), for ``folded_normal`` (de-biased) and ``inverse_variance`` (biased);
+  D_true), for ``subtract`` (de-biased) and ``inverse_variance`` (biased);
 * the narrowness ratio ``mean(D_se) / SD(D_hat)`` -- below 1 means too narrow;
 * the skew of D_hat (its sampling distribution is right-skewed at low CNR, so a
   symmetric interval is doubly wrong there);
@@ -38,7 +38,7 @@ Run from the repository root::
 
     .venv/Scripts/python.exe scripts/coverage_check.py
 
-Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores. Reuses the standard-geometry
+Set ``WIDTH_DEBIAS_WORKERS=0`` to use all cores. Reuses the standard-geometry
 D-free Gaussian calibration cached by ``subdiffusive_alpha.py``; builds it if
 absent. Outputs ``output/coverage_check.{png,txt}``.
 """
@@ -53,10 +53,10 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from folded_debias import Experiment, GaussianModel, calibrate_d_free  # noqa: E402
-from folded_debias.montecarlo import run_ensemble  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import msd_and_weights  # noqa: E402
+from width_debias import Experiment, GaussianModel, calibrate_d_free  # noqa: E402
+from width_debias.montecarlo import run_ensemble  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import msd_and_weights  # noqa: E402
 
 OUTPUT = Path(__file__).resolve().parents[2] / "output"
 OUTPUT.mkdir(exist_ok=True)
@@ -82,11 +82,11 @@ N_RUNS_CAL = 1500
 SEED = 90000
 
 
-def load_calibration() -> TruncationModel:
+def load_calibration() -> BiasLookup:
     """Load the shared D-free Gaussian calibration; build and cache if absent."""
     if CAL_PATH.exists() and "framevar_grid" in np.load(CAL_PATH).files:
         d = np.load(CAL_PATH)
-        return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
+        return BiasLookup(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
                                varbias_grid=d["varbias_grid"],
                                framevar_grid=d["framevar_grid"])
@@ -104,7 +104,7 @@ def wls_slope(msd, t, w) -> tuple[np.ndarray, float]:
     ``msd`` has frames on its last axis (any leading shape). ``D_se`` is the
     covariance SE of D and is a scalar -- it depends only on the (deterministic)
     weights and times, not on the data, so every measurement at one CNR_0 shares
-    it. Mirrors :func:`folded_debias.fit.fit_D`.
+    it. Mirrors :func:`width_debias.fit.fit_D`.
     """
     g = w > 0
     tg, wg = t[g], w[g]
@@ -122,14 +122,14 @@ def _skew(a: np.ndarray) -> float:
     return float((d ** 3).mean() / s2 ** 1.5) if s2 > 0 else 0.0
 
 
-def coverage_at(cnr0: float, trunc: TruncationModel, seed: int) -> dict:
+def coverage_at(cnr0: float, trunc: BiasLookup, seed: int) -> dict:
     """Coverage of the covariance, bootstrap, and inverse-variance intervals."""
     exp = Experiment(D=D_TRUE, **GEOMETRY)
     ens = run_ensemble(exp, cnr0, n_runs=N_RUNS, seed=seed, model=GaussianModel())
     t = exp.times
     cnr = ens.cnr_frame
     var_bias = trunc.var_bias(cnr)                       # (n_frames,), deterministic
-    _, w = msd_and_weights("folded_normal", ens.variance[0], cnr, trunc)
+    _, w = msd_and_weights("subtract", ens.variance[0], cnr, trunc)
 
     # Point estimates per realisation (de-biased and biased).
     corrected = ens.variance - var_bias
@@ -189,7 +189,7 @@ def write_report(rows: list[dict], path: Path) -> None:
         f"D_true = {D_TRUE} sigma0^2/tau, Gaussian, standard geometry; "
         f"{N_RUNS} runs/cell, {N_BOOT} bootstrap.",
         "95% intervals. Coverage = fraction containing D_true.",
-        "folded_normal is de-biased (coverage meaningful); inverse_variance is "
+        "subtract is de-biased (coverage meaningful); inverse_variance is "
         "biased (contrast).",
         "narrowness = mean(D_se)/SD(D_hat) (<1 = covariance CI too narrow).",
         "infl = sqrt(Var_full/Var_diag): how much the shared sigma_hat^2_0",

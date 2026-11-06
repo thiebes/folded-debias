@@ -25,7 +25,7 @@ reported, not part of the switch criterion). Each is scored on all frames (the
 library default) and on frames with per-frame CNR >= ``FLOOR`` (the regime the
 method claims), which the criterion uses.
 
-    $env:FOLDED_DEBIAS_WORKERS = 0
+    $env:WIDTH_DEBIAS_WORKERS = 0
     .venv/Scripts/python.exe experiments/fisher-calibration/compare_calibrations.py generate
     .venv/Scripts/python.exe experiments/fisher-calibration/compare_calibrations.py analyse
 """
@@ -42,11 +42,11 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (CalibrationCells, Experiment, TruncationModel,  # noqa: E402
+from width_debias import (CalibrationCells, Experiment, BiasLookup,  # noqa: E402
                            calibrate_cells, calibrate_d_free, leading_order_terms,
                            model_from_spec, spec_tag)
-from folded_debias.montecarlo import _resolve_workers, run_ensemble  # noqa: E402
-from folded_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
+from width_debias.montecarlo import _resolve_workers, run_ensemble  # noqa: E402
+from width_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
 
 OUT = Path(__file__).resolve().parents[2] / "output" / "fisher-calibration"
 
@@ -122,21 +122,21 @@ def generate() -> None:
 # --------------------------------------------------------------------------
 # Scoring
 # --------------------------------------------------------------------------
-def _models(spec: str, draw: int) -> dict[str, TruncationModel | None]:
+def _models(spec: str, draw: int) -> dict[str, BiasLookup | None]:
     """The three arms for one draw; ``raw`` is None beyond the raw draws."""
     model = model_from_spec(spec)
     x = Experiment().x
     cells = CalibrationCells.load(_cells_path(spec, draw))
     raw = _raw_path(spec, draw)
     return {
-        "raw": TruncationModel.load(raw) if raw.exists() else None,
-        "fisher": TruncationModel.from_cells(cells, leading_order_terms(model, x, 1.0)),
-        "fisher_w": TruncationModel.from_cells(
+        "raw": BiasLookup.load(raw) if raw.exists() else None,
+        "fisher": BiasLookup.from_cells(cells, leading_order_terms(model, x, 1.0)),
+        "fisher_w": BiasLookup.from_cells(
             cells, leading_order_terms(model, x, 1.0, WIDTH_GRID)),
     }
 
 
-def _cell_scores(model: TruncationModel, var: np.ndarray, cnr: np.ndarray,
+def _cell_scores(model: BiasLookup, var: np.ndarray, cnr: np.ndarray,
                  d_true: float, floor: float | None) -> np.ndarray:
     """(mean D/D_ref, SD of D/D_ref, mean calibration SE / D_ref, coverage) for one cell.
 
@@ -146,7 +146,7 @@ def _cell_scores(model: TruncationModel, var: np.ndarray, cnr: np.ndarray,
     msd_and_weights, fit_D, and calibration_D_se per realization.
     """
     times = Experiment(D=d_true).times
-    _, w = msd_and_weights("folded_normal", var[0], cnr, model)
+    _, w = msd_and_weights("subtract", var[0], cnr, model)
     if floor is not None:
         w = np.where(cnr >= floor, w, 0.0)
     corrected = var - model.var_bias(np.broadcast_to(cnr, var.shape).ravel(),

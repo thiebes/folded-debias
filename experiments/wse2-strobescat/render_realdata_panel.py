@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from realdata_diagnostics import (MEASUREMENTS, FIT_HALF_SIGMA, FLOOR,  # noqa: E402
     UM_PER_PX, load_measurement, per_frame_cnr, build_or_load_calibration, decide_noise_law)
-from folded_debias.fit import fit_variance, fit_D  # noqa: E402
+from width_debias.fit import fit_variance, fit_D  # noqa: E402
 
 # Spanish-flag palette (plot_style.md): flag red = the salient/biased series,
 # flag blue = the reference/corrected series.

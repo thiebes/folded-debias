@@ -7,7 +7,7 @@ with its main result; the set's README gives the details and how to run it.
 ## Layout
 
 ```text
-src/folded_debias/   the library
+src/width_debias/   the library
 experiments/         one folder per experiment set (below)
 illustrations/       one folder per schematic figure (below)
 scripts/             shared calibration tooling and figure rendering

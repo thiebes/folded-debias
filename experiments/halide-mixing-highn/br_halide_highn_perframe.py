@@ -36,14 +36,14 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "halide-mixing-brI-legacy"))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from folded_debias import (CalibrationGrid, GaussianModel,  # noqa: E402
+from width_debias import (CalibrationGrid, GaussianModel,  # noqa: E402
                            calibrate_cnr_sigma2)
-from folded_debias.simulate import Experiment  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.validate import calibrate  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias.simulate import Experiment  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.validate import calibrate  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
-from folded_debias.fit import fit_variance as _fit_gaussian  # noqa: E402
+from width_debias.fit import fit_variance as _fit_gaussian  # noqa: E402
 
 from br_halide_validation import fit_msd_powerlaw  # noqa: E402
 from br_halide_highn_validation import STRIDE, subsample  # noqa: E402
@@ -99,12 +99,12 @@ CAL2_CNR = np.concatenate([np.geomspace(1.0, 3.0, 20, endpoint=False),
 N_RUNS_CAL2 = int(os.environ.get("HIGHN_CAL2_RUNS", 4000))
 
 
-def daware_calibration(d_true: float, frac: str, n_frames: int) -> TruncationModel:
+def daware_calibration(d_true: float, frac: str, n_frames: int) -> BiasLookup:
     """D-aware calibration at this fraction's D and geometry; cached per fraction."""
     path = OUTPUT / f"cal_highn_daware_g{int(G_MAX)}_x{frac}.npz"
     if path.exists() and "framevar_grid" in np.load(path).files:
         d = np.load(path)
-        return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
+        return BiasLookup(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
                                varbias_grid=d["varbias_grid"],
                                framevar_grid=d["framevar_grid"])
@@ -118,7 +118,7 @@ def daware_calibration(d_true: float, frac: str, n_frames: int) -> TruncationMod
     return trunc
 
 
-def cnr_sigma2_calibration(pixel_x: np.ndarray) -> TruncationModel:
+def cnr_sigma2_calibration(pixel_x: np.ndarray) -> BiasLookup:
     """Joint (CNR, sigma^2) calibration on the data's pixel grid; cached.
 
     The 1-D D-aware lookup above is keyed on CNR alone, but this bed's spot
@@ -130,7 +130,7 @@ def cnr_sigma2_calibration(pixel_x: np.ndarray) -> TruncationModel:
     unsmoothed points returns erratic var_bias in the late frames above the
     floor (e.g. 2031, 7773, 529 nm^2 at CNR 1.71, 1.56, 1.48 for x = 0.25) and
     over-subtracts on average. Keying on (CNR, sigma^2), with the fixed-point
-    inversion in TruncationModel.var_bias, removes the path dependence. The
+    inversion in BiasLookup.var_bias, removes the path dependence. The
     grid is independent of D, so one calibration serves every fraction.
     """
     path = OUTPUT / (f"cal_highn_cnrsig2_g{int(G_MAX)}.npz" if N_RUNS_CAL2 == 600
@@ -139,14 +139,14 @@ def cnr_sigma2_calibration(pixel_x: np.ndarray) -> TruncationModel:
         grid = CalibrationGrid.load(path)
         if grid.pixel_x is None or not np.allclose(grid.pixel_x, pixel_x):
             raise RuntimeError(f"{path.name} was built on a different pixel grid")
-        return TruncationModel.from_calibration(grid)
+        return BiasLookup.from_calibration(grid)
     grid = calibrate_cnr_sigma2(
         GaussianModel(max_var=MAX_VAR), pixel_x=pixel_x,
         sigma_grid=SIGMA_GRID_NM, cnr_grid=CAL2_CNR, n_runs=N_RUNS_CAL2,
         seed=4242, model_kwargs={"max_var": MAX_VAR}, verbose=True,
-        n_workers=int(os.environ.get("FOLDED_DEBIAS_WORKERS") or 0) or None)
+        n_workers=int(os.environ.get("WIDTH_DEBIAS_WORKERS") or 0) or None)
     grid.save(path)
-    return TruncationModel.from_calibration(grid)
+    return BiasLookup.from_calibration(grid)
 
 
 def per_frame_means(case, trunc, cnr0, n_seeds):
@@ -167,7 +167,7 @@ def per_frame_means(case, trunc, cnr0, n_seeds):
         elif KEY == "iterated" and trunc.is_2d:
             cor[s] = iterated_key_correction(case.t, vh, cnrf, trunc)
         else:
-            cor[s] = corrected_variance("folded_normal", vh, cnrf, trunc)
+            cor[s] = corrected_variance("subtract", vh, cnrf, trunc)
     return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnrf
 
 
@@ -180,7 +180,7 @@ def iterated_key_correction(t, vh, cnrf, trunc, n_iter=8):
     raw one. The final bias is read directly at the key, with no further
     inversion. ``key_sensitivity.py`` compares this key with the exact one.
     """
-    from folded_debias.truncation import _bilinear
+    from width_debias.bias_lookup import _bilinear
     use = (cnrf >= FLOOR_CNR) & np.isfinite(vh)
 
     def bias_at(key):

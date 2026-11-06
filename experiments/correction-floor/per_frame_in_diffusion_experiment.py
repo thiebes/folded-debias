@@ -34,10 +34,10 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (Experiment, model_from_spec,  # noqa: E402
+from width_debias import (Experiment, model_from_spec,  # noqa: E402
                            per_frame_diagnostic)
-from folded_debias.montecarlo import run_ensemble  # noqa: E402
-from folded_debias.truncation import TruncationModel, frame_stats  # noqa: E402
+from width_debias.montecarlo import run_ensemble  # noqa: E402
+from width_debias.bias_lookup import BiasLookup, frame_stats  # noqa: E402
 
 
 # Match dense_calibration_and_test.py exactly for an apples-to-apples test.
@@ -58,7 +58,7 @@ def _calib_one(args):
     return frame_stats(ens)
 
 
-def dense_calibrate(model_name: str) -> TruncationModel:
+def dense_calibrate(model_name: str) -> BiasLookup:
     cal_exp = Experiment(D=0.0)
     cnr0_grid = np.logspace(np.log10(CNR0_RANGE[0]),
                              np.log10(CNR0_RANGE[1]),
@@ -87,16 +87,16 @@ def dense_calibrate(model_name: str) -> TruncationModel:
                 print(f"    [cal] {done}/{n} ({pct:3.0f}%)  "
                       f"elapsed {dt:5.0f}s  ETA {eta:4.0f}s",
                       flush=True)
-    return TruncationModel.from_stats(results)
+    return BiasLookup.from_stats(results)
 
 
-def diagnostic_report(model_name: str, trunc: TruncationModel) -> None:
+def diagnostic_report(model_name: str, trunc: BiasLookup) -> None:
     pmodel = model_from_spec(model_name)
     exp = Experiment(D=D_TRUE)
     print(f"\n=== {model_name}: per-frame diagnostic with DENSE calibration ===",
           flush=True)
     for cnr0 in CNR0_REPORT:
-        fn = per_frame_diagnostic(exp, cnr0, trunc, scheme="folded_normal",
+        fn = per_frame_diagnostic(exp, cnr0, trunc, scheme="subtract",
                                   n_runs=N_RUNS_DIAG, seed=30000,
                                   profile_model=pmodel)
         mas = per_frame_diagnostic(exp, cnr0, trunc, scheme="mas",

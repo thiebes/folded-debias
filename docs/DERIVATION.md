@@ -58,7 +58,7 @@ So the *shape* of the bias and variance is fixed by `p` alone. The *scale* is
 not: `p` is dimensionless, the bias `s²` has units of variance. The absolute
 scale must come from the per-frame CNR through a noise model (the Cramér–Rao
 bound on the width, `s² ∝ σ dx / CNR²` to leading order for a 1-D Gaussian at a
-fixed pixel spacing `dx` and peak-defined CNR; `folded_debias.fisher`) or by
+fixed pixel spacing `dx` and peak-defined CNR; `width_debias.fisher`) or by
 calibration against matched simulations. Both `p` and the CNR scale are needed — which is why the
 weighting takes the per-frame CNR as its input, not `p` alone.
 
@@ -95,7 +95,7 @@ unable to fix the bias, however the weights are chosen.
    the ordinary inverse-variance weight; the subtraction is what removes the
    bias.
 
-In `folded_debias` this is the `folded_normal` scheme. It differs from
+In `width_debias` this is the `subtract` scheme. It differs from
 `inverse_variance` *only* by step 1, so comparing the two isolates the effect
 of the bias correction.
 
@@ -103,7 +103,7 @@ of the bias correction.
 
 The per-frame noise variance `s_i²` is obtained by calibration: a Monte Carlo
 CNR sweep gives `E[σ̂²] − σ²_true` as a function of CNR — the `var_bias(CNR)`
-model in `TruncationModel`. The folded-normal model is what licenses this:
+model in `BiasLookup`. The folded-normal model is what licenses this:
 it tells us the bias is *additive*, *positive*, and a function of the per-frame
 CNR, so a one-dimensional `var_bias(CNR)` calibration is the right object to
 build. Calibration and evaluation use independent random seeds. On real data
@@ -112,7 +112,7 @@ the same calibration is done against simulations matched to the measurement
 
 ## 7. Two alternatives, tested
 
-`folded_normal` subtracts the *calibrated* `var_bias(CNR)`. When that
+The `subtract` scheme removes the *calibrated* `var_bias(CNR)`. When that
 calibration is imperfect — it conflates frames of equal CNR but different true
 width, and the low-CNR mean is heavy-tailed — the hard subtraction can
 overshoot and push `D` below the reference in the deepest noise. Two routes were
@@ -126,11 +126,11 @@ Asymptotic estimator, the subtraction is passed through a smooth gate:
 Writing `u = σ̂²/s²`, the corrected value is `s²·(u − 1 + e^−u)`, which is ≥ 0
 for all `u ≥ 0` and increasing — the correction **cannot drive the variance
 negative**. The gate is ≈ 1 when the frame is well above the noise (full `s²`
-subtraction, matching `folded_normal`) and → 0 when it is noise dominated (the
+subtraction, matching `subtract`) and → 0 when it is noise dominated (the
 frame is left uncorrected rather than overshot). On the narrow `CNR₀ ∈ [5,90]`
 sweep (`experiments/estimator-comparison/moment_estimator_failure.py`), `mas`
 gave the lowest bias of any
-scheme — mean |⟨D⟩/D_ref − 1| = 0.089 vs `folded_normal` 0.116 — and
+scheme — mean |⟨D⟩/D_ref − 1| = 0.089 vs `subtract` 0.116 — and
 removed the deep-regime overshoot.
 
 **On the wider `CNR₀ ∈ [2,100]` sweep the ranking reverses.**
@@ -193,7 +193,7 @@ Voigt, and generalized-Gaussian p = 1.5 and p = 4 profiles
 The calibration is itself a finite Monte Carlo, and its error is common to
 every measurement corrected with it, so it does not average away over runs.
 `weights.calibration_D_se` propagates it into D through the slope fit's
-linear map (`TruncationModel.var_bias_se` gives each looked-up bias's SE;
+linear map (`BiasLookup.var_bias_se` gives each looked-up bias's SE;
 with `D̂ = ½ Σ cᵢ mᵢ` and `Σ cᵢ = 0`, `Var_cal(D) = ¼ Σ cᵢ² sᵢ²`; the common
 t = 0 shift cancels into the intercept, and frame 0's own error enters through
 `c₀` because frame 0 is weighted). Checked against 16 independent calibration
@@ -215,7 +215,7 @@ and a tighter claim needs a larger calibration budget.
 
 The D = 0 lookup assumes the width changes little over the measurement. When
 it grows several-fold, the bias at a given CNR changes with it, and a joint
-`var_bias(CNR, σ²)` calibration (`folded_debias.calibration.calibrate_cnr_sigma2`)
+`var_bias(CNR, σ²)` calibration (`width_debias.calibration.calibrate_cnr_sigma2`)
 is needed. Its lookup requires a stand-in for the unknown true `σ²`. Keying
 each frame on its own fitted `σ̂²` under-corrects at low CNR, because a frame
 whose fit scatters high reads the lookup near the grid edge; a
@@ -328,7 +328,7 @@ of subtracting the bias.
 The division assumes that the bias is proportional to `σ²_true`. The Fisher
 calculation does not support that assumption: at a fixed pixel grid and
 peak-defined CNR the leading-order bias grows as `σ` (Section 3;
-`folded_debias.fisher`), so the division over-scales the bias by `σ/σ_0` when
+`width_debias.fisher`), so the division over-scales the bias by `σ/σ_0` when
 the width grows. The package does not implement the variant. For a width that
 grows over the measurement it provides the width-scaled 1-D lookup
 (`calibrate_fisher(..., width_scaling=True)`) and the joint `var_bias(CNR, σ²)`

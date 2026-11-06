@@ -54,12 +54,12 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-from folded_debias import CalibrationGrid  # noqa: E402
-from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
-from folded_debias.models import (GeneralizedGaussianModel,  # noqa: E402
+from width_debias import CalibrationGrid  # noqa: E402
+from width_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from width_debias.models import (GeneralizedGaussianModel,  # noqa: E402
                                    MomentModel, VoigtModel)
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 from marc_data import load_all  # noqa: E402
 
@@ -98,7 +98,7 @@ def fit_each_row(x: np.ndarray, profiles: np.ndarray, fit_fn) -> np.ndarray:
     return out
 
 
-def validation_pass(case, trunc: TruncationModel, fit_fn, cnr0: float,
+def validation_pass(case, trunc: BiasLookup, fit_fn, cnr0: float,
                     n_seeds: int):
     """Per-frame raw and folded-normal-corrected variance, averaged over seeds."""
     peak0 = float(case.diffmap[0].max())
@@ -113,7 +113,7 @@ def validation_pass(case, trunc: TruncationModel, fit_fn, cnr0: float,
         noisy = case.diffmap + rng.normal(0.0, noise_sigma, case.diffmap.shape)
         var_hat = fit_each_row(case.x, noisy, fit_fn)
         raw[s] = var_hat
-        cor[s] = corrected_variance("folded_normal", var_hat, cnr_frame, trunc)
+        cor[s] = corrected_variance("subtract", var_hat, cnr_frame, trunc)
     return (np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnr_frame)
 
 
@@ -150,7 +150,7 @@ def main() -> None:
             lines.append(f"### {label}: calibration {cal_file} not found "
                          f"-- skipped\n")
             continue
-        trunc = TruncationModel.from_calibration(CalibrationGrid.load(cal_path))
+        trunc = BiasLookup.from_calibration(CalibrationGrid.load(cal_path))
         noiseless_fits[key] = {}
         lines.append("#" * 72)
         lines.append(f"### Estimator: {label}   (calibration: {cal_file})")

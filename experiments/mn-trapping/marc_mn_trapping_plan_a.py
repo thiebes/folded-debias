@@ -9,7 +9,7 @@ This version uses the **joint (CNR, sigma^2) calibration** loaded from
 disk: ``output/calibration_marc_gaussian.npz`` built by
 ``scripts/build_calibration.py`` with Marc's pixel geometry. The
 correction is subtractive folded-normal with fixed-point iteration on the
-2-D lookup (handled automatically by ``TruncationModel.var_bias`` when a
+2-D lookup (handled automatically by ``BiasLookup.var_bias`` when a
 joint calibration is in place).
 
 Run from the repo root::
@@ -33,11 +33,11 @@ import numpy as np
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from folded_debias import CalibrationGrid  # noqa: E402
-from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
-from folded_debias.models import VoigtModel  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias import CalibrationGrid  # noqa: E402
+from width_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from width_debias.models import VoigtModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 from diffusion_map import (  # noqa: E402
     Parameters, diffusion, times as time_axis, x_axis,
@@ -92,12 +92,12 @@ def per_frame_cnr_known(noiseless: np.ndarray, noise_sigma: float) -> np.ndarray
 
 
 def validation_pass(noiseless: np.ndarray, x_arr: np.ndarray, fit_fn,
-                    trunc_model: TruncationModel, cnr0: float, n_seeds: int,
+                    trunc_model: BiasLookup, cnr0: float, n_seeds: int,
                     peak0: float, seed_base: int = 0):
     """Per-frame raw and folded-normal-corrected variance over n_seeds.
 
-    The TruncationModel carries the joint (CNR, sigma^2) lookup; calling
-    ``corrected_variance("folded_normal", ...)`` invokes the fixed-point
+    The BiasLookup carries the joint (CNR, sigma^2) lookup; calling
+    ``corrected_variance("subtract", ...)`` invokes the fixed-point
     iteration in ``model.var_bias`` automatically.
     """
     n_frames = noiseless.shape[0]
@@ -111,13 +111,13 @@ def validation_pass(noiseless: np.ndarray, x_arr: np.ndarray, fit_fn,
         noisy = noiseless + rng.normal(0.0, noise_sigma, noiseless.shape)
         var_hat = fit_each_row(x_arr, noisy, fit_fn)
         raw[s] = var_hat
-        cor[s] = corrected_variance("folded_normal", var_hat, cnr_frame,
+        cor[s] = corrected_variance("subtract", var_hat, cnr_frame,
                                     trunc_model)
 
     return (np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnr_frame)
 
 
-def _load_trunc_model(path: Path, label: str) -> TruncationModel | None:
+def _load_trunc_model(path: Path, label: str) -> BiasLookup | None:
     if not path.exists():
         print(f"  ({label}) calibration not found at {path} -- skipping")
         return None
@@ -130,13 +130,13 @@ def _load_trunc_model(path: Path, label: str) -> TruncationModel | None:
     print(f"    n_runs/cell: {cal.n_runs}, "
           f"model: {cal.model_name}, "
           f"pixel grid: {cal.pixel_x.size if cal.pixel_x is not None else '?'}")
-    return TruncationModel.from_calibration(cal)
+    return BiasLookup.from_calibration(cal)
 
 
 def main():
     print("=" * 70)
     print("Marc Mn-trapping Plan A: per-frame variance recovery")
-    print("(joint 2-D calibration; subtractive folded_normal + fixed-point iter)")
+    print("(joint 2-D calibration; subtractive subtract + fixed-point iter)")
     print("=" * 70)
 
     print("\nBuilding noiseless diffusion map (Marc, 0.51% Mn defaults)...")
@@ -237,7 +237,7 @@ def main():
                 ax.legend(fontsize=6, ncol=2, loc="upper right")
                 ax.grid(alpha=0.3)
                 ax.set_ylim(-0.01, max(np.nanmax(truth) * 1.5, 0.15))
-            fig.suptitle("Marc Mn-trapping: joint-calibration folded_normal\n"
+            fig.suptitle("Marc Mn-trapping: joint-calibration subtract\n"
                          "black: noiseless truth, solid: corrected, dotted: raw")
             fig_path = OUTPUT / "marc_mn_trapping_plan_a.png"
             fig.savefig(fig_path, dpi=150)
@@ -249,7 +249,7 @@ def main():
     lines = []
     lines.append("=" * 70)
     lines.append("Marc Mn-trapping Plan A: per-frame variance recovery")
-    lines.append("(joint 2-D calibration; subtractive folded_normal)")
+    lines.append("(joint 2-D calibration; subtractive subtract)")
     lines.append("=" * 70)
     lines.append(f"diffmap: {PAR.nbins} pixels over {PAR.L} um, "
                  f"{int(PAR.tmax / PAR.dt)} frames over {PAR.tmax} ns")

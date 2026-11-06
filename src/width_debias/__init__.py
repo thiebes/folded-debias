@@ -1,37 +1,39 @@
-"""folded-debias: correcting the truncation-at-zero bias in MSD diffusion fits.
+"""width-debias: correcting the noise bias in fitted profile widths.
 
-A fitted width cannot be negative, so at low CNR the sampling distribution of
-the fitted variance is right-skewed and biased high. That bias leaks through
-the MSD fit and inflates the extracted diffusion coefficient D. Standard
-inverse-variance weighting corrects the unequal noise across frames but cannot
-remove a mean bias from a slope fit.
+A width fitted to a noisy profile scatters about the true width, so the fitted
+variance exceeds the true one on average by the width's estimation variance,
+which grows as the per-frame CNR falls. In a diffusion measurement the CNR
+falls frame by frame, so the bias rises over time, leaks through the MSD fit,
+and inflates the extracted diffusion coefficient D. Standard inverse-variance
+weighting corrects the unequal noise across frames but cannot remove a mean
+bias from a slope fit.
 
-This package derives the correction from a folded-normal model of the fitted
-width (see ``docs/DERIVATION.md``): the fitted variance carries an additive
-bias equal to the estimation-noise variance, so the fix is to subtract that
-bias per frame, then weight by inverse variance. The per-frame CNR (from the
-``fft-cnr`` package) is the input.
+The package subtracts a calibrated bias ``var_bias(CNR)`` from each frame's
+fitted variance, then weights by inverse variance; the MSD and D corrections
+follow from the corrected widths. ``docs/DERIVATION.md`` derives the additive
+form from a folded-normal model of the fitted width. The per-frame CNR (from
+the ``fft-cnr`` package) is the input.
 
 Typical use::
 
     import numpy as np
-    from folded_debias import Experiment, calibrate_d_free, evaluate
-    from folded_debias.fit import fit_D
-    from folded_debias.weights import msd_and_weights
+    from width_debias import Experiment, calibrate_d_free, evaluate
+    from width_debias.fit import fit_D
+    from width_debias.weights import msd_and_weights
 
     cnr0 = np.array([5, 8, 13, 21, 34, 55, 90])
-    trunc = calibrate_d_free(cnr0)           # D-free lookup var_bias(CNR)
+    lookup = calibrate_d_free(cnr0)          # D-free lookup var_bias(CNR)
 
     # Monte Carlo bias curves <D_est>/D_ref for ols, inverse_variance,
-    # folded_normal, and mas
-    results = evaluate(Experiment(D=0.02), cnr0, trunc)
+    # subtract, and mas
+    results = evaluate(Experiment(D=0.02), cnr0, lookup)
 
     # A measurement: fitted widths in units of sigma_0^2 and per-frame CNR
-    msd, w = msd_and_weights("folded_normal", variance, cnr, trunc)
+    msd, w = msd_and_weights("subtract", variance, cnr, lookup)
     w = np.where(cnr >= 1.3, w, 0.0)         # drop frames below the floor
     D = fit_D(times, msd, w).D
 
-``folded_normal`` is the recommended scheme and :func:`calibrate_d_free` the
+``subtract`` is the recommended scheme and :func:`calibrate_d_free` the
 recommended calibration. The README states the conditions for real data: a
 calibration that matches the data's geometry and units, and the per-frame CNR
 floor.
@@ -42,7 +44,7 @@ from .models import (GaussianModel, GeneralizedGaussianModel, MODELS,
                      MomentModel, UnboundedGaussianModel, VoigtModel,
                      model_from_spec, spec_tag)
 from .montecarlo import Ensemble, run_ensemble
-from .truncation import FrameStats, TruncationModel, frame_stats
+from .bias_lookup import FrameStats, BiasLookup, frame_stats
 from .weights import (SCHEMES, calibration_D_se, corrected_variance,
                       msd_and_weights)
 from .validate import (FrameDiagnostic, SchemeResult, calibrate,
@@ -60,7 +62,7 @@ __all__ = [
     "GaussianModel", "VoigtModel", "GeneralizedGaussianModel", "MomentModel",
     "UnboundedGaussianModel", "MODELS", "model_from_spec", "spec_tag",
     "Ensemble", "run_ensemble",
-    "FrameStats", "TruncationModel", "frame_stats",
+    "FrameStats", "BiasLookup", "frame_stats",
     "SCHEMES", "msd_and_weights", "corrected_variance", "calibration_D_se",
     "SchemeResult", "calibrate", "calibrate_d_free", "calibrate_fisher",
     "evaluate", "sweep_stats",

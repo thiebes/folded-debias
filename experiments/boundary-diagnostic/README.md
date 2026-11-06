@@ -41,7 +41,7 @@ profile with the generalized-Gaussian fitter's bounds, kept for reference).
 
 ## Depends on
 
-`folded_debias`. No sibling-folder helpers.
+`width_debias`. No sibling-folder helpers.
 
 ## See also
 

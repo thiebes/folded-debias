@@ -25,7 +25,7 @@ only an unbiased estimator converges to the input D.
 
 ## Data
 
-None. Fully synthetic (uses `folded_debias.simulate` geometry).
+None. Fully synthetic (uses `width_debias.simulate` geometry).
 
 ## Run
 
@@ -52,7 +52,7 @@ the width-fit arm.
 
 ## Depends on
 
-`folded_debias` (`montecarlo.run_ensemble`, `simulate`) and `crlb.py` in this
+`width_debias` (`montecarlo.run_ensemble`, `simulate`) and `crlb.py` in this
 folder; `render_crlb_panel.py` also imports shared plotting primitives from
 `scripts/poster_style.py`.
 

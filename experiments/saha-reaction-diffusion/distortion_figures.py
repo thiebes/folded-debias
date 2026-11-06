@@ -1,9 +1,9 @@
 """Diagnostic figures for the Saha bed: the two distortions, made concrete.
 
 These are illustration/diagnostic figures, NOT poster figures. The Saha bed did
-not earn a folded-debias poster panel (see README.md): the truncation effect is
+not earn a width-debias poster panel (see README.md): the truncation effect is
 modest in the trusted band, and the emission-to-carrier framing is out of
-folded-debias's scope and not novel. The figures are kept because they make the
+width-debias's scope and not novel. The figures are kept because they make the
 validation framework (docs/VALIDATION_DESIGN.md) concrete.
 
 Two figures:
@@ -22,7 +22,7 @@ Two figures:
 
 Both are noise-free-referenced; neither claims carrier-alpha recovery on the
 Saha bed. Self-contained: depends only on the model port and the shipped
-folded_debias package, not on the (actively reworked) validation harness.
+width_debias package, not on the (actively reworked) validation harness.
 
 Style: the plot style guide, Okabe-Ito palette (blue = truth/
 reference, gold = emission/intermediate, red = biased/uncorrected, green =
@@ -49,10 +49,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
 import reaction_diffusion_saha as rd  # noqa: E402
-from folded_debias.calibration import CalibrationGrid  # noqa: E402
-from folded_debias.models import GaussianModel  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias.calibration import CalibrationGrid  # noqa: E402
+from width_debias.models import GaussianModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 # Okabe-Ito roles (see plot_style.md; match scripts/poster_figures.py).
 BLUE = "#0072B2"    # truth / noise-free reference
@@ -144,7 +144,7 @@ def fig_mechanism() -> None:
     if not os.path.exists(CALIBRATION):
         print(f"[skip mechanism: build {CALIBRATION} first]")
         return
-    model = TruncationModel.from_calibration(CalibrationGrid.load(CALIBRATION))
+    model = BiasLookup.from_calibration(CalibrationGrid.load(CALIBRATION))
     times, clean, peak = _emission_frames(A_REGIME)
     ref = np.array([GAUSS.fit_variance(PIXEL_X, r).variance for r in clean])
 
@@ -158,7 +158,7 @@ def fig_mechanism() -> None:
         var_row = np.array([GAUSS.fit_variance(PIXEL_X, noisy[f]).variance
                             for f in range(N_FRAMES)])
         raws[r] = var_row
-        cors[r] = corrected_variance("folded_normal", var_row, cnr_frame, model)
+        cors[r] = corrected_variance("subtract", var_row, cnr_frame, model)
     mean_raw = np.nanmean(raws, axis=0)
     mean_cor = np.nanmean(cors, axis=0)
 

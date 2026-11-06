@@ -3,10 +3,10 @@ requires = ["setuptools==84.0.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "folded-debias"
-# The version lives in one place, folded_debias.__version__.
+name = "width-debias"
+# The version lives in one place, width_debias.__version__.
 dynamic = ["version"]
-description = "Folded-normal debiasing of the low-CNR truncation-at-zero bias in bounded width fits (e.g. MSD diffusion)."
+description = "Correction of the noise bias in fitted profile widths, for mean-squared-displacement (MSD) diffusion measurements."
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
@@ -34,9 +34,9 @@ dependencies = [
 ]
 
 [project.urls]
-Source = "https://github.com/thiebes/folded-debias"
-Changelog = "https://github.com/thiebes/folded-debias/blob/master/CHANGELOG.md"
-Issues = "https://github.com/thiebes/folded-debias/issues"
+Source = "https://github.com/thiebes/width-debias"
+Changelog = "https://github.com/thiebes/width-debias/blob/master/CHANGELOG.md"
+Issues = "https://github.com/thiebes/width-debias/issues"
 
 [project.optional-dependencies]
 # fft-cnr supplies per-frame CNR estimates from single 1-D profiles.
@@ -51,7 +51,7 @@ dev = ["pytest>=7.4", "matplotlib>=3.7,<4", "fft-cnr>=0.3.3,<0.5",
        "curved-text>=0.5,<1"]
 
 [tool.setuptools.dynamic]
-version = { attr = "folded_debias.__version__" }
+version = { attr = "width_debias.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]

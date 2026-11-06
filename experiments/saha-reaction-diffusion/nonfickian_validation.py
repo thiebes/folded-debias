@@ -9,7 +9,7 @@ emission profile. Three distortions sit between the two:
 2. the instrument point-spread function,
 3. the emission-to-carrier mapping.
 
-The folded-normal correction in `folded_debias` removes distortion 1 only. The
+The folded-normal correction in `width_debias` removes distortion 1 only. The
 Saha emission is nonlinear in carrier density -- E = qe nu (1-x) n + qf rho x^2
 n^2 -- so distortion 3 is present and large, and no width estimator plus noise
 correction can reach the carrier transport on its own. That is the forward-model
@@ -84,10 +84,10 @@ sys.path.insert(0, os.path.join(_HERE, "..", "..", "src"))
 sys.path.insert(0, _HERE)
 
 import reaction_diffusion_saha as rd  # noqa: E402
-from folded_debias.calibration import CalibrationGrid  # noqa: E402
-from folded_debias.models import GaussianModel, MomentModel  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias.calibration import CalibrationGrid  # noqa: E402
+from width_debias.models import GaussianModel, MomentModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 # Physical pixel grid the Saha emission is resampled onto, in um. Matched by the
 # calibration build above (n_pixels / half_window identical). The absolute scale
@@ -219,7 +219,7 @@ def build_regime(A: float, emission_power: int) -> Regime:
 
 
 def first_stage_trajectories(regime: Regime, cnr0: float,
-                             model: TruncationModel | None,
+                             model: BiasLookup | None,
                              n_runs: int = N_RUNS, seed: int = 0):
     """Mean first-stage width trajectories under noise at cnr0.
 
@@ -246,7 +246,7 @@ def first_stage_trajectories(regime: Regime, cnr0: float,
         if model is not None:
             var_row = np.array([GAUSS.fit_variance(PIXEL_X, noisy[f]).variance
                                 for f in range(N_FRAMES)])
-            gf[r] = corrected_variance("folded_normal", var_row, cnr_frame, model)
+            gf[r] = corrected_variance("subtract", var_row, cnr_frame, model)
 
     out = {
         "moment": np.nanmean(mom, axis=0),
@@ -258,7 +258,7 @@ def first_stage_trajectories(regime: Regime, cnr0: float,
     return out
 
 
-def load_model(path: str = CALIBRATION_PATH) -> TruncationModel | None:
+def load_model(path: str = CALIBRATION_PATH) -> BiasLookup | None:
     """Load the 2-D Saha calibration, verifying its geometry matches PIXEL_X."""
     if not os.path.exists(path):
         return None
@@ -268,7 +268,7 @@ def load_model(path: str = CALIBRATION_PATH) -> TruncationModel | None:
         raise ValueError(
             f"calibration geometry in {path} does not match PIXEL_X; "
             "rebuild with --n-pixels 401 --half-window 4.0")
-    return TruncationModel.from_calibration(calib)
+    return BiasLookup.from_calibration(calib)
 
 
 def gap_report() -> dict[int, list[Regime]]:
@@ -298,7 +298,7 @@ def gap_report() -> dict[int, list[Regime]]:
 
 
 def first_stage_report(regimes_by_power: dict[int, list[Regime]],
-                       model: TruncationModel | None,
+                       model: BiasLookup | None,
                        cnr0_list: list[float]) -> None:
     """First-stage recovery under noise, scored against each stage's own target.
 

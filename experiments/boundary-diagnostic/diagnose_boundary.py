@@ -36,8 +36,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import model_from_spec, spec_tag  # noqa: E402
-from folded_debias.simulate import Experiment  # noqa: E402
+from width_debias import model_from_spec, spec_tag  # noqa: E402
+from width_debias.simulate import Experiment  # noqa: E402
 
 TRUE_SIGMA = 1.0
 TRUE_VAR = TRUE_SIGMA ** 2

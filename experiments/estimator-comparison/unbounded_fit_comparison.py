@@ -29,7 +29,7 @@ Two levels:
 
 All variances in sigma_0^2; D ratios are dimensionless.
 
-Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores.
+Set ``WIDTH_DEBIAS_WORKERS=0`` to use all cores.
 
 Usage::
 
@@ -45,11 +45,11 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (Experiment, GaussianModel, MomentModel,  # noqa: E402
+from width_debias import (Experiment, GaussianModel, MomentModel,  # noqa: E402
                             UnboundedGaussianModel, calibrate_d_free, evaluate,
                             run_ensemble)
-from folded_debias.fit import fit_D  # noqa: E402
-from folded_debias.weights import msd_and_weights  # noqa: E402
+from width_debias.fit import fit_D  # noqa: E402
+from width_debias.weights import msd_and_weights  # noqa: E402
 
 # --- Per-frame (isolated single-profile) sweep -----------------------------
 PF_CNR_GRID = np.logspace(np.log10(0.3), np.log10(30.0), 18)
@@ -160,8 +160,8 @@ def d_level_sweep():
 
     series = {
         "bounded+OLS":    (bounded["ols"].mean_bias, bounded["ols"].spread),
-        "bounded+folded": (bounded["folded_normal"].mean_bias,
-                           bounded["folded_normal"].spread),
+        "bounded+folded": (bounded["subtract"].mean_bias,
+                           bounded["subtract"].spread),
         "unbounded+OLS":  (unb_mean, unb_sd),
         "moment+OLS":     (mom_mean, mom_sd),
     }

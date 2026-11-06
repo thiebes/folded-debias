@@ -48,10 +48,10 @@ from pathlib import Path
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import Experiment, model_from_spec, spec_tag  # noqa: E402
-from folded_debias.calibration import _single_frame_profile  # noqa: E402
-from folded_debias.montecarlo import run_ensemble  # noqa: E402
-from folded_debias.truncation import TruncationModel, frame_stats  # noqa: E402
+from width_debias import Experiment, model_from_spec, spec_tag  # noqa: E402
+from width_debias.calibration import _single_frame_profile  # noqa: E402
+from width_debias.montecarlo import run_ensemble  # noqa: E402
+from width_debias.bias_lookup import BiasLookup, frame_stats  # noqa: E402
 
 
 # --- Calibration (matches the dense run) -----------------------------------
@@ -152,7 +152,7 @@ def build_dense_calibration(model_name):
     print(f"  Dense calibration: {N_CAL_POINTS} CNR_0 in {CAL_CNR0_RANGE}, "
           f"{N_RUNS_CAL} runs/cell ({N_WORKERS} workers)", flush=True)
     stats = parallel_with_progress(_calib_one, args, "cal")
-    return TruncationModel.from_stats(stats)
+    return BiasLookup.from_stats(stats)
 
 
 def floor_sweep(model_name, trunc):
@@ -162,7 +162,7 @@ def floor_sweep(model_name, trunc):
     # Use the standard pixel grid for the single-profile MC.
     pixel_x = Experiment().x
     # Pass the lookup arrays so workers can interp without needing the
-    # TruncationModel object pickled (also fine to pickle, but arrays are
+    # BiasLookup object pickled (also fine to pickle, but arrays are
     # cleaner).
     vb_cnr = trunc.cnr_grid
     vb_vals = trunc.varbias_grid

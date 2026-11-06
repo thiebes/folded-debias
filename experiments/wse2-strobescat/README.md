@@ -129,7 +129,7 @@ generated files.
 .venv/Scripts/python.exe experiments/wse2-strobescat/render_realdata_panel.py
 ```
 
-`FOLDED_DEBIAS_WORKERS=1` (serial) is the safe default for the calibration
+`WIDTH_DEBIAS_WORKERS=1` (serial) is the safe default for the calibration
 builds; `=0` (all cores) is faster but the Windows process pool can break under
 CPU contention.
 
@@ -168,7 +168,7 @@ CPU contention.
 
 ## Depends on
 
-`folded_debias` (`calibration`, `truncation`, `weights`, `cnr`, `fit`,
+`width_debias` (`calibration`, `truncation`, `weights`, `cnr`, `fit`,
 `noise`). `fft-cnr` for per-frame CNR. The diagnostic scripts share
 `realdata_diagnostics.py` (local sibling).
 

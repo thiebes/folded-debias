@@ -23,7 +23,7 @@ are scored against that truth.
 
 Run from the repository root (needs the pshare for the maps)::
 
-    FOLDED_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_validation.py
+    WIDTH_DEBIAS_WORKERS=0 .venv/Scripts/python.exe experiments/halide-mixing-highn/br_halide_highn_validation.py
 
 Outputs ``output/br_halide_highn_validation.{png,txt}`` and caches the matched
 D-free calibration to ``output/calibration_br_highn.npz``.
@@ -42,10 +42,10 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "halide-mixing-brI-legacy"))
 sys.path.insert(0, os.path.dirname(__file__))
 
-from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
-from folded_debias.models import MomentModel  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias import GaussianModel, calibrate_d_free  # noqa: E402
+from width_debias.models import MomentModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 # Pure helpers shared with the legacy bed (no module-global dependencies).
 from br_halide_validation import fit_each_row, fit_msd_powerlaw  # noqa: E402
@@ -92,11 +92,11 @@ def subsample(case, stride: int):
                    var_true=case.var_true[sl])
 
 
-def build_or_load_calibration() -> TruncationModel:
+def build_or_load_calibration() -> BiasLookup:
     """Gaussian D-free calibration at the high-N geometry; cached after first build."""
     if CAL_PATH.exists() and "framevar_grid" in np.load(CAL_PATH).files:
         d = np.load(CAL_PATH)
-        return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
+        return BiasLookup(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
                                varbias_grid=d["varbias_grid"],
                                framevar_grid=d["framevar_grid"])
@@ -108,7 +108,7 @@ def build_or_load_calibration() -> TruncationModel:
     return trunc
 
 
-def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
+def validation_pass(case, trunc: BiasLookup, cnr0: float, n_seeds: int):
     """Mean raw and folded-normal-corrected Gaussian-fit variance over seeds."""
     peak0 = float(case.profiles[0].max())
     noise_sigma = peak0 / cnr0
@@ -121,7 +121,7 @@ def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
         noisy = case.profiles + rng.normal(0.0, noise_sigma, case.profiles.shape)
         var_hat = fit_each_row(case.x, noisy)
         raw[s] = var_hat
-        cor[s] = corrected_variance("folded_normal", var_hat, cnr_frame, trunc)
+        cor[s] = corrected_variance("subtract", var_hat, cnr_frame, trunc)
     return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnr_frame
 
 
@@ -143,7 +143,7 @@ class CaseResult:
     d_true: float
 
 
-def sweep_case(case, trunc: TruncationModel) -> CaseResult:
+def sweep_case(case, trunc: BiasLookup) -> CaseResult:
     """Run the CNR_0 sweep for one Br fraction (the single source of the numbers)."""
     nf = fit_each_row(case.x, case.profiles)              # noiseless Gaussian fit
     d_true, a_true = fit_msd_powerlaw(case.t, case.var_true)

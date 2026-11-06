@@ -43,7 +43,7 @@ None. Fully synthetic.
 ## Run
 
 ```powershell
-$env:FOLDED_DEBIAS_WORKERS = 0
+$env:WIDTH_DEBIAS_WORKERS = 0
 .venv/Scripts/python.exe experiments/fisher-calibration/compare_calibrations.py generate
 .venv/Scripts/python.exe experiments/fisher-calibration/fisher_check.py generate
 .venv/Scripts/python.exe experiments/fisher-calibration/compare_calibrations.py analyse
@@ -188,8 +188,8 @@ in S (at S of 5 to 7 it reads 0.57 to 2.06 across widths for the Gaussian, each
 
 ## Depends on
 
-`folded_debias` (`calibrate_fisher` components: `calibrate_cells`,
-`leading_order_terms`, `TruncationModel.from_cells`; `calibrate_d_free`).
+`width_debias` (`calibrate_fisher` components: `calibrate_cells`,
+`leading_order_terms`, `BiasLookup.from_cells`; `calibrate_d_free`).
 `fisher_check.py` imports paths and seeds from `compare_calibrations.py`.
 
 ## See also

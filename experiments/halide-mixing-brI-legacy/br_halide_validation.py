@@ -35,7 +35,7 @@ Run from the repository root (needs the pshare for the maps)::
 
     .venv/Scripts/python.exe scripts/br_halide_validation.py
 
-Set ``FOLDED_DEBIAS_WORKERS=0`` to use all cores for the calibration.
+Set ``WIDTH_DEBIAS_WORKERS=0`` to use all cores for the calibration.
 Outputs ``output/br_halide_validation.{png,txt}``.
 """
 from __future__ import annotations
@@ -52,11 +52,11 @@ sys.path.insert(0, os.path.dirname(__file__))
 
 from scipy.optimize import curve_fit  # noqa: E402
 
-from folded_debias import GaussianModel, calibrate_d_free  # noqa: E402
-from folded_debias.fit import fit_variance as fit_gaussian  # noqa: E402
-from folded_debias.models import MomentModel  # noqa: E402
-from folded_debias.truncation import TruncationModel  # noqa: E402
-from folded_debias.weights import corrected_variance  # noqa: E402
+from width_debias import GaussianModel, calibrate_d_free  # noqa: E402
+from width_debias.fit import fit_variance as fit_gaussian  # noqa: E402
+from width_debias.models import MomentModel  # noqa: E402
+from width_debias.bias_lookup import BiasLookup  # noqa: E402
+from width_debias.weights import corrected_variance  # noqa: E402
 
 from br_data import load_all  # noqa: E402
 
@@ -112,11 +112,11 @@ def fit_msd_powerlaw(t: np.ndarray, var: np.ndarray,
         return np.nan, np.nan
 
 
-def build_or_load_calibration() -> TruncationModel:
+def build_or_load_calibration() -> BiasLookup:
     """Gaussian D-free calibration at the Br-I geometry; cached after first build."""
     if CAL_PATH.exists() and "framevar_grid" in np.load(CAL_PATH).files:
         d = np.load(CAL_PATH)
-        return TruncationModel(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
+        return BiasLookup(cnr_grid=d["cnr_grid"], p_grid=d["p_grid"],
                                relvar_grid=d["relvar_grid"],
                                varbias_grid=d["varbias_grid"],
                                framevar_grid=d["framevar_grid"])
@@ -137,7 +137,7 @@ def fit_each_row(x: np.ndarray, profiles: np.ndarray) -> np.ndarray:
     return out
 
 
-def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
+def validation_pass(case, trunc: BiasLookup, cnr0: float, n_seeds: int):
     """Mean raw and folded-normal-corrected Gaussian-fit variance over seeds."""
     peak0 = float(case.profiles[0].max())
     noise_sigma = peak0 / cnr0
@@ -150,7 +150,7 @@ def validation_pass(case, trunc: TruncationModel, cnr0: float, n_seeds: int):
         noisy = case.profiles + rng.normal(0.0, noise_sigma, case.profiles.shape)
         var_hat = fit_each_row(case.x, noisy)
         raw[s] = var_hat
-        cor[s] = corrected_variance("folded_normal", var_hat, cnr_frame, trunc)
+        cor[s] = corrected_variance("subtract", var_hat, cnr_frame, trunc)
     return np.nanmean(raw, axis=0), np.nanmean(cor, axis=0), cnr_frame
 
 
@@ -173,7 +173,7 @@ class CaseResult:
     d_meth: np.ndarray
 
 
-def sweep_case(case, trunc: TruncationModel) -> CaseResult:
+def sweep_case(case, trunc: BiasLookup) -> CaseResult:
     """Run the CNR_0 sweep for one Br fraction (the single source of the numbers)."""
     nf = fit_each_row(case.x, case.profiles)                  # noiseless Gaussian fit
     nm = np.array([MomentModel().fit_variance(case.x, p).variance

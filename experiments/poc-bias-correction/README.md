@@ -14,7 +14,7 @@ two-panel figure per profile model (truncation diagnostic; bias curves
 
 ## Data
 
-None. Fully synthetic (`folded_debias` Monte Carlo); no pshare datasets.
+None. Fully synthetic (`width_debias` Monte Carlo); no pshare datasets.
 
 ## Run
 
@@ -28,7 +28,7 @@ None. Fully synthetic (`folded_debias` Monte Carlo); no pshare datasets.
 The generalized-Gaussian takes its shape exponent in the spec; the bare
 `generalized_gaussian` is p = 2, a Gaussian profile.
 
-Set `FOLDED_DEBIAS_WORKERS=0` (all cores) to speed up the Monte Carlo. Outputs
+Set `WIDTH_DEBIAS_WORKERS=0` (all cores) to speed up the Monte Carlo. Outputs
 are written to the repo-root `output/` directory; the committed snapshots in this
 folder are the current results.
 
@@ -57,8 +57,8 @@ reference. Figures: `poc_demo*.png`.
 
 ## Depends on
 
-`folded_debias` (`model_from_spec`, `Experiment`, `calibrate_d_free`,
-`evaluate`, `sweep_stats`, `TruncationModel`). No sibling-folder helpers.
+`width_debias` (`model_from_spec`, `Experiment`, `calibrate_d_free`,
+`evaluate`, `sweep_stats`, `BiasLookup`). No sibling-folder helpers.
 
 ## See also
 

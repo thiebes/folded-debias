@@ -21,7 +21,7 @@ raster-scanned APD (photon-counting) measurement could be shot-limited instead.
   count or pedestal widens the fitted late frames in the same direction as the
   noise bias.
 - **Experimental calibration path.** `apply_correction.py` uses the joint
-  `(CNR, sigma^2)` calibration, which `src/folded_debias/calibration.py` marks
+  `(CNR, sigma^2)` calibration, which `src/width_debias/calibration.py` marks
   as experimental; it applies no per-frame CNR floor and propagates no
   calibration SE.
 

@@ -15,7 +15,7 @@ per-frame CNR >= 1, Fisher arm, all Fisher draws) under three conditions:
 smoothing parameter, so it leaves out the scatter that the per-draw choice
 itself adds. If the ratio is near 1 at fixed lambda but not as run, that choice
 is the missing term. The fixed-lambda refit replicates
-``TruncationModel.from_cells``; the script checks that the replica reproduces the
+``BiasLookup.from_cells``; the script checks that the replica reproduces the
 library at the GCV choice before using it.
 
     .venv/Scripts/python.exe experiments/fisher-calibration/diagnose_criterion3.py
@@ -30,10 +30,10 @@ import numpy as np
 sys.path.insert(0, os.path.dirname(__file__))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 
-from folded_debias import (CalibrationCells, Experiment, TruncationModel,  # noqa: E402
+from width_debias import (CalibrationCells, Experiment, BiasLookup,  # noqa: E402
                            leading_order_terms, model_from_spec)
-from folded_debias.smoothing import pspline_fit  # noqa: E402
-from folded_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
+from width_debias.smoothing import pspline_fit  # noqa: E402
+from width_debias.weights import calibration_D_se, msd_and_weights  # noqa: E402
 
 from compare_calibrations import (CNR0_VALUES, D_VALUES, FLOOR, N_FISHER_DRAWS,  # noqa: E402
                                   OUT, SPECS, _cells_path, _eval_path)
@@ -41,8 +41,8 @@ from fisher_check import _pooled_cells  # noqa: E402
 
 
 def _ratio_model(cells: CalibrationCells, terms, lam: float | None = None,
-                 knee_cnr: float = 6.0) -> tuple[TruncationModel, float]:
-    """The bias curve of ``TruncationModel.from_cells``, optionally at a fixed lambda."""
+                 knee_cnr: float = 6.0) -> tuple[BiasLookup, float]:
+    """The bias curve of ``BiasLookup.from_cells``, optionally at a fixed lambda."""
     good = (np.isfinite(cells.mean_bias) & np.isfinite(cells.bias_sd)
             & (cells.n_finite > 1))
     cnr = cells.cnr[good]
@@ -62,7 +62,7 @@ def _ratio_model(cells: CalibrationCells, terms, lam: float | None = None,
     design = fit.design(np.log(grid))
     eigval, eigvec = np.linalg.eigh(fit.coef_cov)
     factor = grid_leading[:, None] * (design @ (eigvec * np.sqrt(np.clip(eigval, 0.0, None))))
-    model = TruncationModel(cnr_grid=grid, p_grid=np.zeros_like(grid),
+    model = BiasLookup(cnr_grid=grid, p_grid=np.zeros_like(grid),
                             relvar_grid=np.ones_like(grid),
                             varbias_grid=grid_leading * (1.0 + design @ fit.coef),
                             varbias_se_grid=np.linalg.norm(factor, axis=1),
@@ -73,7 +73,7 @@ def _ratio_model(cells: CalibrationCells, terms, lam: float | None = None,
 def _cell(bias_model, weight_model, var, cnr, d_true):
     """Mean D/D_ref over the cell's realizations and its predicted calibration SE."""
     times = Experiment(D=d_true).times
-    _, w = msd_and_weights("folded_normal", var[0], cnr, weight_model)
+    _, w = msd_and_weights("subtract", var[0], cnr, weight_model)
     w = np.where(cnr >= FLOOR, w, 0.0)
     corrected = var - bias_model.var_bias(np.broadcast_to(cnr, var.shape).ravel()).reshape(var.shape)
     msd = corrected - corrected[:, :1]
@@ -103,7 +103,7 @@ def main() -> None:
         model = model_from_spec(spec)
         terms = leading_order_terms(model, x, 1.0)
         draws = [CalibrationCells.load(_cells_path(spec, k)) for k in range(N_FISHER_DRAWS)]
-        library = [TruncationModel.from_cells(c, terms) for c in draws]
+        library = [BiasLookup.from_cells(c, terms) for c in draws]
         replica = [_ratio_model(c, terms) for c in draws]
         assert all(np.allclose(m.varbias_grid, r.varbias_grid, rtol=1e-10, atol=0.0)
                    and np.allclose(m.varbias_cov_factor, r.varbias_cov_factor, rtol=1e-8, atol=1e-14)
@@ -111,7 +111,7 @@ def main() -> None:
         lams = np.array([lam for _, lam in replica])
         lam_fixed = float(np.exp(np.median(np.log(lams))))
         fixed = [_ratio_model(c, terms, lam_fixed)[0] for c in draws]
-        reference = TruncationModel.from_cells(_pooled_cells(spec), terms)
+        reference = BiasLookup.from_cells(_pooled_cells(spec), terms)
         with np.load(_eval_path(spec)) as z:
             var, cnr = z["variance"], z["cnr"]
         arms = {

@@ -86,4 +86,4 @@ The joint lookup is indexed by the true variance, which a measurement does not
 know. When sigma^2 changes little over the measurement, keying each frame on its
 own fitted variance (the default) is adequate. When it grows several-fold, that
 key under-corrects at low CNR; see "Choice of key" in
-`TruncationModel.var_bias` and `experiments/halide-mixing-highn/key_sensitivity.py`.
+`BiasLookup.var_bias` and `experiments/halide-mixing-highn/key_sensitivity.py`.
